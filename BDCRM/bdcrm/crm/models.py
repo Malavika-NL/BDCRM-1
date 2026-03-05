@@ -58,3 +58,35 @@ class Lesson(models.Model):
 
     def __str__(self):
         return self.title
+    
+
+class Activity(models.Model):
+    TYPE_CHOICES = [
+        ('call', 'Phone Call'),
+        ('email', 'Email'),
+        ('meeting', 'Meeting'),
+        ('note', 'Note'),
+    ]
+    lead = models.ForeignKey(Lead, related_name='activities', on_delete=models.CASCADE)
+    activity_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    description = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Task(models.Model):
+    lead = models.ForeignKey(Lead, related_name='tasks', on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    due_date = models.DateTimeField()
+    is_completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    color = models.CharField(max_length=7, default='#3B82F6')
+    leads = models.ManyToManyField(Lead, related_name='tags', blank=True)
+
+class Company(models.Model):
+    name = models.CharField(max_length=200)
+    industry = models.CharField(max_length=100, blank=True)
+    website = models.URLField(blank=True)
+    size = models.CharField(max_length=50, blank=True)
+    region = models.CharField(max_length=100, blank=True)
