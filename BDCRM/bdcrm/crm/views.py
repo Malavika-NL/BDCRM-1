@@ -8,7 +8,7 @@ from .models import Lead, Course
 from .serializers import LeadSerializer, CourseSerializer
 
 # Set your key (better: put it in environment instead of hardcoding)
-os.environ["ANTHROPIC_API_KEY"] = "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"
+os.environ["ANTHROPIC_API_KEY"] = "my ai key"
 client = anthropic.Anthropic()
 
 class LeadViewSet(viewsets.ModelViewSet):
