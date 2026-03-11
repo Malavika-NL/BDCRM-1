@@ -52,6 +52,8 @@ export interface Task {
 }
 
 export interface Lead {
+  phone: unknown;
+  region: any;
   id: number;
   name: string;
   email: string;
@@ -105,4 +107,29 @@ export interface Course {
   target_region: string;
   modules: Module[];
   created_at: string;
+}
+
+export interface ConsumptionAlert {
+  company: string;
+  product: string;
+  days_overdue: number;
+  pic?: string;
+  last_purchase?: string;
+}
+
+export interface Enrollment {
+  id: number;
+  lead_name: string;
+  course_title: string;
+  status: string;
+  started_at: string;
+}
+
+export interface AgentPayload {
+  name: string;
+  email: string;
+  company_name: string;
+  region?: string;
+  vertical?: string;
+  source: string;
 }

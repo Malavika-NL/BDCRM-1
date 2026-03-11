@@ -120,3 +120,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+# settings.py
+GREEN_API_ID = '7103541726'  # This is from your screenshot
+GREEN_API_TOKEN = '34ce6a2a81bd4e3d8efa611aab71f290e273fb4d8646403cb7'

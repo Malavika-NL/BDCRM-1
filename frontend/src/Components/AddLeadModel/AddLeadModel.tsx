@@ -13,6 +13,7 @@ export const AddLeadModal = ({ isOpen, onClose, onSubmit }: AddLeadModalProps) =
     name: '',
     company: '',
     email: '',
+    phone: '', // NEW
     value: '',
     status: 'new' as LeadStatus,
     source: 'other'
@@ -23,14 +24,13 @@ export const AddLeadModal = ({ isOpen, onClose, onSubmit }: AddLeadModalProps) =
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
-    setFormData({ name: '', company: '', email: '', value: '', status: 'new', source: 'other' });
+    setFormData({ name: '', company: '', email: '', phone: '', value: '', status: 'new', source: 'other' });
     onClose();
   };
 
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
-        {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 flex justify-between items-center">
           <div>
             <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -43,7 +43,6 @@ export const AddLeadModal = ({ isOpen, onClose, onSubmit }: AddLeadModalProps) =
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">Contact Name</label>
@@ -77,6 +76,18 @@ export const AddLeadModal = ({ isOpen, onClose, onSubmit }: AddLeadModalProps) =
               />
             </div>
             <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Phone</label>
+              <input
+                type="tel"
+                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 outline-none transition"
+                placeholder="+1 555 123 4567"
+                value={formData.phone}
+                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Deal Value ($)</label>
               <input
                 required type="number" step="0.01"
@@ -86,21 +97,21 @@ export const AddLeadModal = ({ isOpen, onClose, onSubmit }: AddLeadModalProps) =
                 onChange={e => setFormData({ ...formData, value: e.target.value })}
               />
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Lead Source</label>
-            <select
-              className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 outline-none bg-white transition"
-              value={formData.source}
-              onChange={e => setFormData({ ...formData, source: e.target.value })}
-            >
-              <option value="cold_outreach">Cold Outreach</option>
-              <option value="linkedin">LinkedIn</option>
-              <option value="referral">Referral</option>
-              <option value="website">Website</option>
-              <option value="event">Event</option>
-              <option value="other">Other</option>
-            </select>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Lead Source</label>
+              <select
+                className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 outline-none bg-white transition"
+                value={formData.source}
+                onChange={e => setFormData({ ...formData, source: e.target.value })}
+              >
+                <option value="cold_outreach">Cold Outreach</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="referral">Referral</option>
+                <option value="website">Website</option>
+                <option value="event">Event</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
           </div>
           <button
             type="submit"

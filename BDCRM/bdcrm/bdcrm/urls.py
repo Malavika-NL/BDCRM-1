@@ -10,6 +10,9 @@ router.register(r'tasks', views.TaskViewSet)          # New
 router.register(r'tags', views.TagViewSet)            # New
 router.register(r'companies', views.CompanyViewSet)   # New
 router.register(r'courses', views.CourseViewSet)
+router.register(r'whatsapp-campaigns', views.WhatsAppCampaignViewSet, basename='whatsapp-campaign')
+
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
