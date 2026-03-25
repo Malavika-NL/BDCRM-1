@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ConsumptionPattern, Lead, Course, Module, Lesson, Activity, Region, Task, Tag, Company, Vertical
+from .models import AIActivityAnalysis, AIAlert, AIDocument, AILeadProfile, AIScoreSnapshot, ConsumptionPattern, Lead, Course, Module, Lesson, Activity, Region, Task, Tag, Company, Vertical
 
 # --- NEW SERIALIZERS ---
 
@@ -145,3 +145,163 @@ class WhatsAppCampaignCreateSerializer(serializers.Serializer):
 class QuickSendSerializer(serializers.Serializer):
     phone = serializers.CharField()
     message = serializers.CharField()
+
+from .models import AIInteractionLog
+
+class AIInteractionLogSerializer(serializers.ModelSerializer):
+    lead_name = serializers.CharField(source='lead.name', read_only=True)
+    campaign_name = serializers.CharField(source='campaign.name', read_only=True)
+    
+    class Meta:
+        model = AIInteractionLog
+        fields = '__all__'
+        
+class AILeadProfileSerializer(serializers.ModelSerializer):
+    lead_name = serializers.CharField(source='lead.name', read_only=True)
+    lead_company = serializers.CharField(source='lead.company', read_only=True)
+    lead_status = serializers.CharField(source='lead.status', read_only=True)
+    lead_value = serializers.CharField(source='lead.value', read_only=True)
+
+    class Meta:
+        model = AILeadProfile
+        fields = '__all__'
+
+
+class AIScoreSnapshotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AIScoreSnapshot
+        fields = '__all__'
+
+
+class AIActivityAnalysisSerializer(serializers.ModelSerializer):
+    activity_type = serializers.CharField(source='activity.activity_type', read_only=True)
+    activity_summary = serializers.CharField(source='activity.summary', read_only=True)
+    lead_name = serializers.CharField(source='lead.name', read_only=True)
+
+    class Meta:
+        model = AIActivityAnalysis
+        fields = '__all__'
+
+
+class AIAlertSerializer(serializers.ModelSerializer):
+    lead_name = serializers.CharField(source='lead.name', read_only=True, default='')
+    lead_company = serializers.CharField(source='lead.company', read_only=True, default='')
+
+    class Meta:
+        model = AIAlert
+        fields = '__all__'
+
+
+class AIDocumentSerializer(serializers.ModelSerializer):
+    lead_name = serializers.CharField(source='lead.name', read_only=True, default='')
+
+    class Meta:
+        model = AIDocument
+        fields = '__all__'
+
+
+class AIChatInputSerializer(serializers.Serializer):
+    message = serializers.CharField(max_length=2000)
+    session_id = serializers.CharField(max_length=100, required=False, default='default')
+
+# =========================
+# Add at the bottom of serializers.py
+# =========================
+
+from .models import (
+    ProductLine, CustomerCategory, SalesChannel, EngagementTool,
+    LeadBusinessMeta, BDMTarget, BDMReview, CampaignWorkspace, CampaignResponse
+)
+
+
+class ProductLineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductLine
+        fields = '__all__'
+
+
+class CustomerCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerCategory
+        fields = '__all__'
+
+
+class SalesChannelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SalesChannel
+        fields = '__all__'
+
+
+class EngagementToolSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EngagementTool
+        fields = '__all__'
+
+
+class LeadBusinessMetaSerializer(serializers.ModelSerializer):
+    product_lines_details = ProductLineSerializer(source='product_lines', many=True, read_only=True)
+    engagement_tools_details = EngagementToolSerializer(source='engagement_tools', many=True, read_only=True)
+
+    class Meta:
+        model = LeadBusinessMeta
+        fields = '__all__'
+
+
+class BDMReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BDMReview
+        fields = '__all__'
+
+
+class BDMTargetSerializer(serializers.ModelSerializer):
+    progress = serializers.SerializerMethodField()
+    reviews = BDMReviewSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = BDMTarget
+        fields = '__all__'
+
+    def get_progress(self, obj):
+        return obj.progress_percentage()
+
+
+class CampaignResponseSerializer(serializers.ModelSerializer):
+    lead_name = serializers.CharField(source='lead.name', read_only=True)
+    lead_company = serializers.CharField(source='lead.company', read_only=True)
+
+    class Meta:
+        model = CampaignResponse
+        fields = '__all__'
+
+
+class CampaignWorkspaceSerializer(serializers.ModelSerializer):
+    responses = CampaignResponseSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = CampaignWorkspace
+        fields = '__all__'
+
+
+class CampaignWorkspaceGenerateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=200)
+    brand_name = serializers.CharField(required=False, allow_blank=True)
+    content_theme = serializers.CharField(required=False, allow_blank=True)
+    target_description = serializers.CharField(required=False, allow_blank=True)
+    selected_channel = serializers.CharField(default='whatsapp')
+    selected_vertical = serializers.IntegerField(required=False)
+    selected_region = serializers.IntegerField(required=False)
+    selected_product_line = serializers.IntegerField(required=False)
+    prompt = serializers.CharField()
+    
+from rest_framework import serializers
+from .models import Vertical, Region, ProductLine
+
+class VerticalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Vertical
+        fields = '__all__'
+
+class RegionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Region
+        fields = '__all__'

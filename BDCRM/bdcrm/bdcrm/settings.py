@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+
+import anthropic   
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -115,6 +118,7 @@ USE_I18N = True
 
 USE_TZ = True
 
+ANTHROPIC_API_KEY = "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"
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
@@ -123,3 +127,6 @@ STATIC_URL = 'static/'
 # settings.py
 GREEN_API_ID = '7103541726'  # This is from your screenshot
 GREEN_API_TOKEN = '34ce6a2a81bd4e3d8efa611aab71f290e273fb4d8646403cb7'
+APOLLO_API_KEY = "IYsYOmhQ9jn7MA7fsS2v8Q"
+GOOGLE_API_KEY = "AIzaSyATvmyk6WNzbakT1Rqe3_C4RJmUb7-Nqiw"
+GOOGLE_CSE_ID = "d4b5ae2bd73264261"

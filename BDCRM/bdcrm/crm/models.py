@@ -50,8 +50,7 @@ class Campaign(models.Model):
 class Lead(models.Model):
     STATUS_CHOICES = [
         ('new', 'New'),
-        ('mql', 'Marketing Qualified (MQL)'),
-        ('sql', 'Sales Qualified (SQL)'),
+        ('contacted', 'Contacted'),
         ('negotiation', 'Negotiation'),
         ('won', 'Won'),
         ('lost', 'Lost'),
@@ -246,3 +245,360 @@ class WhatsAppMessage(models.Model):
     
     def __str__(self):
         return f"{self.campaign.name} - {self.lead.name}"
+  
+
+class AILeadProfile(models.Model):
+    lead = models.OneToOneField(Lead, on_delete=models.CASCADE, related_name='ai_profile')
+
+    score = models.FloatField(default=0.0)
+    conversion_probability = models.FloatField(default=0.0)
+    priority_rank = models.IntegerField(default=5)
+
+    churn_risk = models.FloatField(default=0.0)
+    deal_risk_level = models.CharField(max_length=20, blank=True, default='unknown')
+
+    sentiment_trend = models.CharField(max_length=20, blank=True)
+    engagement_velocity = models.FloatField(default=0.0)
+    recommended_action = models.TextField(blank=True)
+    competitor_mentions = models.JSONField(default=list, blank=True)
+    suggested_tags = models.JSONField(default=list, blank=True)
+    best_contact_time = models.JSONField(default=dict, blank=True)
+
+    last_score_factors = models.JSONField(default=dict, blank=True)
+    last_ai_response = models.JSONField(default=dict, blank=True)
+
+    scored_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-score']
+
+    def __str__(self):
+        return f"AI: {self.lead.name} ({self.score})"
+
+
+class AIScoreSnapshot(models.Model):
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='ai_score_history')
+    score = models.FloatField()
+    conversion_probability = models.FloatField(default=0.0)
+    churn_risk = models.FloatField(default=0.0)
+    factors = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class AIActivityAnalysis(models.Model):
+    activity = models.OneToOneField(Activity, on_delete=models.CASCADE, related_name='ai_analysis')
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='ai_activity_analyses')
+
+    sentiment_score = models.FloatField(default=0.0)
+    sentiment_label = models.CharField(max_length=20, blank=True)
+    intent = models.CharField(max_length=100, blank=True)
+    urgency = models.CharField(max_length=20, blank=True)
+    key_topics = models.JSONField(default=list, blank=True)
+    buying_signals = models.JSONField(default=list, blank=True)
+    objections = models.JSONField(default=list, blank=True)
+    competitor_mentions = models.JSONField(default=list, blank=True)
+    one_line_summary = models.TextField(blank=True)
+    follow_up_needed = models.BooleanField(default=False)
+    follow_up_suggestion = models.TextField(blank=True)
+    follow_up_days = models.IntegerField(default=3)
+    full_analysis = models.JSONField(default=dict, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Analysis: {self.lead.name}"
+
+
+class AIAlert(models.Model):
+    ALERT_TYPES = [
+        ('churn_risk', 'Churn Risk'),
+        ('engagement_spike', 'Engagement Spike'),
+        ('score_change', 'Score Change'),
+        ('competitor_mention', 'Competitor Mentioned'),
+        ('ghost_lead', 'Ghost Lead'),
+        ('stagnant_deal', 'Stagnant Deal'),
+        ('follow_up_overdue', 'Follow-up Overdue'),
+    ]
+
+    alert_type = models.CharField(max_length=30, choices=ALERT_TYPES)
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, null=True, blank=True, related_name='ai_alerts')
+    title = models.CharField(max_length=300)
+    description = models.TextField()
+    priority = models.CharField(max_length=20, default='medium')
+    is_read = models.BooleanField(default=False)
+    is_actioned = models.BooleanField(default=False)
+    suggested_action = models.TextField(blank=True)
+    data = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.priority}] {self.title}"
+
+
+class AIChatSession(models.Model):
+    session_id = models.CharField(max_length=100, unique=True)
+    messages = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def add_message(self, role, content):
+        self.messages.append({"role": role, "content": content})
+        if len(self.messages) > 20:
+            self.messages = self.messages[-20:]
+        self.save()
+
+    def __str__(self):
+        return f"Chat: {self.session_id}"
+
+
+class AIDocument(models.Model):
+    DOC_TYPES = [
+        ('proposal', 'Business Proposal'),
+        ('email_sequence', 'Email Sequence'),
+        ('battle_card', 'Battle Card'),
+        ('meeting_brief', 'Meeting Brief'),
+    ]
+
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, null=True, blank=True, related_name='ai_documents')
+    doc_type = models.CharField(max_length=30, choices=DOC_TYPES)
+    title = models.CharField(max_length=300)
+    content = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.doc_type}] {self.title}"
+    
+# =========================
+# BDM / Sales Dashboard Models
+# Add at the bottom of models.py
+# =========================
+
+class ProductLine(models.Model):
+    name = models.CharField(max_length=100, unique=True)  # e.g. RFID, WMS, Label
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class CustomerCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)  # Key Accounts, Existing Accounts...
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class SalesChannel(models.Model):
+    name = models.CharField(max_length=100, unique=True)  # Direct Customer, Dealer
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class EngagementTool(models.Model):
+    name = models.CharField(max_length=100, unique=True)  # WhatsApp, Email, LinkedIn...
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class LeadBusinessMeta(models.Model):
+    """
+    Extra business dimensions for an existing Lead without changing your Lead model.
+    """
+    lead = models.OneToOneField(Lead, on_delete=models.CASCADE, related_name='business_meta')
+    customer_category = models.ForeignKey(CustomerCategory, null=True, blank=True, on_delete=models.SET_NULL)
+    sales_channel = models.ForeignKey(SalesChannel, null=True, blank=True, on_delete=models.SET_NULL)
+    product_lines = models.ManyToManyField(ProductLine, blank=True, related_name='lead_business_metas')
+    engagement_tools = models.ManyToManyField(EngagementTool, blank=True, related_name='lead_business_metas')
+    lifecycle_type = models.CharField(
+        max_length=50,
+        default='target',
+        choices=[
+            ('target', 'Target Customer'),
+            ('current', 'Current Customer'),
+            ('repeat', 'Repeat Customer'),
+            ('dormant', 'Dormant Customer'),
+        ]
+    )
+    last_purchase_date = models.DateField(null=True, blank=True)
+    last_purchase_value = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    purchase_frequency_days = models.IntegerField(default=0)
+    conversion_probability = models.FloatField(default=0.0)
+    notes = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"Business Meta - {self.lead.name}"
+
+
+class BDMTarget(models.Model):
+    """
+    Management target setting module
+    """
+    TARGET_TYPE_CHOICES = [
+        ('region', 'Region'),
+        ('vertical', 'Vertical'),
+        ('product', 'Product'),
+        ('rep', 'Sales Rep'),
+        ('campaign', 'Campaign'),
+    ]
+
+    name = models.CharField(max_length=200)
+    target_type = models.CharField(max_length=50, choices=TARGET_TYPE_CHOICES)
+    vertical = models.ForeignKey(Vertical, null=True, blank=True, on_delete=models.SET_NULL)
+    region = models.ForeignKey(Region, null=True, blank=True, on_delete=models.SET_NULL)
+    product_line = models.ForeignKey(ProductLine, null=True, blank=True, on_delete=models.SET_NULL)
+    campaign = models.ForeignKey(Campaign, null=True, blank=True, on_delete=models.SET_NULL)
+    
+    target_leads = models.IntegerField(default=0)
+    target_revenue = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    achieved_leads = models.IntegerField(default=0)
+    achieved_revenue = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+
+    start_date = models.DateField()
+    end_date = models.DateField()
+    status = models.CharField(max_length=50, default='active')  # active/completed/on_hold
+    notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def progress_percentage(self):
+        if self.target_revenue and float(self.target_revenue) > 0:
+            return round((float(self.achieved_revenue) / float(self.target_revenue)) * 100, 2)
+        if self.target_leads > 0:
+            return round((self.achieved_leads / self.target_leads) * 100, 2)
+        return 0
+
+    def __str__(self):
+        return self.name
+
+
+class BDMReview(models.Model):
+    """
+    Review / PDCA logs against target
+    """
+    target = models.ForeignKey(BDMTarget, on_delete=models.CASCADE, related_name='reviews')
+    review_date = models.DateField()
+    summary = models.TextField()
+    findings = models.TextField(blank=True)
+    action_items = models.TextField(blank=True)
+    score = models.FloatField(default=0.0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Review - {self.target.name} - {self.review_date}"
+
+
+class CampaignWorkspace(models.Model):
+    """
+    Unified campaign builder workspace
+    """
+    name = models.CharField(max_length=200)
+    brand_name = models.CharField(max_length=200, blank=True)
+    content_theme = models.CharField(max_length=200, blank=True)
+    target_description = models.TextField(blank=True)
+    selected_channel = models.CharField(max_length=50, default='whatsapp')
+    selected_vertical = models.ForeignKey(Vertical, null=True, blank=True, on_delete=models.SET_NULL)
+    selected_region = models.ForeignKey(Region, null=True, blank=True, on_delete=models.SET_NULL)
+    selected_product_line = models.ForeignKey(ProductLine, null=True, blank=True, on_delete=models.SET_NULL)
+    prompt_used = models.TextField(blank=True)
+    generated_subject = models.CharField(max_length=255, blank=True)
+    generated_content = models.TextField(blank=True)
+    status = models.CharField(max_length=50, default='draft')  # draft/ready/sent/archived
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
+class CampaignResponse(models.Model):
+    """
+    Response categorization for campaign interactions
+    """
+    RESPONSE_CHOICES = [
+        ('interested', 'Interested'),
+        ('demo_requested', 'Demo Requested'),
+        ('price_requested', 'Price Requested'),
+        ('follow_up_later', 'Follow Up Later'),
+        ('not_interested', 'Not Interested'),
+        ('invalid_lead', 'Invalid Lead'),
+        ('competitor', 'Competitor Mentioned'),
+        ('no_response', 'No Response'),
+    ]
+
+    workspace = models.ForeignKey(CampaignWorkspace, on_delete=models.CASCADE, related_name='responses')
+    lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='campaign_responses')
+    response_type = models.CharField(max_length=50, choices=RESPONSE_CHOICES)
+    response_text = models.TextField(blank=True)
+    ai_summary = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.lead.name} - {self.response_type}"
+
+
+class KeyContact(models.Model):
+    """
+    Required for the 'Map' stage in 'Target' workflow.
+    Identifies Decision Makers vs Gatekeepers.
+    """
+    ROLE_CHOICES = [
+        ('decision_maker', 'Decision Maker'),
+        ('influencer', 'Influencer'),
+        ('gatekeeper', 'Gatekeeper'),
+        ('user', 'End User'),
+    ]
+    lead = models.ForeignKey(Lead, related_name='key_contacts', on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    designation = models.CharField(max_length=100)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    
+    def __str__(self): return f"{self.name} ({self.role})"
+
+# Update your Lead model or create a proxy
+# In existing Lead model, add:
+relationship_type = models.CharField(
+    max_length=20, 
+    choices=[
+        ('target', 'Target (New)'),
+        ('current', 'Current (Cross-sell)'),
+        ('repeat', 'Repeat (Retention)')
+    ],
+    default='target'
+)
+is_account_mapped = models.BooleanField(default=False, help_text="Has the org chart been mapped?")
+
+class MarketingAsset(models.Model):
+    ASSET_TYPES = [
+        ('brochure', 'Company Profile/Brochure'),
+        ('demo', 'Product Demo Video'),
+        ('price_list', 'Price List'),
+        ('image', 'Creative Image'),
+    ]
+    name = models.CharField(max_length=100)
+    asset_type = models.CharField(max_length=20, choices=ASSET_TYPES)
+    file = models.FileField(upload_to='marketing_assets/') # Requires Pillow/boto3 if using S3
+    whatsapp_media_id = models.CharField(max_length=100, blank=True, help_text="ID for fast sending via WhatsApp API")
+    
+    associated_vertical = models.ForeignKey(Vertical, null=True, blank=True, on_delete=models.SET_NULL)
+    
+    def __str__(self): return self.name

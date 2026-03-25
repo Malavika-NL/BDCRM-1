@@ -11,10 +11,28 @@ router.register(r'tags', views.TagViewSet)            # New
 router.register(r'companies', views.CompanyViewSet)   # New
 router.register(r'courses', views.CourseViewSet)
 router.register(r'whatsapp-campaigns', views.WhatsAppCampaignViewSet, basename='whatsapp-campaign')
+router.register(r'dashboard/smart_prompts', views.SmartDashboardViewSet, basename='smart-prompts')
+router.register(r'agent/dump_leads', views.AgentIngestionViewSet, basename='agent-dump')
+router.register(r'ai-logs', views.AIInteractionLogViewSet, basename='ai-logs')
+router.register(r'ai', views.AILeadViewSet, basename='ai-lead')
+router.register(r'verticals', views.VerticalViewSet)
+router.register(r'regions', views.RegionViewSet)
+router.register(r'ai-activity', views.AIActivityViewSet, basename='ai-activity')
+router.register(r'ai-docs', views.AIDocumentViewSet, basename='ai-docs')
+router.register(r'ai-chat', views.AIChatbotViewSet, basename='ai-chat')
+router.register(r'ai-alerts', views.AIAlertViewSet, basename='ai-alerts')
+router.register(r'ai-analytics', views.AIAnalyticsViewSet, basename='ai-analytics')
+router.register(r'ai-prospector', views.AIProspectorViewSet, basename='ai-prospector')
+router.register(r'product-lines', views.ProductLineViewSet)
+router.register(r'bdm-targets', views.BDMTargetViewSet, basename='bdm-targets')
+router.register(r'smart-sales-calls', views.SmartSalesCallViewSet, basename='smart-sales-calls')
+router.register(r'campaign-workspace', views.CampaignWorkspaceViewSet, basename='campaign-workspace')
+
 
 
 
 urlpatterns = [
+    path('api/run-free-campaign/', views.run_free_campaign, name='run_free_campaign'),
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
 ]

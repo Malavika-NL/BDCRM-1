@@ -1,3 +1,7 @@
+// ══════════════════════════════════════════════════════
+// Utils/types.ts — FULL PRODUCTION FILE
+// ══════════════════════════════════════════════════════
+
 // --- ENUMS & CONSTANTS ---
 
 export type LeadStatus = 'new' | 'contacted' | 'negotiation' | 'won' | 'lost';
@@ -15,7 +19,35 @@ export const STATUS_ORDER: LeadStatus[] = ['new', 'contacted', 'negotiation', 'w
 export type ActivityType = 'call' | 'email' | 'meeting' | 'note';
 export type TaskPriority = 'low' | 'medium' | 'high';
 
-// --- CORE INTERFACES ---
+// --- BDM SPECIFIC TYPES (New) ---
+
+export interface Vertical {
+  id: number;
+  name: string;
+}
+
+export interface Region {
+  id: number;
+  name: string;
+}
+
+export interface ProductLine {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+export interface LeadBusinessMeta {
+  id: number;
+  lead: number;
+  lifecycle_type: 'target' | 'current' | 'repeat' | 'dormant';
+  last_purchase_date?: string;
+  last_purchase_value?: string;
+  purchase_frequency_days?: number;
+  product_lines: number[]; // Array of Product IDs
+}
+
+// --- CORE CRM INTERFACES ---
 
 export interface Tag {
   id: number;
@@ -33,7 +65,7 @@ export interface Company {
 
 export interface Activity {
   id: number;
-  lead: number; // Lead ID
+  lead: number;
   activity_type: ActivityType;
   summary: string;
   description: string;
@@ -42,7 +74,7 @@ export interface Activity {
 
 export interface Task {
   id: number;
-  lead: number; // Lead ID
+  lead: number;
   title: string;
   description?: string;
   due_date: string;
@@ -52,18 +84,23 @@ export interface Task {
 }
 
 export interface Lead {
-  phone: unknown;
   region: any;
   id: number;
   name: string;
   email: string;
-  company: string; // Keeps compatibility with old UI, though backend has relations
-  related_company?: number | null; // ID of the Company model
+  // Fixed: Explicitly allow null so React doesn't crash on render
+  phone: string | null; 
+  company: string;
+  related_company?: number | null;
   status: LeadStatus;
   value: string; // Decimal string from Django
   source?: string;
   created_at: string;
   updated_at?: string;
+  
+  // Relations (Fixed: Explicitly added these to the type definition)
+  vertical?: Vertical | null;
+  region_rel?: Region | null;
   
   // Nested data from Serializers
   tags_details?: Tag[]; 
@@ -109,6 +146,8 @@ export interface Course {
   created_at: string;
 }
 
+// --- SMART DASHBOARD ---
+
 export interface ConsumptionAlert {
   company: string;
   product: string;
@@ -116,6 +155,8 @@ export interface ConsumptionAlert {
   pic?: string;
   last_purchase?: string;
 }
+
+// --- AUTOMATION ---
 
 export interface Enrollment {
   id: number;
@@ -132,4 +173,80 @@ export interface AgentPayload {
   region?: string;
   vertical?: string;
   source: string;
+}
+
+// --- AI FEATURES ---
+
+export interface AIInteractionLog {
+  id: number;
+  lead_name: string;
+  campaign_name: string;
+  interaction_type: string;
+  transcript: string;
+  ai_summary: string;
+  sentiment: string;
+  created_at: string;
+}
+
+export interface AIAlert {
+  id: number;
+  alert_type: string;
+  lead: number | null;
+  lead_name: string;
+  lead_company: string;
+  title: string;
+  description: string;
+  priority: string;
+  is_read: boolean;
+  is_actioned: boolean;
+  suggested_action: string;
+  data: any;
+  created_at: string;
+}
+
+export interface AIDocument {
+  id: number;
+  lead: number | null;
+  lead_name: string;
+  doc_type: string;
+  title: string;
+  content: any;
+  created_at: string;
+}
+
+export interface AILeadProfile {
+  id: number;
+  lead: number;
+  lead_name: string;
+  lead_company: string;
+  lead_status: string;
+  lead_value: string;
+  score: number;
+  conversion_probability: number;
+  priority_rank: number;
+  churn_risk: number;
+  deal_risk_level: string;
+  sentiment_trend: string;
+  recommended_action: string;
+  competitor_mentions: string[];
+  suggested_tags: string[];
+  scored_at: string;
+}
+
+export interface ChatResponse {
+  response: string;
+  action_type: string;
+  data_highlights?: string[];
+  suggested_actions?: { action: string; priority: string }[];
+  follow_up_questions?: string[];
+}
+
+export interface AIScoreSnapshot {
+  id: number;
+  lead: number;
+  score: number;
+  conversion_probability: number;
+  churn_risk: number;
+  factors: any;
+  created_at: string;
 }

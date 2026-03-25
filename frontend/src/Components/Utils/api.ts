@@ -1,21 +1,19 @@
-// src/Utils/api.ts
-
 import type {
   Lead,
   DashboardStats,
   Task,
   Course,
   ConsumptionAlert,
-  Enrollment,
   AgentPayload
 } from './types';
 
+// Change this if you deploy to AWS/Heroku
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
 export const api = {
 
   // ==========================================
-  // 1. LEADS & PIPELINE
+  // 1. LEADS & PIPELINE (CORE CRM)
   // ==========================================
 
   getLeads: async (search: string = ''): Promise<Lead[]> => {
@@ -63,14 +61,12 @@ export const api = {
   },
 
   deleteLead: async (id: number | string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/leads/${id}/`, {
-      method: 'DELETE',
-    });
+    const res = await fetch(`${API_BASE_URL}/leads/${id}/`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete lead');
   },
 
   // ==========================================
-  // 2. DASHBOARD
+  // 2. DASHBOARD & TASKS & ACTIVITIES
   // ==========================================
 
   getDashboardStats: async (): Promise<DashboardStats> => {
@@ -79,15 +75,9 @@ export const api = {
     return res.json();
   },
 
-  // ==========================================
-  // 3. TASKS
-  // ==========================================
-
   getTasks: async (is_completed?: boolean): Promise<Task[]> => {
     const url = new URL(`${API_BASE_URL}/tasks/`);
-    if (is_completed !== undefined) {
-      url.searchParams.append('is_completed', is_completed.toString());
-    }
+    if (is_completed !== undefined) url.searchParams.append('is_completed', is_completed.toString());
     const res = await fetch(url.toString());
     if (!res.ok) throw new Error('Failed to fetch tasks');
     return res.json();
@@ -124,20 +114,12 @@ export const api = {
   },
 
   deleteTask: async (id: number | string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/tasks/${id}/`, {
-      method: 'DELETE',
-    });
+    const res = await fetch(`${API_BASE_URL}/tasks/${id}/`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete task');
   },
 
-  // ==========================================
-  // 4. ACTIVITIES
-  // ==========================================
-
   getActivities: async (leadId?: number | string): Promise<any[]> => {
-    const url = leadId 
-      ? `${API_BASE_URL}/activities/?lead=${leadId}`
-      : `${API_BASE_URL}/activities/`;
+    const url = leadId ? `${API_BASE_URL}/activities/?lead=${leadId}` : `${API_BASE_URL}/activities/`;
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch activities');
     return res.json();
@@ -154,7 +136,7 @@ export const api = {
   },
 
   // ==========================================
-  // 5. TAGS
+  // 3. TAGS & COMPANIES (AUXILIARY)
   // ==========================================
 
   getTags: async (): Promise<any[]> => {
@@ -173,10 +155,6 @@ export const api = {
     return res.json();
   },
 
-  // ==========================================
-  // 6. COMPANIES
-  // ==========================================
-
   getCompanies: async (): Promise<any[]> => {
     const res = await fetch(`${API_BASE_URL}/companies/`);
     if (!res.ok) return [];
@@ -194,7 +172,144 @@ export const api = {
   },
 
   // ==========================================
-  // 7. PLAYBOOKS / COURSES
+  // 4. BDM SEGMENTATION (DYNAMIC DROPDOWNS)
+  // ==========================================
+
+  getVerticals: async (): Promise<any[]> => {
+    // Fetches list of industries (Auto, Pharma, etc.)
+    const res = await fetch(`${API_BASE_URL}/verticals/`); 
+    if (!res.ok) return []; 
+    return res.json();
+  },
+
+  getRegions: async (): Promise<any[]> => {
+    // Fetches list of regions (North, West, etc.)
+    const res = await fetch(`${API_BASE_URL}/regions/`); 
+    if (!res.ok) return []; 
+    return res.json();
+  },
+
+  getProductLines: async (): Promise<any[]> => {
+    // Fetches list of products (Printer, Label, Ribbon)
+    const res = await fetch(`${API_BASE_URL}/product-lines/`); 
+    if (!res.ok) return []; 
+    return res.json();
+  },
+
+  getLeadBusinessMeta: async (leadId: number | string): Promise<any> => {
+    // Fetches cross-sell data (Which products they own vs need)
+    const res = await fetch(`${API_BASE_URL}/lead-business-meta/?lead=${leadId}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.length > 0 ? data[0] : null; 
+  },
+
+  // ==========================================
+  // 5. AI COPILOT (SCORING & INTELLIGENCE)
+  // ==========================================
+
+  getAILogs: async (): Promise<any[]> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/ai-logs/`);
+      if (!res.ok) return [];
+      return res.json();
+    } catch (e) {
+      console.error('Failed to fetch AI logs:', e);
+      return [];
+    }
+  },
+
+  getAIScore: async (leadId: number | string): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/leads/${leadId}/ai_score/`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to fetch AI score');
+    return res.json();
+  },
+
+  getAISummary: async (leadId: number | string): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/leads/${leadId}/ai_summary/`);
+    if (!res.ok) throw new Error('Failed to fetch AI summary');
+    return res.json();
+  },
+
+  getAINextAction: async (leadId: number | string): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/leads/${leadId}/ai_next_action/`);
+    if (!res.ok) throw new Error('Failed to fetch AI next action');
+    return res.json();
+  },
+
+  aiWriteMessage: async (leadId: number | string, data: { type: string; tone: string; purpose: string }): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/leads/${leadId}/ai_write/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Failed to generate AI message');
+    return res.json();
+  },
+
+  generateAIBulkMessages: async (leadIds: number[], baseMessage: string, channel: string): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/leads/ai_bulk_message/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lead_ids: leadIds, base_message: baseMessage, channel })
+    });
+    if (!res.ok) throw new Error('Failed to generate AI bulk messages');
+    return res.json();
+  },
+
+  generateAIPlaybook: async (leadId: number | string): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/leads/${leadId}/generate_ai_playbook/`);
+    if (!res.ok) throw new Error('Failed to generate AI Playbook');
+    return res.json();
+  },
+
+  // ==========================================
+  // 6. WHATSAPP CAMPAIGNS
+  // ==========================================
+
+  getWhatsAppCampaigns: async (): Promise<any[]> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/whatsapp-campaigns/`);
+      if (!res.ok) return [];
+      return res.json();
+    } catch (e) {
+      console.error('WhatsApp campaigns endpoint failed:', e);
+      return [];
+    }
+  },
+
+  createWhatsAppCampaign: async (data: { name: string; message_template: string; lead_ids: number[] }): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/whatsapp-campaigns/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create campaign');
+    return res.json();
+  },
+
+  sendWhatsAppCampaign: async (campaignId: number): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/whatsapp-campaigns/${campaignId}/send/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) throw new Error('Failed to send campaign');
+    return res.json();
+  },
+
+  quickSendWhatsApp: async (phone: string, message: string): Promise<{ success: boolean; message?: string; error?: string }> => {
+    const res = await fetch(`${API_BASE_URL}/whatsapp-campaigns/quick_send/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, message }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.error || 'Failed to send message' };
+    return data;
+  },
+
+  // ==========================================
+  // 7. MISC (Courses, Smart Dashboard)
   // ==========================================
 
   getCourses: async (): Promise<Course[]> => {
@@ -203,56 +318,16 @@ export const api = {
     return res.json();
   },
 
-  getCourse: async (id: number | string): Promise<Course> => {
-    const res = await fetch(`${API_BASE_URL}/courses/${id}/`);
-    if (!res.ok) throw new Error('Failed to fetch course');
-    return res.json();
-  },
-
-  createCourse: async (data: any): Promise<Course> => {
-    const res = await fetch(`${API_BASE_URL}/courses/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error('Failed to create course');
-    return res.json();
-  },
-
-  // ==========================================
-  // 8. AI COPILOT
-  // ==========================================
-
-  generateAIPrompt: async (
-    leadId: number | string,
-    customPrompt: string
-  ): Promise<{ generated_text: string }> => {
-    const res = await fetch(`${API_BASE_URL}/leads/${leadId}/generate_ai_prompt/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ custom_prompt: customPrompt }),
-    });
-    if (!res.ok) throw new Error('Failed to generate AI prompt');
-    return res.json();
-  },
-
-  // ==========================================
-  // 9. SMART DASHBOARD & AGENT & AUTOMATION
-  // ==========================================
-
-  // Smart Dashboard (Consumption Logic - Refills)
   getSmartPrompts: async (): Promise<{ date: string; alerts: ConsumptionAlert[] }> => {
     try {
       const res = await fetch(`${API_BASE_URL}/dashboard/smart_prompts/`);
       if (!res.ok) return { date: new Date().toISOString(), alerts: [] };
       return res.json();
     } catch (e) {
-      console.warn('Smart prompts endpoint failed', e);
       return { date: new Date().toISOString(), alerts: [] };
     }
   },
 
-  // Agent Terminal (Triggering the Python Scraper logic)
   triggerAgentDump: async (leads: AgentPayload[]): Promise<any> => {
     const res = await fetch(`${API_BASE_URL}/agent/dump_leads/`, {
       method: 'POST',
@@ -263,298 +338,209 @@ export const api = {
     return res.json();
   },
 
-  // Workflow Automation (Reading the Signal outputs)
-  getEnrollments: async (): Promise<Enrollment[]> => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/enrollments/`);
-      if (!res.ok) return [];
-      return res.json();
-    } catch (e) {
-      console.warn('Enrollments endpoint not reachable yet, returning empty array.');
-      return [];
-    }
-  },
-
   // ==========================================
-  // 10. AI PROFILE INTELLIGENCE
+  // 8. AI ANALYTICS & ALERTS (Advanced)
   // ==========================================
 
-  searchProfile: async (
-    name: string,
-    company: string = '',
-    location: string = '',
-    customInstructions: string = ''
-  ): Promise<any> => {
-    const res = await fetch(`${API_BASE_URL}/search-profile/`, {
+  // --- AI SCORING ---
+  aiScoreLead: async (leadId: number | string): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai/score/${leadId}/`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed');
+    return res.json();
+  },
+
+  aiScoreBulk: async (leadIds?: number[]): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai/score_bulk/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name,
-        company,
-        location,
-        custom_instructions: customInstructions,
-      }),
+      body: JSON.stringify({ lead_ids: leadIds || [] })
     });
-    if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+    if (!res.ok) throw new Error('Failed');
     return res.json();
   },
 
-  // ==========================================
-  // 11. WHATSAPP CAMPAIGNS
-  // ==========================================
-
-  /**
-   * Get all WhatsApp campaigns
-   * GET /api/whatsapp-campaigns/
-   */
-  getWhatsAppCampaigns: async (): Promise<any[]> => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/whatsapp-campaigns/`);
-      if (!res.ok) {
-        console.warn('Failed to fetch WhatsApp campaigns:', res.status);
-        return [];
-      }
-      return res.json();
-    } catch (e) {
-      console.error('WhatsApp campaigns endpoint failed:', e);
-      return [];
-    }
-  },
-
-  /**
-   * Get a single WhatsApp campaign with all its messages
-   * GET /api/whatsapp-campaigns/{id}/
-   */
-  getWhatsAppCampaign: async (id: number): Promise<any> => {
-    const res = await fetch(`${API_BASE_URL}/whatsapp-campaigns/${id}/`);
-    if (!res.ok) throw new Error('Failed to fetch WhatsApp campaign');
+  aiGetProfile: async (leadId: number | string): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai/profile/${leadId}/`);
+    if (!res.ok) return null;
     return res.json();
   },
 
-  /**
-   * Create a new WhatsApp campaign and prepare messages for selected leads
-   * POST /api/whatsapp-campaigns/
-   * Body: { name, message_template, lead_ids }
-   */
-  createWhatsAppCampaign: async (data: {
-    name: string;
-    message_template: string;
-    lead_ids: number[];
-  }): Promise<any> => {
-    const res = await fetch(`${API_BASE_URL}/whatsapp-campaigns/`, {
+  aiGetScoreHistory: async (leadId: number | string): Promise<any[]> => {
+    const res = await fetch(`${API_BASE_URL}/ai/score_history/${leadId}/`);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  aiGetLeaderboard: async (): Promise<any[]> => {
+    const res = await fetch(`${API_BASE_URL}/ai/leaderboard/`);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  // --- AI CHURN ---
+  aiChurnRisk: async (leadId: number | string): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai/churn/${leadId}/`);
+    if (!res.ok) throw new Error('Failed');
+    return res.json();
+  },
+
+  aiChurnReport: async (): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai/churn_report/`);
+    if (!res.ok) throw new Error('Failed');
+    return res.json();
+  },
+
+  // --- AI INTELLIGENCE ---
+  aiConversationIntelligence: async (leadId: number | string): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai/intelligence/${leadId}/`);
+    if (!res.ok) throw new Error('Failed');
+    return res.json();
+  },
+
+  aiSentimentTimeline: async (leadId: number | string): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai/sentiment/${leadId}/`);
+    if (!res.ok) throw new Error('Failed');
+    return res.json();
+  },
+
+  // --- AI ACTIVITY ANALYSIS ---
+  aiAnalyzeActivity: async (activityId: number): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai-activity/analyze/${activityId}/`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed');
+    return res.json();
+  },
+
+  aiGetActivityAnalyses: async (leadId: number | string): Promise<any[]> => {
+    const res = await fetch(`${API_BASE_URL}/ai-activity/for_lead/${leadId}/`);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  // --- AI DOCUMENTS ---
+  aiGenerateProposal: async (leadId: number | string, instructions?: string): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai-docs/proposal/${leadId}/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ instructions: instructions || '' })
     });
-    
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ detail: 'Failed to create campaign' }));
-      throw new Error(error.detail || 'Failed to create campaign');
-    }
-    
+    if (!res.ok) throw new Error('Failed');
     return res.json();
   },
 
-  /**
-   * Update a WhatsApp campaign
-   * PATCH /api/whatsapp-campaigns/{id}/
-   */
-  updateWhatsAppCampaign: async (id: number, data: any): Promise<any> => {
-    const res = await fetch(`${API_BASE_URL}/whatsapp-campaigns/${id}/`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error('Failed to update campaign');
-    return res.json();
-  },
-
-  /**
-   * Delete a WhatsApp campaign
-   * DELETE /api/whatsapp-campaigns/{id}/
-   */
-  deleteWhatsAppCampaign: async (id: number): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/whatsapp-campaigns/${id}/`, {
-      method: 'DELETE',
-    });
-    if (!res.ok) throw new Error('Failed to delete campaign');
-  },
-
-  /**
-   * Send all pending messages in a campaign
-   * POST /api/whatsapp-campaigns/{id}/send/
-   */
-  sendWhatsAppCampaign: async (campaignId: number): Promise<any> => {
-    const res = await fetch(`${API_BASE_URL}/whatsapp-campaigns/${campaignId}/send/`, {
+  aiGenerateBattleCard: async (leadId: number | string, competitors?: string[]): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai-docs/battle_card/${leadId}/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ competitors: competitors || [] })
     });
-    
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ error: 'Failed to send campaign' }));
-      throw new Error(error.error || 'Failed to send campaign');
-    }
-    
+    if (!res.ok) throw new Error('Failed');
     return res.json();
   },
 
-  /**
-   * Get campaign delivery statistics
-   * GET /api/whatsapp-campaigns/{id}/stats/
-   */
-  getWhatsAppCampaignStats: async (campaignId: number): Promise<{
-    total: number;
-    pending: number;
-    sent: number;
-    delivered: number;
-    failed: number;
-  }> => {
-    const res = await fetch(`${API_BASE_URL}/whatsapp-campaigns/${campaignId}/stats/`);
-    if (!res.ok) throw new Error('Failed to fetch campaign stats');
-    return res.json();
-  },
-
-  /**
-   * Get all messages for a campaign
-   * GET /api/whatsapp-campaigns/{id}/messages/
-   */
-  getWhatsAppCampaignMessages: async (campaignId: number): Promise<any[]> => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/whatsapp-campaigns/${campaignId}/messages/`);
-      if (!res.ok) return [];
-      return res.json();
-    } catch (e) {
-      console.warn('Failed to fetch campaign messages:', e);
-      return [];
-    }
-  },
-
-  /**
-   * Quick send a single WhatsApp message to one phone number
-   * POST /api/whatsapp-campaigns/quick_send/
-   * Body: { phone, message }
-   */
-  quickSendWhatsApp: async (phone: string, message: string): Promise<{
-    success: boolean;
-    message?: string;
-    message_id?: string;
-    error?: string;
-  }> => {
-    const res = await fetch(`${API_BASE_URL}/whatsapp-campaigns/quick_send/`, {
+  aiGenerateEmailSequence: async (leadId: number | string, num: number = 5, goal: string = 'nurture'): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai-docs/email_sequence/${leadId}/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, message }),
+      body: JSON.stringify({ num_emails: num, goal })
     });
-    
-    const data = await res.json();
-    
-    if (!res.ok) {
-      return {
-        success: false,
-        error: data.error || 'Failed to send message'
-      };
-    }
-    
-    return data;
-  },
-
-  /**
-   * Send a WhatsApp template message (for approved templates only)
-   * POST /api/whatsapp-campaigns/send_template/
-   * Body: { phone, template_name, parameters, language_code }
-   */
-  sendWhatsAppTemplate: async (data: {
-    phone: string;
-    template_name: string;
-    parameters?: string[];
-    language_code?: string;
-  }): Promise<any> => {
-    const res = await fetch(`${API_BASE_URL}/whatsapp-campaigns/send_template/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ error: 'Failed to send template' }));
-      throw new Error(error.error || 'Failed to send template');
-    }
-    
+    if (!res.ok) throw new Error('Failed');
     return res.json();
   },
 
-  /**
-   * Retry a failed WhatsApp message
-   * POST /api/whatsapp-messages/{id}/retry/
-   */
-  retryWhatsAppMessage: async (messageId: number): Promise<any> => {
-    const res = await fetch(`${API_BASE_URL}/whatsapp-messages/${messageId}/retry/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    });
-    
-    if (!res.ok) throw new Error('Failed to retry message');
+  aiGetLeadDocuments: async (leadId: number | string): Promise<any[]> => {
+    const res = await fetch(`${API_BASE_URL}/ai-docs/for_lead/${leadId}/`);
+    if (!res.ok) return [];
     return res.json();
   },
 
-  // ==========================================
-  // 12. CAMPAIGNS (General - Legacy)
-  // ==========================================
-
-  getCampaigns: async (): Promise<any[]> => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/campaigns/`);
-      if (!res.ok) return [];
-      return res.json();
-    } catch (e) {
-      console.warn('Campaigns endpoint failed:', e);
-      return [];
-    }
-  },
-
-  createCampaign: async (data: any): Promise<any> => {
-    const res = await fetch(`${API_BASE_URL}/campaigns/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error('Failed to create campaign');
+  aiGetAllDocuments: async (type?: string): Promise<any[]> => {
+    let url = `${API_BASE_URL}/ai-docs/all_docs/`;
+    if (type) url += `?type=${type}`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
     return res.json();
   },
+
+  // --- AI SEARCH ---
+  aiSearch: async (query: string): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai/search/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    if (!res.ok) throw new Error('Failed');
+    return res.json();
+  },
+
+  // --- AI CHATBOT ---
+  aiChat: async (message: string, sessionId: string = 'default'): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai-chat/chat/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, session_id: sessionId })
+    });
+    if (!res.ok) throw new Error('Failed');
+    return res.json();
+  },
+
+  aiChatHistory: async (sessionId: string = 'default'): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai-chat/history/?session_id=${sessionId}`);
+    if (!res.ok) return { messages: [] };
+    return res.json();
+  },
+
+  aiChatClear: async (sessionId: string = 'default'): Promise<void> => {
+    await fetch(`${API_BASE_URL}/ai-chat/clear/?session_id=${sessionId}`, { method: 'DELETE' });
+  },
+
+  // --- AI ALERTS ---
+  aiGetAlerts: async (isRead?: boolean): Promise<any[]> => {
+    let url = `${API_BASE_URL}/ai-alerts/`;
+    if (isRead !== undefined) url += `?is_read=${isRead}`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  aiMarkAlertRead: async (id: number): Promise<void> => {
+    await fetch(`${API_BASE_URL}/ai-alerts/${id}/mark_read/`, { method: 'POST' });
+  },
+
+  aiMarkAllRead: async (): Promise<void> => {
+    await fetch(`${API_BASE_URL}/ai-alerts/mark_all_read/`, { method: 'POST' });
+  },
+
+  aiUnreadCount: async (): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai-alerts/unread_count/`);
+    if (!res.ok) return { unread: 0 };
+    return res.json();
+  },
+
+  // --- AI ANALYTICS ---
+  aiRevenueForecast: async (months: number = 3): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai-analytics/revenue_forecast/?months=${months}`);
+    if (!res.ok) throw new Error('Failed');
+    return res.json();
+  },
+
+  aiAnomalies: async (): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai-analytics/anomalies/`);
+    if (!res.ok) throw new Error('Failed');
+    return res.json();
+  },
+
+  aiDailyDigest: async (): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai-analytics/daily_digest/`);
+    if (!res.ok) throw new Error('Failed');
+    return res.json();
+  },
+
+  aiPipelineIntelligence: async (): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/ai-analytics/pipeline_intelligence/`);
+    if (!res.ok) throw new Error('Failed');
+    return res.json();
+  },
+
 };
 
-// ==========================================
-// HELPER FUNCTIONS
-// ==========================================
-
-/**
- * Format phone number for WhatsApp (remove spaces, dashes, etc.)
- */
-export const formatPhoneNumber = (phone: string): string => {
-  return phone.replace(/[^\d+]/g, '');
-};
-
-/**
- * Validate phone number format
- */
-export const isValidPhoneNumber = (phone: string): boolean => {
-  const cleaned = formatPhoneNumber(phone);
-  return /^\+?\d{10,15}$/.test(cleaned);
-};
-
-/**
- * Format message template with variables
- */
-export const formatMessageTemplate = (
-  template: string,
-  variables: Record<string, string>
-): string => {
-  let formatted = template;
-  Object.entries(variables).forEach(([key, value]) => {
-    formatted = formatted.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
-  });
-  return formatted;
-};
-
-// Default export
 export default api;

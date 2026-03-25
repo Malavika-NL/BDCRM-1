@@ -1,8 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bot, PhoneCall, UploadCloud, FileText, CheckCircle2, Zap, Play, Globe } from 'lucide-react';
+import { api } from '../Utils/api';
+import type { AIInteractionLog } from '../Utils/types';
 
 export const AutoAgent = () => {
   const [activeStep, setActiveStep] = useState(3);
+  const [logs, setLogs] = useState<AIInteractionLog[]>([]);
+  const [isDialing, setIsDialing] = useState(false);
+
+  // Fetch real data from Django
+  const fetchLogs = async () => {
+    const data = await api.getAILogs();
+    setLogs(data);
+  };
+
+  // Poll for new logs every 3 seconds to create a "Live Terminal" effect
+  useEffect(() => {
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   const steps = [
     { id: 1, name: 'Upload List', icon: UploadCloud, desc: 'CSV or Scrape' },
     { id: 2, name: 'Verify', icon: CheckCircle2, desc: 'Validate lines' },
@@ -24,19 +42,31 @@ export const AutoAgent = () => {
         <div className="lg:col-span-2 bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm flex items-center justify-between">
           <div>
             <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-lg uppercase tracking-wider mb-3 inline-block">Active Pattern</span>
-            <h3 className="text-2xl font-bold text-slate-800">Q3 Pharma Outbound</h3>
-            <p className="text-slate-500 mt-1">Connected to Asterisk trunk. Dialing 5 lines concurrently.</p>
+            {/* If you have a live Campaign, you can map its name here. For now, showing latest log's campaign */}
+            <h3 className="text-2xl font-bold text-slate-800">
+              {logs.length > 0 && logs[0].campaign_name ? logs[0].campaign_name : "General Outbound"}
+            </h3>
+            <p className="text-slate-500 mt-1">Connected to system. Ready for outbound triggers.</p>
           </div>
-          <button className="bg-gradient-to-r from-emerald-500 to-green-500 text-white px-8 py-4 rounded-2xl font-bold hover:shadow-xl hover:shadow-emerald-500/30 transition flex items-center gap-2 text-lg">
-            <Play size={20} fill="currentColor" /> Live Dialing
+          <button 
+            onClick={() => setIsDialing(!isDialing)}
+            className={`text-white px-8 py-4 rounded-2xl font-bold transition flex items-center gap-2 text-lg shadow-lg ${
+              isDialing 
+              ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/30' 
+              : 'bg-gradient-to-r from-emerald-500 to-green-500 hover:shadow-emerald-500/30'
+            }`}
+          >
+            {isDialing ? 'Stop Engine' : <><Play size={20} fill="currentColor" /> Start Dialing</>}
           </button>
         </div>
         
         <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-2xl shadow-xl text-white relative overflow-hidden flex flex-col justify-center">
           <Globe className="absolute -right-6 -bottom-6 text-white/5" size={140} />
-          <p className="text-slate-400 text-sm font-bold uppercase tracking-wider z-10">Live Queue</p>
-          <h3 className="text-5xl font-black mt-2 z-10">1,240</h3>
-          <p className="text-emerald-400 text-sm mt-3 font-medium flex items-center gap-1 z-10"><CheckCircle2 size={16}/> 142 SQLs Generated</p>
+          <p className="text-slate-400 text-sm font-bold uppercase tracking-wider z-10">Total AI Logs</p>
+          <h3 className="text-5xl font-black mt-2 z-10">{logs.length}</h3>
+          <p className="text-emerald-400 text-sm mt-3 font-medium flex items-center gap-1 z-10">
+            <CheckCircle2 size={16}/> Live DB Connection
+          </p>
         </div>
       </div>
 
@@ -60,25 +90,53 @@ export const AutoAgent = () => {
         </div>
       </div>
 
+      {/* 🟢 REAL DATA TERMINAL 🟢 */}
       <div className="bg-slate-900 rounded-2xl shadow-xl overflow-hidden flex flex-col">
         <div className="bg-slate-800/80 px-6 py-4 border-b border-slate-700/50 flex justify-between items-center">
-          <span className="text-slate-300 text-sm font-mono ml-2">Terminal // Voice Logic Engine</span>
+          <span className="text-slate-300 text-sm font-mono ml-2">Terminal // Live Django Database</span>
           <span className="flex items-center gap-2 text-xs font-bold text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-lg">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"/> ONLINE
+            <span className={`w-2 h-2 rounded-full ${isDialing ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}`}/> 
+            {isDialing ? 'ONLINE & LISTENING' : 'PAUSED'}
           </span>
         </div>
-        <div className="p-6 font-mono text-sm space-y-3 text-slate-300 h-[300px] overflow-y-auto custom-scrollbar">
-          <p><span className="text-blue-400">[SYSTEM]</span> Loaded List ID #8492 (Target: 500 records)</p>
-          <p><span className="text-slate-500">[10:42:01]</span> Dialing +1 (555) 019-8372... <span className="text-amber-400">Ringing</span></p>
-          <p><span className="text-emerald-400">[10:42:05]</span> Connected. Initializing Deepgram STT.</p>
-          <p><span className="text-purple-400 font-bold">[AGENT]</span> "Hi, is this John from Acme Pharma?"</p>
-          <p><span className="text-slate-400">[USER]</span> "Yes, who is this?"</p>
-          <p><span className="text-purple-400 font-bold">[AGENT]</span> "I'm calling regarding our new API..."</p>
-          <p><span className="text-blue-400">[AI_LOGIC]</span> Sentiment: Positive. Intent: Interested.</p>
-          <p><span className="text-amber-400">[ACTION]</span> Updating CRM Stage: <span className="text-white bg-indigo-500 px-1 rounded">SQL</span>. Triggering Email.</p>
-          <p className="animate-pulse text-slate-500 mt-4">Waiting for next line...</p>
+        
+        <div className="p-6 font-mono text-sm space-y-4 text-slate-300 h-[300px] overflow-y-auto custom-scrollbar flex flex-col-reverse">
+          
+          {isDialing && (
+            <div className="animate-pulse text-slate-500 flex gap-2">
+              <span className="text-emerald-500">➜</span> Waiting for next event...
+            </div>
+          )}
+
+          {logs.length === 0 ? (
+             <p className="text-slate-500">No interaction logs found in the database yet.</p>
+          ) : (
+            logs.map((log) => (
+              <div key={log.id} className="border-b border-white/5 pb-3">
+                <p className="text-xs text-slate-500 mb-1">
+                  [{new Date(log.created_at).toLocaleTimeString()}] 
+                  <span className="text-amber-400 ml-2">Type: {log.interaction_type.toUpperCase()}</span>
+                </p>
+                <p>
+                  <span className="text-blue-400 font-bold">[LEAD]</span> {log.lead_name} 
+                  {log.sentiment && (
+                    <span className={`ml-2 px-2 py-0.5 rounded text-xs ${
+                      log.sentiment === 'positive' ? 'bg-emerald-500/20 text-emerald-300' :
+                      log.sentiment === 'negative' ? 'bg-rose-500/20 text-rose-300' : 'bg-slate-700 text-slate-300'
+                    }`}>
+                      Sentiment: {log.sentiment}
+                    </span>
+                  )}
+                </p>
+                <p className="text-slate-300 mt-1 whitespace-pre-wrap pl-4 border-l-2 border-slate-700">
+                  {log.transcript || log.ai_summary || "No transcript available."}
+                </p>
+              </div>
+            ))
+          )}
         </div>
       </div>
+      
     </div>
   );
 };

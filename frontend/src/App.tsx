@@ -17,6 +17,12 @@ import { AutoAgent } from './Components/AutoAgent/AutoAgent';
 import { AgentFeed } from './Components/Dashboard/AgentFeed';
 import { BDMDashboard } from './Components/Dashboard/BDMdashboard';
 import { WhatsAppCampaigns } from './Components/Whatsapp/Whatsapp';
+import { AIAnalytics } from './Components/AI/AIAnalytics';
+import { AICommandCenter } from './Components/AI/AICommandcenter';
+import { AIProspector } from './Components/AI/AIProspector';
+import { BDMTargets } from './Components/Target/BDMTarget';
+import CampaignWorkspaceCreate from './Components/Target/CampaignWorkspaceCreate';
+import CampaignWorkspaceList from './Components/Target/CampaignWorkspaceList';
 
 function App() {
   return (
@@ -64,9 +70,17 @@ function App() {
 
             {/* Agent Logs */}
             <Route path="/agent-logs" element={<AgentFeed />} />
-
             {/* BDM Strategy Dashboard */}
             <Route path="/bdm-core" element={<BDMDashboard />} />
+            <Route path="/prospector" element={<AIProspector />} />
+            <Route path="/ai-command" element={<AICommandCenter />} />
+            <Route path="/ai-analytics" element={<AIAnalytics />} />
+            <Route path="/bdm-targets" element={<BDMTargets />} />
+            {/* <Route path="/campaign-workspace" element={<CampaignWorkspacePage />} /> */}
+            <Route path="/campaign-workspace" element={<CampaignWorkspaceList />} />
+            <Route path="/campaign-workspace/new" element={<CampaignWorkspaceCreate />} />
+
+
 
             {/* WhatsApp Campaigns */}
             <Route path="/whatsapp" element={<WhatsAppCampaigns />} />
