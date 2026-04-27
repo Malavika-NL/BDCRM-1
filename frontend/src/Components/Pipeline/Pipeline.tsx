@@ -1,183 +1,3 @@
-// import React, { useEffect, useState } from 'react';
-// import { Plus, ArrowRight, Search, Building2, Calendar, DollarSign, MoreVertical } from 'lucide-react';
-// import { STATUS_LABELS, type Lead, STATUS_ORDER } from '../Utils/types';
-// import { api } from '../Utils/api';
-// import { LeadDetailDrawer } from '../LeadDetailDrawer/LeadDetailDrawer';
-// import { AddLeadModal } from '../AddLeadModel/AddLeadModel';
-
-// const STATUS_CONFIG: Record<string, { dot: string; badge: string; text: string; border: string }> = {
-//   new: { dot: 'bg-blue-500', badge: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200' },
-//   mql: { dot: 'bg-indigo-500', badge: 'bg-indigo-100', text: 'text-indigo-700', border: 'border-indigo-200' },
-//   sql: { dot: 'bg-purple-500', badge: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-200' },
-//   negotiation: { dot: 'bg-amber-500', badge: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200' },
-//   won: { dot: 'bg-emerald-500', badge: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-200' },
-//   lost: { dot: 'bg-rose-500', badge: 'bg-rose-100', text: 'text-rose-700', border: 'border-rose-200' },
-// };
-
-// export const Pipeline = () => {
-//   const [leads, setLeads] = useState<Lead[]>([]);
-//   const [search, setSearch] = useState('');
-//   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-//   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-
-//   const fetchLeads = async () => { api.getLeads(search).then(setLeads); };
-  
-//   useEffect(() => { 
-//     const timer = setTimeout(fetchLeads, 300); 
-//     return () => clearTimeout(timer); 
-//   }, [search]);
-
-//   const advanceStage = async (e: React.MouseEvent, lead: Lead) => {
-//     e.stopPropagation();
-//     const idx = STATUS_ORDER.indexOf(lead.status);
-//     if (idx < STATUS_ORDER.length - 1) { 
-//       await api.updateLeadStatus(lead.id, STATUS_ORDER[idx + 1]); 
-//       fetchLeads(); 
-//     }
-//   };
-
-//   return (
-//     <div className="flex flex-col h-full bg-slate-50 overflow-hidden font-sans">
-//       {/* Top Header Section */}
-//       <header className="bg-white border-b border-slate-200 px-8 py-5 shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 z-10">
-//         <div>
-//           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Deal Pipeline</h2>
-//           <p className="text-sm text-slate-500 mt-1 font-medium">Manage your active deals and track progress.</p>
-//         </div>
-        
-//         <div className="flex items-center gap-3 w-full md:w-auto">
-//           <div className="relative group flex-1 md:w-72">
-//             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-//             <input 
-//               type="text" 
-//               placeholder="Search leads, companies..." 
-//               className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-//               value={search} 
-//               onChange={(e) => setSearch(e.target.value)} 
-//             />
-//           </div>
-//           <button 
-//             onClick={() => setIsAddModalOpen(true)} 
-//             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors shrink-0"
-//           >
-//             <Plus size={16} /> Add Deal
-//           </button>
-//         </div>
-//       </header>
-
-//       {/* Kanban Board Container */}
-//       <div className="flex-1 overflow-x-auto overflow-y-hidden p-6 custom-scrollbar">
-//         <div className="flex gap-5 h-full min-w-max pb-4">
-          
-//           {STATUS_ORDER.map((status) => {
-//             const statusLeads = leads.filter(l => l.status === status);
-//             const config = STATUS_CONFIG[status] || STATUS_CONFIG.new;
-
-//             return (
-//               <div key={status} className="flex flex-col w-[320px] bg-slate-100/70 rounded-xl border border-slate-200/80 shrink-0 h-full max-h-full">
-                
-//                 {/* Column Header */}
-//                 <div className="px-4 py-3 border-b border-slate-200/80 bg-slate-100 rounded-t-xl shrink-0">
-//                   <div className="flex justify-between items-center">
-//                     <div className="flex items-center gap-2">
-//                       <div className={`w-2.5 h-2.5 rounded-full ${config.dot}`} />
-//                       <h3 className="font-semibold text-slate-700 text-sm tracking-wide">
-//                         {STATUS_LABELS[status]}
-//                       </h3>
-//                     </div>
-//                     <span className="text-xs font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-sm">
-//                       {statusLeads.length}
-//                     </span>
-//                   </div>
-//                 </div>
-
-//                 {/* Column Body / Cards List */}
-//                 <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar">
-//                   {statusLeads.map(lead => (
-//                     <div 
-//                       key={lead.id} 
-//                       onClick={() => setSelectedLead(lead)} 
-//                       className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm hover:border-blue-300 hover:shadow-md cursor-pointer group transition-all duration-200 relative"
-//                     >
-//                       {/* Top Row: Company & Menu */}
-//                       <div className="flex justify-between items-start mb-2">
-//                         <div className="flex items-center gap-1.5 text-slate-500">
-//                           <Building2 size={14} />
-//                           <span className="text-xs font-medium truncate max-w-[180px]">{lead.company}</span>
-//                         </div>
-//                         <button className="text-slate-400 hover:text-slate-600 p-0.5 rounded transition-colors">
-//                           <MoreVertical size={16} />
-//                         </button>
-//                       </div>
-
-//                       {/* Lead Name */}
-//                       <h4 className="font-bold text-slate-800 text-base mb-3 leading-snug">
-//                         {lead.name}
-//                       </h4>
-
-//                       {/* Value Tag */}
-//                       <div className="flex items-center gap-1.5 mb-4">
-//                         <div className={`flex items-center gap-1 px-2.5 py-1 rounded-md ${config.badge} ${config.text} border ${config.border}`}>
-//                           <DollarSign size={12} strokeWidth={3} />
-//                           <span className="text-xs font-bold">
-//                             {parseFloat(lead.value).toLocaleString()}
-//                           </span>
-//                         </div>
-//                       </div>
-
-//                       {/* Bottom Row: Date & Action */}
-//                       <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-//                         <div className="flex items-center gap-1.5 text-slate-400">
-//                           <Calendar size={12} />
-//                           <span className="text-[11px] font-medium">
-//                             {new Date(lead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-//                           </span>
-//                         </div>
-                        
-//                         {/* Static, visible Advance button */}
-//                         {status !== 'lost' && status !== 'won' && (
-//                           <button 
-//                             onClick={(e) => advanceStage(e, lead)} 
-//                             className="flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-50 hover:bg-blue-50 hover:text-blue-600 px-2.5 py-1.5 rounded-md border border-slate-200 hover:border-blue-200 transition-colors"
-//                           >
-//                             Advance <ArrowRight size={12} strokeWidth={2.5} />
-//                           </button>
-//                         )}
-//                       </div>
-//                     </div>
-//                   ))}
-
-//                   {/* Empty State */}
-//                   {statusLeads.length === 0 && (
-//                     <div className="p-4 rounded-lg border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center text-slate-400 mt-2">
-//                       <span className="text-sm font-medium">No leads in this stage</span>
-//                     </div>
-//                   )}
-//                 </div>
-//               </div>
-//             );
-//           })}
-//         </div>
-//       </div>
-
-//       <AddLeadModal 
-//         isOpen={isAddModalOpen} 
-//         onClose={() => setIsAddModalOpen(false)} 
-//         onSubmit={async (d:any) => { await api.createLead(d); fetchLeads(); }} 
-//       />
-//       <LeadDetailDrawer 
-//         lead={selectedLead} 
-//         isOpen={!!selectedLead} 
-//         onClose={() => setSelectedLead(null)} 
-//         onUpdate={() => { 
-//           fetchLeads(); 
-//           if(selectedLead) api.getLead(selectedLead.id).then(setSelectedLead); 
-//         }} 
-//       />
-//     </div>
-//   );
-// };
-
 import React, { useEffect, useState, useRef } from 'react';
 import {
   Plus, Search, Building2, Columns3, List, LayoutGrid,
@@ -207,15 +27,40 @@ const getCfg = (s: string) => STATUS_CONFIG[s] || STATUS_CONFIG.new;
 
 /* ─── ACTIVITY HELPERS ───────────────────────────────── */
 type ActivityEntry = { id: number; leadId: number; action: string; from?: string; to?: string; ts: number };
-let activityCounter = 0;
-const makeActivity = (leadId: number, action: string, from?: string, to?: string): ActivityEntry => ({
-  id: ++activityCounter, leadId, action, from, to, ts: Date.now(),
-});
+
 const timeAgo = (ts: number) => {
   const s = Math.floor((Date.now() - ts) / 1000);
   if (s < 60) return 'just now';
   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  return `${Math.floor(s / 3600)}h ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+};
+
+// Helper to format backend activities for the sidebar
+const formatBackendActivity = (a: any): ActivityEntry => {
+  let action = a.summary || a.activity_type;
+  let from, to;
+
+  // Detect status change to render the custom colored badges in the UI
+  if (a.summary && a.summary.includes('Stage updated:')) {
+    const parts = a.summary.replace('Stage updated: ', '').split(' → ');
+    if (parts.length === 2) {
+      from = Object.keys(STATUS_LABELS).find(k => STATUS_LABELS[k as LeadStatus] === parts[0]);
+      to = Object.keys(STATUS_LABELS).find(k => STATUS_LABELS[k as LeadStatus] === parts[1]);
+      if (from && to) {
+        action = 'status_change';
+      }
+    }
+  }
+
+  return {
+    id: a.id,
+    leadId: a.lead,
+    action,
+    from,
+    to,
+    ts: new Date(a.created_at).getTime()
+  };
 };
 
 /* ─── ANALYTICS PANEL ────────────────────────────────── */
@@ -363,7 +208,8 @@ const ActivityFeed = ({ activities, leads, onClose }: {
           <div className="relative">
             <div className="absolute left-3 top-0 bottom-0 w-px bg-gray-100" />
             <div className="space-y-4">
-              {[...activities].reverse().map(a => {
+              {/* Note: the backend handles sorting by -created_at, so no need to reverse */}
+              {activities.map(a => {
                 const fromCfg = a.from ? getCfg(a.from) : null;
                 const toCfg = a.to ? getCfg(a.to) : null;
                 return (
@@ -722,30 +568,62 @@ export const Pipeline = () => {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [activities, setActivities] = useState<ActivityEntry[]>([]);
 
-  const fetchLeads = async () => {
+  // 🔥 CORE FIX: Fetch both Leads and Activities from Django backend
+  const fetchAllData = async () => {
     setIsRefreshing(true);
-    const data = await api.getLeads(search);
-    setLeads(data);
+    try {
+      const [leadsData, actsData] = await Promise.all([
+        api.getLeads(search),
+        api.getActivities()
+      ]);
+      
+      setLeads(leadsData);
+
+      // Map backend activities to frontend format so they persist on reload
+      const mappedActs = actsData.map(formatBackendActivity);
+      setActivities(mappedActs);
+
+    } catch(e) {
+      console.error("Failed to fetch pipeline data:", e);
+    }
     setIsRefreshing(false);
   };
 
   useEffect(() => {
-    const t = setTimeout(fetchLeads, 300);
+    const t = setTimeout(fetchAllData, 300);
     return () => clearTimeout(t);
   }, [search]);
 
+  // 🔥 CORE FIX: Save activity permanently and re-fetch from database
   const handleChangeStatus = async (leadId: number, newStatus: LeadStatus) => {
     try {
       const lead = leads.find(l => l.id === leadId);
       const oldStatus = lead?.status;
-      await api.updateLeadStatus(leadId, newStatus);
+      
+      if (!oldStatus || oldStatus === newStatus) return;
+
+      // 1. Optimistic UI Update (Instant feedback)
       setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
-      // Log activity
-      if (oldStatus && oldStatus !== newStatus) {
-        setActivities(prev => [...prev, makeActivity(leadId, 'status_change', oldStatus, newStatus)]);
-      }
+
+      // 2. Update status in Database
+      await api.updateLeadStatus(leadId, newStatus);
+      
+      // 3. Save the activity permanently to the database
+      await api.createActivity({
+        lead: leadId,
+        activity_type: 'note',
+        summary: `Stage updated: ${STATUS_LABELS[oldStatus as LeadStatus]} → ${STATUS_LABELS[newStatus]}`,
+        description: `Pipeline stage moved from ${STATUS_LABELS[oldStatus as LeadStatus]} to ${STATUS_LABELS[newStatus]}.`
+      });
+
+      // 4. Fetch the freshly saved activities from the backend
+      const updatedActsData = await api.getActivities();
+      setActivities(updatedActsData.map(formatBackendActivity));
+
     } catch (e) {
       console.error('Failed to update status:', e);
+      // Optional: If it failed, re-fetch to revert optimistic update
+      fetchAllData();
     }
   };
 
@@ -785,7 +663,7 @@ export const Pipeline = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={fetchLeads}
+            <button onClick={fetchAllData}
               className={`p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg ${isRefreshing ? 'animate-spin' : ''}`}>
               <RefreshCw size={18} />
             </button>
@@ -899,15 +777,14 @@ export const Pipeline = () => {
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={async (d: any) => {
           await api.createLead(d);
-          fetchLeads();
-          setActivities(prev => [...prev, makeActivity(0, 'Deal created')]);
+          fetchAllData();
         }}
       />
       <LeadDetailDrawer
         lead={selectedLead}
         isOpen={!!selectedLead}
         onClose={() => setSelectedLead(null)}
-        onUpdate={fetchLeads}
+        onUpdate={fetchAllData}
       />
     </div>
   );

@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'crm',
     'rest_framework',
     'corsheaders',
+    'django_crontab',
 ]
 
 MIDDLEWARE = [
@@ -75,7 +76,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'bdcrm.wsgi.application'
-
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases

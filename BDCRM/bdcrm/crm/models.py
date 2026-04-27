@@ -455,8 +455,9 @@ class BDMTarget(models.Model):
         ('region', 'Region'),
         ('vertical', 'Vertical'),
         ('product', 'Product'),
-        ('rep', 'Sales Rep'),
-        ('campaign', 'Campaign'),
+        ('customer_category', 'Customer Category'),
+        ('sales_channel', 'Sales Channel'),
+        ('engagement_tool', 'Engagement Tool'),
     ]
 
     name = models.CharField(max_length=200)
@@ -464,6 +465,9 @@ class BDMTarget(models.Model):
     vertical = models.ForeignKey(Vertical, null=True, blank=True, on_delete=models.SET_NULL)
     region = models.ForeignKey(Region, null=True, blank=True, on_delete=models.SET_NULL)
     product_line = models.ForeignKey(ProductLine, null=True, blank=True, on_delete=models.SET_NULL)
+    customer_category = models.ForeignKey(CustomerCategory, null=True, blank=True, on_delete=models.SET_NULL)
+    sales_channel = models.ForeignKey(SalesChannel, null=True, blank=True, on_delete=models.SET_NULL)
+    engagement_tool = models.ForeignKey(EngagementTool, null=True, blank=True, on_delete=models.SET_NULL)
     campaign = models.ForeignKey(Campaign, null=True, blank=True, on_delete=models.SET_NULL)
     
     target_leads = models.IntegerField(default=0)
@@ -473,7 +477,7 @@ class BDMTarget(models.Model):
 
     start_date = models.DateField()
     end_date = models.DateField()
-    status = models.CharField(max_length=50, default='active')  # active/completed/on_hold
+    status = models.CharField(max_length=50, default='active')
     notes = models.TextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

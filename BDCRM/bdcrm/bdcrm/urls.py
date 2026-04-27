@@ -27,11 +27,17 @@ router.register(r'product-lines', views.ProductLineViewSet)
 router.register(r'bdm-targets', views.BDMTargetViewSet, basename='bdm-targets')
 router.register(r'smart-sales-calls', views.SmartSalesCallViewSet, basename='smart-sales-calls')
 router.register(r'campaign-workspace', views.CampaignWorkspaceViewSet, basename='campaign-workspace')
+router.register(r'customer-categories', views.CustomerCategoryViewSet)
+router.register(r'sales-channels', views.SalesChannelViewSet)
+router.register(r'engagement-tools', views.EngagementToolViewSet)
 
 
 
 
 urlpatterns = [
+    path('api/run-free-campaign/', views.run_free_campaign, name='run_free_campaign'),
+    path('api/run-agent/', views.trigger_agent, name='run_agent'),
+    path('api/agent-status/', views.agent_status, name='agent_status'),
     path('api/run-free-campaign/', views.run_free_campaign, name='run_free_campaign'),
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),

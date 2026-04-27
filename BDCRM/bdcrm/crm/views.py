@@ -51,28 +51,26 @@ class LeadViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
-        """
-        Custom endpoint to get aggregated CRM data for charts
-        GET /api/leads/dashboard_stats/
-        """
         leads = Lead.objects.all()
         
-        # 1. Pipeline Total
-        total_value = leads.aggregate(Sum('value'))['value__sum'] or 0
+        # --- CALCULATE WON LEADS AND REVENUE ---
+        won_leads = leads.filter(status='won')
+        won_count = won_leads.count()
+        current_revenue = won_leads.aggregate(total=Sum('value'))['total'] or 0
+        total_value = leads.aggregate(total=Sum('value'))['total'] or 0
         
-        # 2. Status Counts (for Funnel Chart)
+        # Win Rate Calculation
+        closed_deals = leads.filter(Q(status='won') | Q(status='lost')).count()
+        win_rate = (won_count / closed_deals * 100) if closed_deals > 0 else 0
+
+        # Status Counts and Activities
         status_counts = leads.values('status').annotate(count=Count('status'))
-        
-        # 3. Recent Activity Feed
         recent_activities = Activity.objects.all().order_by('-created_at')[:5]
         activity_data = ActivitySerializer(recent_activities, many=True).data
 
-        # 4. Win Rate Calculation
-        closed_deals = leads.filter(Q(status='won') | Q(status='lost')).count()
-        won_deals = leads.filter(status='won').count()
-        win_rate = (won_deals / closed_deals * 100) if closed_deals > 0 else 0
-
         return Response({
+            "won_count": won_count,
+            "current_revenue": current_revenue,
             "total_value": total_value,
             "total_leads": leads.count(),
             "win_rate": round(win_rate, 1),
@@ -1361,3 +1359,69 @@ def run_free_campaign(request):
 
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+# ═══════════════════════════════════════════════════════
+#  AI AGENT TRIGGER ENDPOINT
+# ═══════════════════════════════════════════════════════
+
+import threading
+from .ai_agent import CRMAgent
+
+@api_view(['POST'])
+def trigger_agent(request):
+    """
+    POST /api/run-agent/
+    Triggers the AI Agent from the React frontend.
+    Runs in a background thread so the API responds immediately.
+    """
+    def _run_agent():
+        try:
+            agent = CRMAgent()
+            agent.run()
+        except Exception as e:
+            print(f"❌ Agent error: {e}")
+
+    # Start in background thread
+    thread = threading.Thread(target=_run_agent, daemon=True)
+    thread.start()
+
+    return JsonResponse({
+        "status": "started",
+        "message": "AI Agent started in background. Check your Django terminal for live output."
+    })
+
+
+@api_view(['GET'])
+def agent_status(request):
+    """
+    GET /api/agent-status/
+    Returns basic status info.
+    """
+    from .models import Activity, AIAlert
+    now = timezone.now()
+
+    # Count recent agent actions
+    agent_actions_24h = Activity.objects.filter(
+        summary__icontains='🤖',
+        created_at__gte=now - timedelta(hours=24)
+    ).count()
+
+    # Recent agent activities
+    recent = Activity.objects.filter(
+        summary__icontains='🤖'
+    ).order_by('-created_at')[:20]
+
+    recent_list = []
+    for a in recent:
+        recent_list.append({
+            "id": a.id,
+            "lead": a.lead.name if a.lead else "Unknown",
+            "company": a.lead.company if a.lead else "",
+            "summary": a.summary,
+            "description": a.description[:100],
+            "created_at": a.created_at.isoformat(),
+        })
+
+    return JsonResponse({
+        "agent_actions_24h": agent_actions_24h,
+        "recent_actions": recent_list,
+    })
