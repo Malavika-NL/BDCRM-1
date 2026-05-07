@@ -36,10 +36,8 @@ from .ai_engine import (
     CRMChatbot, RevenueForecastEngine, AIDocumentGenerator,
     AnomalyDetectionEngine, DailyDigestGenerator, _call_claude
 )
-# Anthropic Setup
-os.environ["ANTHROPIC_API_KEY"] = "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"
-client = anthropic.Anthropic()
-
+from django.conf import settings
+client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 class LeadViewSet(viewsets.ModelViewSet):
     queryset = Lead.objects.all().order_by("-created_at")
     serializer_class = LeadSerializer

@@ -118,8 +118,8 @@ USE_I18N = True
 
 USE_TZ = True
 
-ANTHROPIC_API_KEY = "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"
-
+import os
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
