@@ -109,8 +109,8 @@ export const Dashboard = () => {
               <MoreHorizontal size={20} />
             </button>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-64 min-h-[256px]">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
               <BarChart data={pipelineData}>
                 <XAxis 
                   dataKey="name" 
@@ -140,8 +140,8 @@ export const Dashboard = () => {
         {/* Pie Chart */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900 mb-6">Win Rate</h2>
-          <div className="h-48 relative">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-48 min-h-[192px] relative">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={160}>
               <PieChart>
                 <Pie
                   data={pieData}
@@ -183,8 +183,8 @@ export const Dashboard = () => {
         {/* Weekly Trend */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900 mb-6">Weekly Leads</h2>
-          <div className="h-48">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-48 min-h-[192px]">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={160}>
               <LineChart data={weeklyData}>
                 <XAxis 
                   dataKey="day" 

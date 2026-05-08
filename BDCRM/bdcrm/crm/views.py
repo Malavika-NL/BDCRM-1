@@ -1,5 +1,5 @@
 from rest_framework import viewsets, filters
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from django.db.models import Sum, Count, Q
 import os
@@ -8,11 +8,14 @@ import re
 from django.conf import settings
 import requests # Make sure this is at the top of views.py
 from datetime import date
+import calendar
 import anthropic
+from datetime import timedelta
 from .ai_helper import ask_ai, ask_ai_json
 from .models import (
     ProductLine, CustomerCategory, SalesChannel, EngagementTool,
-    LeadBusinessMeta, BDMTarget, BDMReview, CampaignWorkspace, CampaignResponse
+    LeadBusinessMeta, BDMTarget, BDMReview, CampaignWorkspace, CampaignResponse,
+    ActivityPlanner, PlannerMemberPlan, PlannerTask
 )
 
 from .serializers import (
@@ -20,7 +23,8 @@ from .serializers import (
     EngagementToolSerializer, LeadBusinessMetaSerializer,
     BDMTargetSerializer, BDMReviewSerializer,
     CampaignWorkspaceSerializer, CampaignResponseSerializer,
-    CampaignWorkspaceGenerateSerializer
+    CampaignWorkspaceGenerateSerializer, ActivityPlannerSerializer,
+    PlannerMemberPlanSerializer, PlannerTaskSerializer
 )
 from .models import (AILeadProfile, Lead, Course, Activity, Task, Tag, Company, Vertical, Region, Industry, Campaign, AIInteractionLog,
                      ConsumptionPattern, ProductCategory, Enrollment, AILeadProfile, AIScoreSnapshot, AIActivityAnalysis,
@@ -1282,11 +1286,139 @@ class CampaignWorkspaceViewSet(viewsets.ModelViewSet):
             'sent_campaigns': CampaignWorkspace.objects.filter(status='sent').count(),
             'responses': summary
         })
-        
-import pywhatkit
+
+
+class ActivityPlannerViewSet(viewsets.ModelViewSet):
+    queryset = ActivityPlanner.objects.all().order_by('-year', '-month', '-created_at')
+    serializer_class = ActivityPlannerSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'member_plans__member_name', 'member_plans__workspace_name']
+
+    @action(detail=False, methods=['get'])
+    def dashboard(self, request):
+        planners = self.get_queryset()
+        member_plans = PlannerMemberPlan.objects.filter(planner__in=planners)
+        tasks = PlannerTask.objects.filter(member_plan__in=member_plans)
+        return Response({
+            "total_planners": planners.count(),
+            "active_planners": planners.filter(status='active').count(),
+            "members": member_plans.count(),
+            "pending_tasks": tasks.filter(status='pending').count(),
+            "done_tasks": tasks.filter(status='done').count(),
+            "planners": ActivityPlannerSerializer(planners[:8], many=True).data
+        })
+
+    @action(detail=True, methods=['post'])
+    def assign_members(self, request, pk=None):
+        planner = self.get_object()
+        member_data = request.data.get('members', [])
+        created = []
+        for item in member_data:
+            member_plan = PlannerMemberPlan.objects.create(
+                planner=planner,
+                user_id=item.get('user'),
+                member_name=item.get('member_name', 'Member'),
+                workspace_name=item.get('workspace_name', f"{item.get('member_name', 'Member')} Workspace"),
+                monthly_calls_target=item.get('monthly_calls_target', 0),
+                monthly_whatsapp_target=item.get('monthly_whatsapp_target', 0),
+                monthly_email_target=item.get('monthly_email_target', 0),
+                monthly_linkedin_target=item.get('monthly_linkedin_target', 0),
+                calls_weightage=item.get('calls_weightage', 25),
+                whatsapp_weightage=item.get('whatsapp_weightage', 25),
+                email_weightage=item.get('email_weightage', 25),
+                linkedin_weightage=item.get('linkedin_weightage', 25),
+                assigned_by=request.user if request.user and request.user.is_authenticated else None,
+            )
+            self._generate_member_tasks(member_plan)
+            created.append(member_plan)
+        return Response(PlannerMemberPlanSerializer(created, many=True).data, status=201)
+
+    @action(detail=True, methods=['post'])
+    def regenerate(self, request, pk=None):
+        planner = self.get_object()
+        for member in planner.member_plans.all():
+            member.tasks.all().delete()
+            self._generate_member_tasks(member)
+        return Response({"success": True, "message": "Planner tasks regenerated"})
+
+    def _channel_distribution(self, total, weight, slots):
+        if total <= 0 or weight <= 0 or slots <= 0:
+            return [0] * slots
+        weighted_total = round(total * (weight / 100.0))
+        base = weighted_total // slots
+        rem = weighted_total % slots
+        return [base + (1 if i < rem else 0) for i in range(slots)]
+
+    def _generate_member_tasks(self, member_plan):
+        month = member_plan.planner.month
+        year = member_plan.planner.year
+        _, num_days = calendar.monthrange(year, month)
+        days = [date(year, month, d) for d in range(1, num_days + 1)]
+        week_map = {}
+        for day in days:
+            week_num = ((day.day - 1) // 7) + 1
+            week_map.setdefault(week_num, []).append(day)
+
+        channels = [
+            ("calls", member_plan.monthly_calls_target, member_plan.calls_weightage),
+            ("whatsapp", member_plan.monthly_whatsapp_target, member_plan.whatsapp_weightage),
+            ("email", member_plan.monthly_email_target, member_plan.email_weightage),
+            ("linkedin", member_plan.monthly_linkedin_target, member_plan.linkedin_weightage),
+        ]
+
+        for channel, monthly_target, weight in channels:
+            weekly_counts = self._channel_distribution(monthly_target, weight, len(week_map.keys()))
+            for idx, week_number in enumerate(sorted(week_map.keys())):
+                weekly_target = weekly_counts[idx]
+                PlannerTask.objects.create(
+                    member_plan=member_plan,
+                    period_type='weekly',
+                    week_number=week_number,
+                    channel=channel,
+                    target_count=weekly_target,
+                    title=f"Week {week_number}: {channel.title()} target {weekly_target}",
+                    created_by_admin=True,
+                )
+                week_days = week_map[week_number]
+                daily_counts = self._channel_distribution(weekly_target, 100, len(week_days))
+                for d_idx, task_day in enumerate(week_days):
+                    daily_target = daily_counts[d_idx]
+                    PlannerTask.objects.create(
+                        member_plan=member_plan,
+                        period_type='daily',
+                        week_number=week_number,
+                        task_date=task_day,
+                        channel=channel,
+                        target_count=daily_target,
+                        title=f"{task_day.strftime('%d %b')}: {channel.title()} {daily_target}",
+                        created_by_admin=True,
+                    )
+
+
+class PlannerMemberPlanViewSet(viewsets.ModelViewSet):
+    queryset = PlannerMemberPlan.objects.all().order_by('-created_at')
+    serializer_class = PlannerMemberPlanSerializer
+
+    def perform_update(self, serializer):
+        member_plan = serializer.save()
+        if any(
+            f in serializer.validated_data for f in [
+                'monthly_calls_target', 'monthly_whatsapp_target', 'monthly_email_target',
+                'monthly_linkedin_target', 'calls_weightage', 'whatsapp_weightage',
+                'email_weightage', 'linkedin_weightage'
+            ]
+        ):
+            member_plan.tasks.all().delete()
+            ActivityPlannerViewSet()._generate_member_tasks(member_plan)
+
+
+class PlannerTaskViewSet(viewsets.ModelViewSet):
+    queryset = PlannerTask.objects.all().order_by('task_date', 'week_number')
+    serializer_class = PlannerTaskSerializer
+
+
 import time
 from django.http import JsonResponse
-from rest_framework.decorators import api_view
 
 # ... existing imports ...
 
@@ -1297,6 +1429,8 @@ def run_free_campaign(request):
     WARNING: Do not touch mouse/keyboard while this runs.
     """
     try:
+        import pywhatkit
+        import keyboard
         # 1. Get data from React
         data = request.data
         campaign_name = data.get('name', 'Free Campaign')

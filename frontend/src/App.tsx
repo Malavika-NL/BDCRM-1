@@ -24,6 +24,7 @@ import CampaignWorkspaceCreate from './Components/Target/CampaignWorkspaceCreate
 import CampaignWorkspaceList from './Components/Target/CampaignWorkspaceList';
 import BDMTargetCreate from './Components/Target/BDMTargetCreate';
 import BDMTargetsList from './Components/Target/BDMTargetList';
+import { ActivityPlannerPage } from './Components/Planner/ActivityPlannerPage';
 
 function App() {
   return (
@@ -59,6 +60,7 @@ function App() {
 
             {/* Tasks */}
             <Route path="/tasks" element={<TasksPage />} />
+            <Route path="/activity-planner" element={<ActivityPlannerPage />} />
 
             {/* Contacts */}
             <Route path="/contacts" element={<Contacts />} />

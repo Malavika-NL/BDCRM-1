@@ -210,7 +210,8 @@ class AIChatInputSerializer(serializers.Serializer):
 
 from .models import (
     ProductLine, CustomerCategory, SalesChannel, EngagementTool,
-    LeadBusinessMeta, BDMTarget, BDMReview, CampaignWorkspace, CampaignResponse
+    LeadBusinessMeta, BDMTarget, BDMReview, CampaignWorkspace, CampaignResponse,
+    ActivityPlanner, PlannerMemberPlan, PlannerTask
 )
 
 
@@ -304,4 +305,26 @@ class VerticalSerializer(serializers.ModelSerializer):
 class RegionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Region
+        fields = '__all__'
+
+
+class PlannerTaskSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PlannerTask
+        fields = '__all__'
+
+
+class PlannerMemberPlanSerializer(serializers.ModelSerializer):
+    tasks = PlannerTaskSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = PlannerMemberPlan
+        fields = '__all__'
+
+
+class ActivityPlannerSerializer(serializers.ModelSerializer):
+    member_plans = PlannerMemberPlanSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ActivityPlanner
         fields = '__all__'

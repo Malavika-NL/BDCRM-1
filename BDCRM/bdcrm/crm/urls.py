@@ -30,6 +30,9 @@ router.register(r'campaign-workspace', views.CampaignWorkspaceViewSet, basename=
 router.register(r'customer-categories', views.CustomerCategoryViewSet)
 router.register(r'sales-channels', views.SalesChannelViewSet)
 router.register(r'engagement-tools', views.EngagementToolViewSet)
+router.register(r'activity-planners', views.ActivityPlannerViewSet, basename='activity-planners')
+router.register(r'planner-member-plans', views.PlannerMemberPlanViewSet, basename='planner-member-plans')
+router.register(r'planner-tasks', views.PlannerTaskViewSet, basename='planner-tasks')
 
 
 

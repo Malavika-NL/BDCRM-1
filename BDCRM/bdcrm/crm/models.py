@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.conf import settings
 
 class Vertical(models.Model):
     name = models.CharField(max_length=100) # e.g., Auto, Pharma
@@ -606,3 +607,112 @@ class MarketingAsset(models.Model):
     associated_vertical = models.ForeignKey(Vertical, null=True, blank=True, on_delete=models.SET_NULL)
     
     def __str__(self): return self.name
+
+
+class ActivityPlanner(models.Model):
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('active', 'Active'),
+        ('completed', 'Completed'),
+    ]
+    ROLE_CHOICES = [
+        ('admin', 'Admin'),
+        ('member', 'Member'),
+    ]
+
+    name = models.CharField(max_length=200)
+    month = models.PositiveSmallIntegerField()
+    year = models.PositiveSmallIntegerField()
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='created_activity_plans',
+    )
+    role_mode = models.CharField(max_length=20, choices=ROLE_CHOICES, default='admin')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-year', '-month', '-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.month}/{self.year})"
+
+
+class PlannerMemberPlan(models.Model):
+    planner = models.ForeignKey(ActivityPlanner, on_delete=models.CASCADE, related_name='member_plans')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='activity_member_plans',
+    )
+    member_name = models.CharField(max_length=150)
+    workspace_name = models.CharField(max_length=200)
+
+    monthly_calls_target = models.PositiveIntegerField(default=0)
+    monthly_whatsapp_target = models.PositiveIntegerField(default=0)
+    monthly_email_target = models.PositiveIntegerField(default=0)
+    monthly_linkedin_target = models.PositiveIntegerField(default=0)
+
+    calls_weightage = models.PositiveSmallIntegerField(default=25)
+    whatsapp_weightage = models.PositiveSmallIntegerField(default=25)
+    email_weightage = models.PositiveSmallIntegerField(default=25)
+    linkedin_weightage = models.PositiveSmallIntegerField(default=25)
+
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='assigned_activity_member_plans',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['member_name']
+
+    def __str__(self):
+        return f"{self.member_name} - {self.workspace_name}"
+
+
+class PlannerTask(models.Model):
+    PERIOD_CHOICES = [
+        ('weekly', 'Weekly'),
+        ('daily', 'Daily'),
+    ]
+    CHANNEL_CHOICES = [
+        ('calls', 'Calls'),
+        ('whatsapp', 'WhatsApp'),
+        ('email', 'Email'),
+        ('linkedin', 'LinkedIn'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('done', 'Done'),
+    ]
+
+    member_plan = models.ForeignKey(PlannerMemberPlan, on_delete=models.CASCADE, related_name='tasks')
+    period_type = models.CharField(max_length=20, choices=PERIOD_CHOICES)
+    week_number = models.PositiveSmallIntegerField(default=1)
+    task_date = models.DateField(null=True, blank=True)
+    channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES)
+    target_count = models.PositiveIntegerField(default=0)
+    title = models.CharField(max_length=200)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_by_admin = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['week_number', 'task_date', 'channel']
+
+    def __str__(self):
+        return f"{self.member_plan.member_name} - {self.channel} ({self.period_type})"

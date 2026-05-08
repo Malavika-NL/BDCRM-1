@@ -6,7 +6,8 @@ import {
   Target, BrainCircuit, TrendingUp,
   Phone,
   Wand2,
-  MapPin
+  MapPin,
+  CalendarDays
 } from 'lucide-react';
 import { api } from '../Utils/api';
 
@@ -14,6 +15,7 @@ const navItems = [
   { path: '/dashboard',     label: 'Dashboard',      icon: LayoutDashboard },
   { path: '/bdm-targets',   label: 'BDM Targets',     icon: Target },
   { path: '/campaign-workspace', label: 'Campaign Workspace', icon: Wand2 },
+  { path: '/activity-planner', label: 'Activity Planner', icon: CalendarDays, isNew: true },
   { path: '/pipeline',      label: 'Pipeline',        icon: GitBranch },
   { path: '/ai-command',    label: 'AI Assistant',    icon: BrainCircuit, isNew: true },
   { path: '/ai-analytics',  label: 'AI Analytics',    icon: TrendingUp, isNew: true },

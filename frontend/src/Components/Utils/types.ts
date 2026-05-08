@@ -250,3 +250,43 @@ export interface AIScoreSnapshot {
   factors: any;
   created_at: string;
 }
+
+export interface PlannerTask {
+  id: number;
+  member_plan: number;
+  period_type: 'weekly' | 'daily';
+  week_number: number;
+  task_date: string | null;
+  channel: 'calls' | 'whatsapp' | 'email' | 'linkedin';
+  target_count: number;
+  title: string;
+  status: 'pending' | 'in_progress' | 'done';
+  created_by_admin: boolean;
+}
+
+export interface PlannerMemberPlan {
+  id: number;
+  planner: number;
+  user: number | null;
+  member_name: string;
+  workspace_name: string;
+  monthly_calls_target: number;
+  monthly_whatsapp_target: number;
+  monthly_email_target: number;
+  monthly_linkedin_target: number;
+  calls_weightage: number;
+  whatsapp_weightage: number;
+  email_weightage: number;
+  linkedin_weightage: number;
+  tasks: PlannerTask[];
+}
+
+export interface ActivityPlanner {
+  id: number;
+  name: string;
+  month: number;
+  year: number;
+  status: 'draft' | 'active' | 'completed';
+  notes: string;
+  member_plans: PlannerMemberPlan[];
+}

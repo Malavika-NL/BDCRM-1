@@ -4,7 +4,10 @@ import type {
   Task,
   Course,
   ConsumptionAlert,
-  AgentPayload
+  AgentPayload,
+  ActivityPlanner,
+  PlannerMemberPlan,
+  PlannerTask,
 } from './types';
 
 // Change this if you deploy to AWS/Heroku
@@ -538,6 +541,62 @@ export const api = {
   aiPipelineIntelligence: async (): Promise<any> => {
     const res = await fetch(`${API_BASE_URL}/ai-analytics/pipeline_intelligence/`);
     if (!res.ok) throw new Error('Failed');
+    return res.json();
+  },
+
+  getActivityPlanners: async (): Promise<ActivityPlanner[]> => {
+    const res = await fetch(`${API_BASE_URL}/activity-planners/`);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  createActivityPlanner: async (data: Partial<ActivityPlanner>): Promise<ActivityPlanner> => {
+    const res = await fetch(`${API_BASE_URL}/activity-planners/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create planner');
+    return res.json();
+  },
+
+  updateActivityPlanner: async (plannerId: number, data: Partial<ActivityPlanner>): Promise<ActivityPlanner> => {
+    const res = await fetch(`${API_BASE_URL}/activity-planners/${plannerId}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update planner');
+    return res.json();
+  },
+
+  assignPlannerMembers: async (plannerId: number, members: any[]): Promise<PlannerMemberPlan[]> => {
+    const res = await fetch(`${API_BASE_URL}/activity-planners/${plannerId}/assign_members/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ members }),
+    });
+    if (!res.ok) throw new Error('Failed to assign planner members');
+    return res.json();
+  },
+
+  updatePlannerMember: async (memberPlanId: number, data: Partial<PlannerMemberPlan>): Promise<PlannerMemberPlan> => {
+    const res = await fetch(`${API_BASE_URL}/planner-member-plans/${memberPlanId}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update member plan');
+    return res.json();
+  },
+
+  updatePlannerTask: async (taskId: number, data: Partial<PlannerTask>): Promise<PlannerTask> => {
+    const res = await fetch(`${API_BASE_URL}/planner-tasks/${taskId}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update task');
     return res.json();
   },
 
