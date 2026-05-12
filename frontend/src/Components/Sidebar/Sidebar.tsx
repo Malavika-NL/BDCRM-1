@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, RefreshCw, GitBranch, Workflow, CheckSquare,
-  Users, BookOpen, Bot, Terminal, BarChart3, MessageCircle,
+  LayoutDashboard, GitBranch, Workflow, CheckSquare,
+  Users, BookOpen, Terminal, BarChart3,
   Target, BrainCircuit, TrendingUp,
-  Phone,
   Wand2,
-  MapPin,
-  CalendarDays
+  CalendarDays,
+  UserPlus
 } from 'lucide-react';
 import { api } from '../Utils/api';
+import { authStore } from '../Utils/auth';
 
 const navItems = [
   { path: '/dashboard',     label: 'Dashboard',      icon: LayoutDashboard },
@@ -31,7 +31,13 @@ const navItems = [
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [alertCount, setAlertCount] = useState(0);
+  const currentUser = authStore.getUser();
+  const isAdmin = currentUser?.role === 'admin';
+  const visibleNavItems = isAdmin
+    ? [...navItems, { path: '/create-user', label: 'Create User', icon: UserPlus }]
+    : navItems;
 
   useEffect(() => {
     const fetchCount = () => {
@@ -44,6 +50,11 @@ export const Sidebar: React.FC = () => {
     const interval = setInterval(fetchCount, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleLogout = () => {
+    authStore.clearSession();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <aside className="w-64 bg-slate-900 text-white flex flex-col h-full">
@@ -59,7 +70,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
 
@@ -103,6 +114,12 @@ export const Sidebar: React.FC = () => {
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           AI Engine Active
         </div>
+        <button
+          onClick={handleLogout}
+          className="mt-3 w-full rounded-lg bg-slate-800 text-slate-100 text-sm py-2 hover:bg-slate-700 transition-colors"
+        >
+          Logout
+        </button>
       </div>
     </aside>
   );

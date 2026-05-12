@@ -1,7 +1,13 @@
 from rest_framework import viewsets, filters
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework import permissions, status
+from rest_framework.views import APIView
 from django.db.models import Sum, Count, Q
+from django.db import OperationalError
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from rest_framework_simplejwt.tokens import RefreshToken
 import os
 import requests
 import re
@@ -35,6 +41,7 @@ from .serializers import (
     TaskSerializer, TagSerializer, CompanySerializer, AIInteractionLogSerializer,
     ConsumptionPatternSerializer, AgentIngestionSerializer
 )
+from .serializers import LoginSerializer, UserCreateSerializer, UserMeSerializer
 from .ai_engine import (
     LeadScoringEngine, ChurnPredictionEngine, ConversationIntelligence,
     CRMChatbot, RevenueForecastEngine, AIDocumentGenerator,
@@ -42,6 +49,96 @@ from .ai_engine import (
 )
 from django.conf import settings
 client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+
+def _token_payload_for_user(user: User):
+    profile = getattr(user, "profile", None)
+    role = profile.role if profile else ("admin" if user.is_staff else "employee")
+    refresh = RefreshToken.for_user(user)
+    return {
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
+        "user": UserMeSerializer(user).data,
+        "role": role,
+    }
+
+
+class LoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data.get("username", "").strip()
+        email = serializer.validated_data.get("email", "").strip().lower()
+        password = serializer.validated_data["password"]
+        user = None
+        inactive_user = None
+
+        try:
+            if username:
+                user = authenticate(username=username, password=password)
+            elif email:
+                email_users = User.objects.filter(email__iexact=email).order_by("id")
+                for candidate in email_users:
+                    if not candidate.is_active:
+                        inactive_user = candidate
+                        continue
+                    if candidate.check_password(password):
+                        user = candidate
+                        break
+
+            if not user and username:
+                username_users = User.objects.filter(username__iexact=username).order_by("id")
+                for candidate in username_users:
+                    if not candidate.is_active:
+                        inactive_user = candidate
+                        continue
+                    if candidate.check_password(password):
+                        user = candidate
+                        break
+        except OperationalError:
+            return Response(
+                {"detail": "Database is not initialized. Run migrations first: python manage.py migrate"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        if not user and inactive_user:
+            return Response({"detail": "Account is inactive. Contact admin."}, status=status.HTTP_403_FORBIDDEN)
+        if not user:
+            return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response(_token_payload_for_user(user), status=status.HTTP_200_OK)
+
+
+class CreateUserView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        request_role = getattr(getattr(request.user, "profile", None), "role", None)
+        is_admin = request.user.is_superuser or request.user.is_staff or request_role == "admin"
+        if not is_admin:
+            return Response({"detail": "Only admin can create users."}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = UserCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(UserMeSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def me(request):
+    return Response(UserMeSerializer(request.user).data)
+
+
+@api_view(["POST"])
+@permission_classes([permissions.IsAuthenticated])
+def bootstrap_admin_profile(request):
+    from .models import UserProfile
+
+    if request.user.is_superuser or request.user.is_staff:
+        UserProfile.objects.get_or_create(user=request.user, defaults={"role": "admin"})
+    return Response({"ok": True})
 class LeadViewSet(viewsets.ModelViewSet):
     queryset = Lead.objects.all().order_by("-created_at")
     serializer_class = LeadSerializer

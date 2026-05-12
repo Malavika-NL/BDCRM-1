@@ -43,5 +43,9 @@ urlpatterns = [
     path('api/agent-status/', views.agent_status, name='agent_status'),
     path('api/run-free-campaign/', views.run_free_campaign, name='run_free_campaign'),
     path('admin/', admin.site.urls),
+    path('api/auth/login/', views.LoginView.as_view(), name='auth_login'),
+    path('api/auth/create-user/', views.CreateUserView.as_view(), name='auth_create_user'),
+    path('api/auth/me/', views.me, name='auth_me'),
+    path('api/auth/bootstrap-admin/', views.bootstrap_admin_profile, name='auth_bootstrap_admin'),
     path('api/', include(router.urls)),
 ]

@@ -1,9 +1,12 @@
 // src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import type React from 'react';
+import { authStore } from './Components/Utils/auth';
 
 // --- Layout ---
 import MainLayout from './Components/Layout/MainLayout';
 import { LoginPage } from './Components/Login/Login';
+import { UserCreationPage } from './Components/Login/UserCreationPage';
 
 // --- Page Components ---
 import { Dashboard } from './Components/Dashboard/Dashboard';
@@ -27,6 +30,13 @@ import BDMTargetsList from './Components/Target/BDMTargetList';
 import { ActivityPlannerPage } from './Components/Planner/ActivityPlannerPage';
 
 function App() {
+  const RequireAuth = ({ children }: { children: React.ReactNode }) => {
+    if (!authStore.isAuthenticated()) {
+      return <Navigate to="/login" replace />;
+    }
+    return children;
+  };
+
   return (
     <BrowserRouter>
       <Routes>
@@ -38,7 +48,7 @@ function App() {
         {/* <Route element={<RequireAuth />}> */}
 
           {/* --- Routes WITH Layout (Sidebar) --- */}
-          <Route element={<MainLayout />}>
+          <Route element={<RequireAuth><MainLayout /></RequireAuth>}>
 
             {/* Root redirect */}
             <Route
@@ -84,6 +94,7 @@ function App() {
             <Route path="/campaign-workspace/new" element={<CampaignWorkspaceCreate />} />
             <Route path="/bdm-targets" element={<BDMTargetsList />} />
             <Route path="/bdm-targets/new" element={<BDMTargetCreate />} />
+            <Route path="/create-user" element={<UserCreationPage />} />
 
 
 

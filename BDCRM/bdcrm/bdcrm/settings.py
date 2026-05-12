@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'crm',
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
     'django_crontab',
 ]
@@ -120,6 +121,16 @@ USE_TZ = True
 
 import os
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny',
+    ),
+}
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 

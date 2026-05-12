@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.contrib.auth.models import User
 from .models import AIActivityAnalysis, AIAlert, AIDocument, AILeadProfile, AIScoreSnapshot, ConsumptionPattern, Lead, Course, Module, Lesson, Activity, Region, Task, Tag, Company, Vertical
 
 # --- NEW SERIALIZERS ---
@@ -328,3 +329,111 @@ class ActivityPlannerSerializer(serializers.ModelSerializer):
     class Meta:
         model = ActivityPlanner
         fields = '__all__'
+
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField(required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        username = attrs.get("username", "").strip()
+        email = attrs.get("email", "").strip()
+        if not username and not email:
+            raise serializers.ValidationError("Provide username or email.")
+        return attrs
+
+
+class UserCreateSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True, min_length=6)
+    first_name = serializers.CharField(required=False, allow_blank=True)
+    last_name = serializers.CharField(required=False, allow_blank=True)
+    role = serializers.ChoiceField(choices=["admin", "employee"], default="employee")
+    phone_number = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    designation = serializers.CharField(required=False, allow_blank=True, max_length=120)
+    department = serializers.CharField(required=False, allow_blank=True, max_length=120)
+    address = serializers.CharField(required=False, allow_blank=True)
+    is_active = serializers.BooleanField(required=False, default=True)
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Username already exists.")
+        return value
+
+    def validate_email(self, value):
+        email = value.strip()
+        if email and User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError("Email already exists.")
+        return email
+
+    def create(self, validated_data):
+        from .models import UserProfile
+
+        role = validated_data.pop("role", "employee")
+        password = validated_data.pop("password")
+        phone_number = validated_data.pop("phone_number", "")
+        designation = validated_data.pop("designation", "")
+        department = validated_data.pop("department", "")
+        address = validated_data.pop("address", "")
+        is_active = validated_data.pop("is_active", True)
+
+        user = User.objects.create_user(password=password, **validated_data)
+        user.is_active = is_active
+        user.save(update_fields=["is_active"])
+        UserProfile.objects.create(user=user, role=role)
+        profile = user.profile
+        profile.phone_number = phone_number
+        profile.designation = designation
+        profile.department = department
+        profile.address = address
+        profile.save(update_fields=["phone_number", "designation", "department", "address"])
+        return user
+
+
+class UserMeSerializer(serializers.ModelSerializer):
+    role = serializers.SerializerMethodField()
+    phone_number = serializers.SerializerMethodField()
+    designation = serializers.SerializerMethodField()
+    department = serializers.SerializerMethodField()
+    address = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "is_staff",
+            "is_active",
+            "role",
+            "phone_number",
+            "designation",
+            "department",
+            "address",
+        ]
+
+    def get_role(self, obj):
+        profile = getattr(obj, "profile", None)
+        if profile:
+            return profile.role
+        return "admin" if obj.is_staff else "employee"
+
+    def get_phone_number(self, obj):
+        profile = getattr(obj, "profile", None)
+        return profile.phone_number if profile else ""
+
+    def get_designation(self, obj):
+        profile = getattr(obj, "profile", None)
+        return profile.designation if profile else ""
+
+    def get_department(self, obj):
+        profile = getattr(obj, "profile", None)
+        return profile.department if profile else ""
+
+    def get_address(self, obj):
+        profile = getattr(obj, "profile", None)
+        return profile.address if profile else ""
