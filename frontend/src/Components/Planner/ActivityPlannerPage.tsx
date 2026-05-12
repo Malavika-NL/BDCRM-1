@@ -3,7 +3,7 @@ import {
   CheckCircle2, Plus, RefreshCcw, Users,
   Target, Phone, MessageSquare, Mail,
   Linkedin, Sparkles, Trash2, Settings,
-  Calendar, Layers, ChevronLeft
+  Calendar, Layers, ChevronLeft, CalendarDays, BarChart3
 } from 'lucide-react';
 import { api } from '../Utils/api';
 import type { ActivityPlanner, PlannerTask } from '../Utils/types';
@@ -48,13 +48,39 @@ const CHANNEL_CONFIG: Record<Channel, {
   linkedin: { icon: <Linkedin size={11} />, color: 'text-indigo-600', bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', label: 'LinkedIn' },
 };
 
-const StepPill = ({ current, step, label, icon }: { current: number; step: number; label: string; icon: React.ReactNode; }) => {
+const StepPill = ({
+  current,
+  step,
+  label,
+  icon,
+  onClick,
+  disabled = false,
+}: {
+  current: number;
+  step: number;
+  label: string;
+  icon: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+}) => {
   const done = current > step;
   const active = current === step;
   return (
-    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${done ? 'bg-emerald-100 text-emerald-700' : active ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400'}`}>
-      {done ? <CheckCircle2 size={12} /> : icon}{label}
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+        done
+          ? 'bg-emerald-100 text-emerald-700'
+          : active
+            ? 'bg-indigo-600 text-white shadow-sm'
+            : 'bg-transparent text-slate-500 hover:bg-slate-100'
+      } ${disabled ? 'opacity-45 cursor-not-allowed hover:bg-transparent' : ''}`}
+    >
+      {done ? <CheckCircle2 size={12} /> : icon}
+      {label}
+    </button>
   );
 };
 
@@ -364,10 +390,42 @@ export function ActivityPlannerPage() {
       pct: tasks.length ? Math.round((done / tasks.length) * 100) : 0,
     };
   }, [activeMemberPlan]);
+  const monthLabel = useMemo(
+    () => MONTHS.find(m => m.value === month)?.label || '',
+    [month],
+  );
+  const canGoTeam = useMemo(
+    () => Boolean(plannerId || selectedPlanner),
+    [plannerId, selectedPlanner],
+  );
+  const canGoCalendar = useMemo(
+    () => Boolean(selectedPlanner && selectedPlanner.member_plans.length > 0),
+    [selectedPlanner],
+  );
+
+  const handleStepNav = (target: Step) => {
+    if (target === 1) {
+      setStep(1);
+      return;
+    }
+
+    if (target === 2) {
+      if (!canGoTeam) return;
+      setStep(2);
+      return;
+    }
+
+    if (!canGoCalendar || !selectedPlanner) return;
+    setStep(3);
+    setPlannerView('month');
+    if (!selectedMemberId || !selectedPlanner.member_plans.some(m => m.id === selectedMemberId)) {
+      setSelectedMemberId(selectedPlanner.member_plans[0]?.id ?? null);
+    }
+  };
 
   return (
-    <div className="h-full flex flex-col bg-slate-50 overflow-hidden font-sans">
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0">
+    <div className="h-full flex flex-col bg-[radial-gradient(circle_at_15%_20%,#dbeafe_0%,#eef2ff_50%,#f8fafc_100%)] overflow-hidden font-sans">
+      <header className="bg-white/90 backdrop-blur-sm border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="bg-indigo-600 p-2 rounded-xl"><Target className="text-white" size={20} /></div>
           <div>
@@ -377,9 +435,9 @@ export function ActivityPlannerPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <StepPill current={step} step={1} label="Setup" icon={<Settings size={12} />} />
-          <StepPill current={step} step={2} label="Team" icon={<Users size={12} />} />
-          <StepPill current={step} step={3} label="Calendar" icon={<Calendar size={12} />} />
+          <StepPill current={step} step={1} label="Setup" icon={<Settings size={12} />} onClick={() => handleStepNav(1)} />
+          <StepPill current={step} step={2} label="Team" icon={<Users size={12} />} onClick={() => handleStepNav(2)} disabled={!canGoTeam} />
+          <StepPill current={step} step={3} label="Calendar" icon={<Calendar size={12} />} onClick={() => handleStepNav(3)} disabled={!canGoCalendar} />
           <button onClick={load} className={`p-2 rounded-lg hover:bg-slate-100 ${loading ? 'animate-spin' : ''}`}><RefreshCcw size={16} /></button>
         </div>
       </header>
@@ -609,15 +667,36 @@ export function ActivityPlannerPage() {
             </section>
           </>
         ) : (
-          <div className="flex-1 overflow-y-auto p-6 flex items-center justify-center">
+          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
             {step === 1 && (
-              <div className="max-w-md w-full space-y-6">
-                <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-2xl">
-                  <Sparkles className="text-indigo-400 mb-4" />
-                  <h2 className="text-2xl font-black mb-2">Build Strategy</h2>
-                  <p className="text-slate-400 text-sm">Create an automated activity roadmap for your sales team.</p>
+              <div className="max-w-5xl w-full space-y-6 animate-[fadeIn_.35s_ease]">
+                <div className="flex justify-between items-end bg-white/70 backdrop-blur-sm border border-indigo-100 rounded-3xl p-5 shadow-sm">
+                  <div>
+                    <h2 className="text-3xl font-black text-slate-800">Build Strategy</h2>
+                    <p className="text-slate-500 text-sm">Create the base planner configuration for your team.</p>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-500 bg-white border border-slate-200 px-3 py-2 rounded-xl">
+                    <CalendarDays size={14} />
+                    <span>{monthLabel} {year}</span>
+                  </div>
                 </div>
-                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <p className="text-[10px] font-black uppercase text-slate-400">Month</p>
+                    <p className="text-lg font-black text-slate-800 mt-1">{monthLabel}</p>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <p className="text-[10px] font-black uppercase text-slate-400">Year</p>
+                    <p className="text-lg font-black text-slate-800 mt-1">{year}</p>
+                  </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4 hover:shadow-lg transition-shadow duration-300">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-black text-slate-700">Plan Configuration</p>
+                    <Sparkles size={14} className="text-indigo-500" />
+                  </div>
                   <div>
                     <label className="text-xs font-black text-slate-400 uppercase">Plan Name</label>
                     <input className="w-full mt-1 p-3 bg-slate-50 border-none rounded-2xl font-bold" value={planName} onChange={e => setPlanName(e.target.value)} />
@@ -632,36 +711,6 @@ export function ActivityPlannerPage() {
                     <div>
                       <label className="text-xs font-black text-slate-400 uppercase">Year</label>
                       <input type="number" className="w-full mt-1 p-3 bg-slate-50 border-none rounded-2xl font-bold" value={year} onChange={e => setYear(Number(e.target.value))} />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-black text-slate-400 uppercase">Weekend Working Days (Admin)</label>
-                    <p className="text-[11px] text-slate-500 mt-1 mb-2">
-                      Weekdays are always working. Select Saturday/Sunday dates that should also be treated as working.
-                    </p>
-                    <div className="grid grid-cols-4 gap-2">
-                      {weekendOptions.map(date => {
-                        const active = workingWeekendDates.includes(date);
-                        const day = new Date(`${date}T00:00:00`);
-                        return (
-                          <button
-                            type="button"
-                            key={date}
-                            onClick={() => {
-                              setWorkingWeekendDates(prev =>
-                                prev.includes(date) ? prev.filter(d => d !== date) : [...prev, date],
-                              );
-                            }}
-                            className={`px-2 py-2 rounded-xl text-[11px] font-bold border transition ${
-                              active
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                            }`}
-                          >
-                            {date.slice(8)} {day.getDay() === 6 ? 'Sat' : 'Sun'}
-                          </button>
-                        );
-                      })}
                     </div>
                   </div>
                   <button
@@ -689,18 +738,32 @@ export function ActivityPlannerPage() {
             )}
 
             {step === 2 && (
-              <div className="max-w-4xl w-full space-y-6">
-                <div className="flex justify-between items-end">
+              <div className="max-w-5xl w-full space-y-6 animate-[fadeIn_.35s_ease]">
+                <div className="flex justify-between items-end bg-white/70 backdrop-blur-sm border border-indigo-100 rounded-3xl p-5 shadow-sm">
                   <div>
                     <h2 className="text-2xl font-black text-slate-800">Assign Agents</h2>
                     <p className="text-slate-500 text-sm">Configure targets for each team member.</p>
                   </div>
                   <button onClick={() => setMembers([...members, { ...members[0], member_name: '' }])} className="px-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all">+ Add Agent</button>
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm md:col-span-2">
+                    <p className="text-[10px] font-black uppercase text-slate-400">Plan Name</p>
+                    <p className="text-lg font-black text-slate-800 mt-1 truncate">{planName || 'Monthly Activity Planner'}</p>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                    <p className="text-[10px] font-black uppercase text-slate-400">Timeline</p>
+                    <p className="text-lg font-black text-slate-800 mt-1">{monthLabel} {year}</p>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+                    <p className="text-[10px] font-black uppercase text-slate-400">Working Weekends</p>
+                    <p className="text-lg font-black text-indigo-700 mt-1">{workingWeekendDates.length}</p>
+                  </div>
+                </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
                   {members.map((m, i) => (
-                    <div key={i} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative group">
+                    <div key={i} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm relative group hover:-translate-y-0.5 hover:shadow-md transition-all">
                       <input
                         placeholder="Agent Name"
                         className="text-lg font-black text-slate-800 border-none focus:ring-0 p-0 mb-4 w-full"
@@ -752,7 +815,7 @@ export function ActivityPlannerPage() {
                     }}
                     className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl shadow-indigo-200"
                   >
-                    {saving ? 'Generating Calendar...' : 'Deploy & View Calendar'}
+                    <span className="inline-flex items-center gap-2">{saving ? 'Generating Calendar...' : <><BarChart3 size={16} /> Deploy & View Calendar</>}</span>
                   </button>
                 </div>
               </div>
