@@ -249,7 +249,7 @@ export const CampaignWorkspaceList = () => {
               <Plus size={16} /> Create Workspace
             </button>
           </div>
-        )}
+        </div>
       </div>
 
       {selectedWorkspace && (
@@ -268,9 +268,9 @@ export const CampaignWorkspaceList = () => {
                 <div>
                   <h3 className="text-xl font-bold text-slate-800">{selectedWorkspace.name}</h3>
                   <p className="text-sm text-slate-500 mt-1">
-                    {selectedWorkspace.brand_name ? `${selectedWorkspace.brand_name} • ` : ''}
+                    {selectedWorkspace.brand_name ? `${selectedWorkspace.brand_name} ï¿½ ` : ''}
                     <span className="capitalize">{selectedWorkspace.selected_channel}</span>
-                    {' • '}
+                    {' ï¿½ '}
                     {formatDate(selectedWorkspace.created_at)}
                   </p>
                 </div>
@@ -321,6 +321,7 @@ export const CampaignWorkspaceList = () => {
                   <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedWorkspace.generated_content}</p>
                 </div>
               </div>
+            )}
 
               {selectedWorkspace.responses && selectedWorkspace.responses.length > 0 && (
                 <div>
@@ -331,7 +332,7 @@ export const CampaignWorkspaceList = () => {
                     {selectedWorkspace.responses.map((r: any) => (
                       <div key={r.id} className="text-sm bg-emerald-50 border border-emerald-200 rounded-lg p-3">
                         <strong>{r.lead_name}</strong>
-                        <span className="mx-1 text-emerald-500">•</span>
+                        <span className="mx-1 text-emerald-500">ï¿½</span>
                         <span className="capitalize">{r.response_type.replace('_', ' ')}</span>
                         {r.response_text && <p className="mt-1 text-slate-600">{r.response_text}</p>}
                       </div>
