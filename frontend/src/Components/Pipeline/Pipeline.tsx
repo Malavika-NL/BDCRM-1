@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Building2, Columns3, List, LayoutGrid,
   RefreshCw, Briefcase, ChevronDown, Check,
   Zap, Phone, MessageSquare, CheckCircle2, XCircle,
   BarChart3, X, TrendingUp, DollarSign, Target,
-  Clock, ArrowUpRight, Filter, SlidersHorizontal,
+  Clock, ArrowUpRight, SlidersHorizontal,
   Activity, Calendar, Tag
 } from 'lucide-react';
 import { STATUS_LABELS, type Lead, STATUS_ORDER, type LeadStatus } from '../Utils/types';
 import { api } from '../Utils/api';
 import { LeadDetailDrawer } from '../LeadDetailDrawer/LeadDetailDrawer';
-import { AddLeadModal } from '../AddLeadModel/AddLeadModel';
 
 /* ─── STATUS CONFIG ──────────────────────────────────── */
 const STATUS_CONFIG: Record<string, {
@@ -374,7 +374,7 @@ const LeadCard = ({ lead, onSelect, onChangeStatus, onDragStart }: {
       draggable
       onDragStart={e => onDragStart?.(e, lead)}
       onClick={onSelect}
-      className="bg-white rounded-lg border border-gray-200 p-3 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 transition-all select-none"
+      className="bg-white rounded-xl border border-blue-100 p-3 cursor-grab active:cursor-grabbing hover:shadow-lg hover:border-blue-300 transition-all duration-200 select-none hover:-translate-y-0.5"
     >
       <div className="flex items-start gap-3 mb-3">
         <div className={`w-10 h-10 rounded-lg ${cfg.bg} ${cfg.text} flex items-center justify-center text-sm font-bold shrink-0`}>
@@ -420,7 +420,7 @@ const BoardView = ({ leads, onSelect, onChangeStatus }: {
   };
 
   return (
-    <div className="flex h-full overflow-x-auto p-4 gap-4">
+    <div className="flex h-full overflow-x-auto p-4 gap-4 custom-scrollbar">
       {STATUS_ORDER.map(status => {
         const statusLeads = leads.filter(l => l.status === status);
         const cfg = getCfg(status);
@@ -432,10 +432,10 @@ const BoardView = ({ leads, onSelect, onChangeStatus }: {
             onDragOver={e => { e.preventDefault(); setDragOver(status); }}
             onDragLeave={() => setDragOver(null)}
             onDrop={e => handleDrop(e, status as LeadStatus)}
-            className={`flex flex-col w-[300px] rounded-xl shrink-0 h-full transition-all duration-150 ${isOver ? 'bg-blue-50 ring-2 ring-blue-300 ring-offset-1' : 'bg-gray-100'}`}
+            className={`flex flex-col w-[300px] rounded-2xl shrink-0 h-full transition-all duration-150 border ${isOver ? 'bg-blue-50 ring-2 ring-blue-300 ring-offset-1 border-blue-300' : 'bg-white/80 border-blue-100'}`}
           >
             {/* Column header */}
-            <div className="p-3 border-b border-gray-200">
+            <div className="p-3 border-b border-blue-100 bg-white/80 backdrop-blur-sm rounded-t-2xl">
               <div className="flex items-center gap-2">
                 <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white`}>
                   {cfg.icon}
@@ -457,7 +457,7 @@ const BoardView = ({ leads, onSelect, onChangeStatus }: {
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-2">
+            <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
               {statusLeads.map(lead => (
                 <LeadCard key={lead.id} lead={lead}
                   onSelect={() => onSelect(lead)}
@@ -483,9 +483,9 @@ const ListView = ({ leads, onSelect, onChangeStatus }: {
   leads: Lead[]; onSelect: (l: Lead) => void;
   onChangeStatus: (id: number, s: LeadStatus) => void;
 }) => (
-  <div className="h-full overflow-auto">
+  <div className="h-full overflow-auto custom-scrollbar">
     <table className="w-full">
-      <thead className="bg-gray-50 sticky top-0">
+      <thead className="bg-blue-50/80 backdrop-blur-sm sticky top-0 z-10">
         <tr className="border-b border-gray-200">
           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Deal</th>
           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Company</th>
@@ -494,12 +494,12 @@ const ListView = ({ leads, onSelect, onChangeStatus }: {
           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Created</th>
         </tr>
       </thead>
-      <tbody className="divide-y divide-gray-100 bg-white">
+      <tbody className="divide-y divide-blue-50 bg-white">
         {leads.map(lead => {
           const cfg = getCfg(lead.status);
           const initials = lead.name.split(' ').map(n => n[0]).join('').slice(0, 2);
           return (
-            <tr key={lead.id} onClick={() => onSelect(lead)} className="hover:bg-gray-50 cursor-pointer">
+            <tr key={lead.id} onClick={() => onSelect(lead)} className="hover:bg-blue-50/60 cursor-pointer transition-colors">
               <td className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-lg ${cfg.bg} ${cfg.text} flex items-center justify-center text-xs font-bold`}>{initials}</div>
@@ -525,13 +525,13 @@ const GridView = ({ leads, onSelect, onChangeStatus }: {
   leads: Lead[]; onSelect: (l: Lead) => void;
   onChangeStatus: (id: number, s: LeadStatus) => void;
 }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-6 overflow-y-auto h-full">
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-6 overflow-y-auto h-full custom-scrollbar">
     {leads.map(lead => {
       const cfg = getCfg(lead.status);
       const initials = lead.name.split(' ').map(n => n[0]).join('').slice(0, 2);
       return (
         <div key={lead.id} onClick={() => onSelect(lead)}
-          className="bg-white rounded-xl border border-gray-200 p-5 cursor-pointer hover:shadow-lg transition-all">
+          className="bg-white rounded-2xl border border-blue-100 p-5 cursor-pointer hover:shadow-xl hover:shadow-blue-100 transition-all duration-200 hover:-translate-y-1">
           <div className="flex items-start justify-between mb-4">
             <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white font-bold`}>
               {initials}
@@ -556,9 +556,9 @@ const GridView = ({ leads, onSelect, onChangeStatus }: {
 const DEFAULT_FILTERS: Filters = { status: '', minValue: '', maxValue: '', sortBy: 'newest' };
 
 export const Pipeline = () => {
+  const navigate = useNavigate();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [search, setSearch] = useState('');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [view, setView] = useState<'board' | 'list' | 'grid'>('board');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -567,6 +567,7 @@ export const Pipeline = () => {
   const [showActivity, setShowActivity] = useState(false);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [activities, setActivities] = useState<ActivityEntry[]>([]);
+  const [quickStage, setQuickStage] = useState<LeadStatus | ''>('');
 
   // 🔥 CORE FIX: Fetch both Leads and Activities from Django backend
   const fetchAllData = async () => {
@@ -593,6 +594,17 @@ export const Pipeline = () => {
     const t = setTimeout(fetchAllData, 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => {
+    const savedView = localStorage.getItem('pipeline_view_mode') as 'board' | 'list' | 'grid' | null;
+    if (savedView && ['board', 'list', 'grid'].includes(savedView)) {
+      setView(savedView);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('pipeline_view_mode', view);
+  }, [view]);
 
   // 🔥 CORE FIX: Save activity permanently and re-fetch from database
   const handleChangeStatus = async (leadId: number, newStatus: LeadStatus) => {
@@ -635,6 +647,7 @@ export const Pipeline = () => {
       const q = search.toLowerCase();
       if (q && !l.name.toLowerCase().includes(q) && !l.company.toLowerCase().includes(q)) return false;
       if (filters.status && l.status !== filters.status) return false;
+      if (quickStage && l.status !== quickStage) return false;
       const val = parseFloat(l.value);
       if (filters.minValue && val < parseFloat(filters.minValue)) return false;
       if (filters.maxValue && val > parseFloat(filters.maxValue)) return false;
@@ -649,33 +662,38 @@ export const Pipeline = () => {
     });
 
   const hasActiveFilters = filters.status || filters.minValue || filters.maxValue || filters.sortBy !== 'newest';
+  const totalValue = leads.reduce((acc, l) => acc + parseFloat(l.value), 0);
+  const wonCount = leads.filter(l => l.status === 'won').length;
+  const openCount = leads.filter(l => l.status !== 'won' && l.status !== 'lost').length;
+  const lostValue = leads.filter(l => l.status === 'lost').reduce((acc, l) => acc + parseFloat(l.value), 0);
+  const winRate = leads.length ? Math.round((wonCount / leads.length) * 100) : 0;
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
+    <div className="flex flex-col h-full bg-[radial-gradient(circle_at_top_right,#dbeafe_0,#eff6ff_35%,#f8fafc_100%)] overflow-hidden">
 
       {/* ── HEADER ── */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 shrink-0">
+      <header className="bg-white/90 backdrop-blur-sm border-b border-blue-100 px-6 py-4 shrink-0 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Pipeline</h1>
-            <p className="text-sm text-gray-500">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Pipeline Command Center</h1>
+            <p className="text-sm text-slate-500">
               Drag cards to move • {filtered.length} of {leads.length} deals
             </p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={fetchAllData}
-              className={`p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg ${isRefreshing ? 'animate-spin' : ''}`}>
+              className={`p-2 text-slate-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all ${isRefreshing ? 'animate-spin' : ''}`}>
               <RefreshCw size={18} />
             </button>
             {/* Analytics toggle */}
             <button onClick={() => { setShowAnalytics(v => !v); setShowActivity(false); }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${showAnalytics ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${showAnalytics ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'text-slate-600 hover:bg-blue-50'}`}>
               <BarChart3 size={16} />
               Analytics
             </button>
             {/* Activity toggle */}
             <button onClick={() => { setShowActivity(v => !v); setShowAnalytics(false); }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all relative ${showActivity ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all relative ${showActivity ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'text-slate-600 hover:bg-indigo-50'}`}>
               <Activity size={16} />
               Activity
               {activities.length > 0 && !showActivity && (
@@ -684,22 +702,41 @@ export const Pipeline = () => {
                 </span>
               )}
             </button>
-            <button onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+            <button onClick={() => navigate('/pipeline/new')}
+              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md shadow-blue-200 transition-all hover:-translate-y-0.5">
               <Plus size={16} />
               Add Deal
             </button>
           </div>
         </div>
 
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4 animate-[fadeIn_.35s_ease]">
+          <div className="rounded-2xl border border-blue-100 bg-white p-3">
+            <p className="text-[11px] text-slate-500 font-semibold flex items-center gap-1"><Briefcase size={12} /> Total Deals</p>
+            <p className="text-2xl font-black text-slate-900 mt-1">{leads.length}</p>
+          </div>
+          <div className="rounded-2xl border border-indigo-100 bg-white p-3">
+            <p className="text-[11px] text-slate-500 font-semibold flex items-center gap-1"><Calendar size={12} /> Open Deals</p>
+            <p className="text-2xl font-black text-indigo-700 mt-1">{openCount}</p>
+          </div>
+          <div className="rounded-2xl border border-emerald-100 bg-white p-3">
+            <p className="text-[11px] text-slate-500 font-semibold flex items-center gap-1"><Target size={12} /> Win Rate</p>
+            <p className="text-2xl font-black text-emerald-700 mt-1">{winRate}%</p>
+          </div>
+          <div className="rounded-2xl border border-blue-100 bg-white p-3">
+            <p className="text-[11px] text-slate-500 font-semibold flex items-center gap-1"><DollarSign size={12} /> Pipeline Value</p>
+            <p className="text-2xl font-black text-blue-700 mt-1">${(totalValue / 1000).toFixed(0)}k</p>
+          </div>
+        </div>
+
         {/* Toolbar */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input
                 type="text" placeholder="Search deals..."
-                className="w-64 pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                className="w-64 pl-9 pr-4 py-2 bg-white border border-blue-100 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 value={search} onChange={e => setSearch(e.target.value)}
               />
             </div>
@@ -707,21 +744,41 @@ export const Pipeline = () => {
               onClick={() => setShowFilters(v => !v)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-all ${showFilters || hasActiveFilters
                 ? 'bg-blue-50 text-blue-700 border-blue-200'
-                : 'text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
+                : 'text-slate-600 border-blue-100 hover:bg-blue-50'}`}>
               <SlidersHorizontal size={15} />
               Filter
               {hasActiveFilters && (
                 <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
               )}
             </button>
+            <button
+              onClick={() => setQuickStage('')}
+              className={`text-xs px-2.5 py-2 rounded-lg border transition-all ${quickStage === '' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-blue-100 hover:bg-indigo-50'}`}
+            >
+              All
+            </button>
+            {STATUS_ORDER.map(status => {
+              const cfg = getCfg(status);
+              const count = leads.filter(l => l.status === status).length;
+              return (
+                <button
+                  key={status}
+                  onClick={() => setQuickStage(prev => prev === status ? '' : status)}
+                  className={`text-xs px-2.5 py-2 rounded-lg border flex items-center gap-1.5 transition-all ${quickStage === status ? `${cfg.bg} ${cfg.text} border-transparent` : 'bg-white border-blue-100 text-slate-600 hover:bg-blue-50'}`}
+                >
+                  <Tag size={11} />
+                  {STATUS_LABELS[status]} ({count})
+                </button>
+              );
+            })}
           </div>
 
-          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+          <div className="flex items-center bg-white border border-blue-100 rounded-lg p-1 shadow-sm">
             {(['board', 'list', 'grid'] as const).map((v, i) => {
               const icons = [<Columns3 size={16} />, <List size={16} />, <LayoutGrid size={16} />];
               return (
                 <button key={v} onClick={() => setView(v)}
-                  className={`p-2 rounded-md ${view === v ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}>
+                  className={`p-2 rounded-md transition-all ${view === v ? 'bg-blue-600 text-white shadow-md shadow-blue-200' : 'text-slate-500 hover:bg-blue-50'}`}>
                   {icons[i]}
                 </button>
               );
@@ -741,7 +798,7 @@ export const Pipeline = () => {
       )}
 
       {/* ── MAIN CONTENT (board + side panels) ── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden animate-[fadeIn_.35s_ease]">
         <div className="flex-1 overflow-hidden">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full">
@@ -752,6 +809,9 @@ export const Pipeline = () => {
                 className="mt-3 text-blue-600 hover:text-blue-700 text-sm font-medium">
                 Clear filters
               </button>
+              <div className="mt-3 text-xs text-slate-400">
+                Lost Value: ${lostValue.toLocaleString()}
+              </div>
             </div>
           ) : view === 'board' ? (
             <BoardView leads={filtered} onSelect={setSelectedLead} onChangeStatus={handleChangeStatus} />
@@ -772,14 +832,6 @@ export const Pipeline = () => {
       </div>
 
       {/* ── MODALS ── */}
-      <AddLeadModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSubmit={async (d: any) => {
-          await api.createLead(d);
-          fetchAllData();
-        }}
-      />
       <LeadDetailDrawer
         lead={selectedLead}
         isOpen={!!selectedLead}

@@ -12,6 +12,7 @@ import { UserCreationPage } from './Components/Login/UserCreationPage';
 import { Dashboard } from './Components/Dashboard/Dashboard';
 import { SmartDashboard } from './Components/Dashboard/SmartDashboard';
 import { Pipeline } from './Components/Pipeline/Pipeline';
+import AddDealPage from './Components/Pipeline/AddDealPage';
 import { WorkflowMonitor } from './Components/Dashboard/WorkflowMonitor';
 import { TasksPage } from './Components/TaskPage/TaskPage';
 import { Contacts } from './Components/Contacts/Contacts';
@@ -64,6 +65,7 @@ function App() {
 
             {/* Sales Pipeline */}
             <Route path="/pipeline" element={<Pipeline />} />
+            <Route path="/pipeline/new" element={<AddDealPage />} />
 
             {/* Workflow Automation */}
             <Route path="/workflows" element={<WorkflowMonitor />} />
