@@ -758,66 +758,10 @@ import {
 import { api } from '../Utils/api';
 import type { DashboardStats } from '../Utils/types';
 
-/* ─── Design System Tokens ─── */
-const TOKENS = {
-  primary: {
-    50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc',
-    400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca',
-    800: '#3730a3', 900: '#312e81',
-  },
-  neutral: {
-    0: '#ffffff', 25: '#fcfcfd', 50: '#f8fafc', 100: '#f1f5f9',
-    200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b',
-    600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a',
-    950: '#020617',
-  },
-  success: { light: '#ecfdf5', base: '#10b981', dark: '#065f46', border: '#a7f3d0' },
-  warning: { light: '#fffbeb', base: '#f59e0b', dark: '#92400e', border: '#fde68a' },
-  danger:  { light: '#fef2f2', base: '#ef4444', dark: '#991b1b', border: '#fecaca' },
-  info:    { light: '#eff6ff', base: '#3b82f6', dark: '#1e40af', border: '#bfdbfe' },
-
-  pageBg: '#f8fafc',
-  headerBg: '#ffffff',
-  cardBg: '#ffffff',
-  cardBorder: '#e2e8f0',
-  headerBorder: '#e2e8f0',
-
-  shadowXs: '0 1px 2px rgba(0,0,0,0.05)',
-  shadowSm: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)',
-  shadowMd: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)',
-  shadowLg: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
-  shadowXl: '0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)',
-
-  fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  fontMono: '"JetBrains Mono", "Fira Code", monospace',
-
-  radius: { sm: 6, md: 8, lg: 12, xl: 16, '2xl': 20, full: 9999 },
-  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-};
-
-/* ─── Stat card configs ─── */
-const STAT_CONFIGS = {
-  revenue: {
-    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    accentColor: '#7c3aed',
-  },
-  leads: {
-    gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-    accentColor: '#ec4899',
-  },
-  winRate: {
-    gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-    accentColor: '#06b6d4',
-  },
-  pending: {
-    gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-    accentColor: '#10b981',
-  },
-};
-
+/* ─── Chart palette (indigo/pink/cyan/emerald — mirrors Pipeline STATUS_CONFIG) ─── */
 const CHART_COLORS = {
-  bar: ['#6366f1', '#ec4899', '#06b6d4', '#10b981'],
-  pie: ['#6366f1', '#e2e8f0'],
+  bar:  ['#6366f1', '#ec4899', '#06b6d4', '#10b981'],
+  pie:  ['#6366f1', '#e2e8f0'],
   line: '#6366f1',
   grid: '#f1f5f9',
 };
@@ -826,162 +770,152 @@ const today = new Date().toLocaleDateString('en-US', {
   weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
 });
 
-/* ─── Inject global styles ─── */
+/* ─── Inject animation keyframes once ─── */
 const injectGlobalStyles = () => {
-  const id = 'dashboard-global-styles';
+  const id = 'dash-pipeline-styles';
   if (document.getElementById(id)) return;
-  const style = document.createElement('style');
-  style.id = id;
-  style.textContent = `
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+  const s = document.createElement('style');
+  s.id = id;
+  s.textContent = `
     @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+      from { opacity:0; transform:translateY(10px); }
+      to   { opacity:1; transform:translateY(0);    }
     }
     @keyframes slideIn {
-      from { opacity: 0; transform: translateX(-8px); }
-      to { opacity: 1; transform: translateX(0); }
+      from { opacity:0; transform:translateX(-6px); }
+      to   { opacity:1; transform:translateX(0);    }
     }
-    @keyframes scaleIn {
-      from { opacity: 0; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1); }
-    }
-
-    .dash-card {
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .dash-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 24px -4px rgba(0,0,0,0.12), 0 4px 8px -2px rgba(0,0,0,0.08);
-    }
-    .stat-card {
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      cursor: pointer;
-    }
-    .stat-card:hover {
-      transform: translateY(-4px) scale(1.01);
-      box-shadow: 0 20px 40px -8px rgba(0,0,0,0.15);
-    }
-    .activity-item {
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      cursor: pointer;
-    }
-    .activity-item:hover {
-      background: #f1f5f9 !important;
-      transform: translateX(4px);
-    }
-    .btn-primary {
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 16px -4px rgba(99, 102, 241, 0.4);
-    }
-    .btn-primary:active {
-      transform: translateY(0);
-    }
-    .btn-secondary {
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .btn-secondary:hover {
-      background: #f1f5f9 !important;
-      border-color: #cbd5e1 !important;
-    }
-    .search-input::placeholder {
-      color: #94a3b8;
-    }
-    .search-input:focus {
-      outline: none;
-    }
-    .icon-btn {
-      transition: all 0.15s ease;
-    }
-    .icon-btn:hover {
-      background: #f1f5f9 !important;
-    }
-    .view-all-btn {
-      transition: all 0.15s ease;
-    }
-    .view-all-btn:hover {
-      color: #4338ca !important;
-    }
-    .dashboard-scroll::-webkit-scrollbar {
-      width: 6px;
-    }
-    .dashboard-scroll::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    .dashboard-scroll::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 3px;
-    }
-    .dashboard-scroll::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-    @media (max-width: 1200px) {
-      .charts-row, .bottom-row {
-        flex-direction: column !important;
-      }
-    }
-    @media (max-width: 768px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-      }
-      .header-content {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-      }
-      .header-actions {
-        width: 100%;
-        justify-content: flex-start !important;
-      }
-    }
-    @media (max-width: 480px) {
-      .stats-grid {
-        grid-template-columns: 1fr !important;
-      }
-    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .dash-fadeinup { animation: fadeInUp 0.4s ease both; }
+    .dash-slidein  { animation: slideIn  0.3s ease both; }
+    .stat-card { transition: transform 0.25s cubic-bezier(.4,0,.2,1), box-shadow 0.25s cubic-bezier(.4,0,.2,1); cursor:pointer; }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -4px rgba(0,0,0,0.12); }
+    .dash-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .dash-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -4px rgba(0,0,0,0.1); }
+    .activity-item { transition: background 0.15s ease, transform 0.15s ease; cursor:pointer; }
+    .activity-item:hover { background: #f1f5f9 !important; transform: translateX(3px); }
   `;
-  document.head.appendChild(style);
+  document.head.appendChild(s);
 };
-
-/* ─── Reusable tiny component for colored dots next to card titles ─── */
-const TitleDot = ({ color }: { color: string }) => (
-  <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
-);
 
 /* ─── Custom Tooltip ─── */
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: TOKENS.neutral[900],
-      border: 'none',
-      borderRadius: TOKENS.radius.lg,
-      padding: '10px 16px',
-      boxShadow: TOKENS.shadowXl,
-    }}>
-      <p style={{ color: TOKENS.neutral[400], fontSize: 11, margin: '0 0 4px', fontWeight: 500, fontFamily: TOKENS.fontFamily }}>
-        {label}
-      </p>
-      {payload.map((entry: any, idx: number) => (
-        <p key={idx} style={{ color: '#fff', fontSize: 14, fontWeight: 700, margin: 0, fontFamily: TOKENS.fontFamily }}>
-          {entry.value} {entry.name || 'leads'}
-        </p>
+    <div className="bg-slate-900 rounded-xl px-4 py-2.5 shadow-xl">
+      <p className="text-[11px] font-medium text-slate-400 mb-1">{label}</p>
+      {payload.map((e: any, i: number) => (
+        <p key={i} className="text-[14px] font-bold text-white m-0">{e.value} {e.name || 'leads'}</p>
       ))}
     </div>
   );
 };
 
-/* ═══════════ MAIN DASHBOARD ═══════════ */
+/* ─── Rounded bar shape ─── */
+const RoundedBar = (props: any) => {
+  const { x, y, width, height, index } = props;
+  return (
+    <rect x={x} y={y} width={width} height={height}
+      fill={CHART_COLORS.bar[index % CHART_COLORS.bar.length]}
+      rx={5} ry={5}
+      style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.08))' }}
+    />
+  );
+};
+
+/* ═══════════════ STAT CARD ═══════════════ */
+const STAT_GRADIENTS: Record<string, { from: string; to: string; shadow: string }> = {
+  revenue: { from: '#667eea', to: '#764ba2', shadow: 'rgba(102,126,234,0.35)' },
+  leads:   { from: '#f093fb', to: '#f5576c', shadow: 'rgba(240,147,251,0.35)' },
+  winRate: { from: '#4facfe', to: '#00f2fe', shadow: 'rgba(79,172,254,0.35)' },
+  pending: { from: '#43e97b', to: '#38f9d7', shadow: 'rgba(67,233,123,0.35)' },
+};
+
+const StatCard = ({ title, value, change, icon: Icon, gradientKey, delay }: {
+  title: string; value: string | number; change: number;
+  icon: any; gradientKey: string; delay: number;
+}) => {
+  const g = STAT_GRADIENTS[gradientKey];
+  const positive = change >= 0;
+  return (
+    <div className="stat-card bg-white rounded-xl border border-slate-200 overflow-hidden dash-fadeinup"
+      style={{ animationDelay: `${delay * 0.08}s` }}>
+      {/* top accent bar */}
+      <div className="h-[3px] w-full" style={{ background: `linear-gradient(135deg, ${g.from}, ${g.to})` }} />
+      <div className="p-4">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">{title}</p>
+            <p className="text-[28px] font-bold text-slate-900 leading-none tracking-tight">{value}</p>
+          </div>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+            style={{ background: `linear-gradient(135deg, ${g.from}, ${g.to})`, boxShadow: `0 4px 12px ${g.shadow}` }}>
+            <Icon size={18} color="#fff" strokeWidth={2} />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+            positive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+          }`}>
+            {positive ? <ArrowUp size={10} strokeWidth={2.5} /> : <ArrowDown size={10} strokeWidth={2.5} />}
+            {Math.abs(change)}%
+          </span>
+          <span className="text-[10px] text-slate-400">vs last month</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════════ ACTIVITY ITEM ═══════════════ */
+const ACTIVITY_CFG: Record<string, { icon: any; bg: string; text: string; accent: string; label: string }> = {
+  call:    { icon: Phone,    bg: 'bg-blue-50',    text: 'text-blue-600',    accent: '#3b82f6', label: 'Call'    },
+  email:   { icon: Mail,     bg: 'bg-violet-50',  text: 'text-violet-600',  accent: '#8b5cf6', label: 'Email'   },
+  meeting: { icon: Calendar, bg: 'bg-emerald-50', text: 'text-emerald-600', accent: '#10b981', label: 'Meeting' },
+  note:    { icon: FileText, bg: 'bg-amber-50',   text: 'text-amber-600',   accent: '#f59e0b', label: 'Note'    },
+};
+
+const ActivityItem = ({ activity, index }: { activity: any; index: number }) => {
+  const cfg = ACTIVITY_CFG[activity.activity_type] || ACTIVITY_CFG.note;
+  const IconComp = cfg.icon;
+  const timeStr = new Date(activity.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const dateStr = new Date(activity.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  return (
+    <div className="activity-item flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50/80 mb-1.5 dash-slidein"
+      style={{ animationDelay: `${index * 0.05}s`, borderLeft: `3px solid ${cfg.accent}` }}>
+      <div className={`w-8 h-8 rounded-lg ${cfg.bg} ${cfg.text} flex items-center justify-center shrink-0`}>
+        <IconComp size={14} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.text}`}>
+          {cfg.label}
+        </span>
+        <p className="text-[12px] font-medium text-slate-800 truncate mt-0.5">
+          {activity.summary || activity.activity_type}
+        </p>
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-[11px] font-semibold text-slate-700">{timeStr}</p>
+        <p className="text-[10px] text-slate-400 mt-0.5">{dateStr}</p>
+      </div>
+      <ChevronRight size={13} className="text-slate-300 shrink-0" />
+    </div>
+  );
+};
+
+/* ═══════════════ LOADING STATE ═══════════════ */
+const LoadingState = () => (
+  <div className="flex items-center justify-center h-full bg-[#f4f6fb]">
+    <div className="flex flex-col items-center bg-white rounded-2xl px-14 py-12 border border-slate-200 shadow-lg">
+      <div className="w-8 h-8 rounded-full border-[3px] border-slate-200 border-t-indigo-500 mb-4"
+        style={{ animation: 'spin 0.8s linear infinite' }} />
+      <p className="text-[14px] font-bold text-slate-700 mb-0.5">Loading dashboard</p>
+      <p className="text-[11px] text-slate-400">Fetching your latest data…</p>
+    </div>
+  </div>
+);
+
+/* ═══════════════ MAIN DASHBOARD ═══════════════ */
 export const Dashboard = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1014,148 +948,163 @@ export const Dashboard = () => {
   ];
 
   const pieData = [
-    { name: 'Won',         value: getStatusCount('won'),                                  color: CHART_COLORS.pie[0] },
-    { name: 'In Progress', value: Math.max(0, stats.total_leads - getStatusCount('won')), color: CHART_COLORS.pie[1] },
+    { name: 'Won',         value: getStatusCount('won'),                                   color: CHART_COLORS.pie[0] },
+    { name: 'In Progress', value: Math.max(0, stats.total_leads - getStatusCount('won')),  color: CHART_COLORS.pie[1] },
   ];
 
   const totalWeeklyLeads = weeklyData.reduce((s, d) => s + d.leads, 0);
-  const peakDay = weeklyData.reduce((mx, d) => (d.leads > mx.leads ? d : mx), weeklyData[0]);
-
-  const CustomBar = (props: any) => {
-    const { x, y, width, height, index } = props;
-    return (
-      <rect x={x} y={y} width={width} height={height}
-        fill={CHART_COLORS.bar[index % CHART_COLORS.bar.length]}
-        rx={6} ry={6}
-        style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
-      />
-    );
-  };
+  const peakDay = weeklyData.reduce((mx, d) => d.leads > mx.leads ? d : mx, weeklyData[0]);
 
   return (
-    <div style={S.page} className="dashboard-scroll">
+    <div className="flex flex-col h-full bg-[#f4f6fb] overflow-hidden">
 
-      {/* ═══ HEADER ═══ */}
-      <header style={S.header}>
-        <div style={S.headerInner} className="header-content">
-          <div>
-            <div style={S.breadcrumb}>
-              <div style={S.breadcrumbIconWrap}>
-                <LayoutDashboard size={11} color={TOKENS.primary[600]} />
-              </div>
-              <span style={S.breadcrumbText}>Overview</span>
-              <span style={S.breadcrumbDivider}>/</span>
-              <span style={S.breadcrumbCurrent}>Dashboard</span>
-            </div>
-            <h1 style={S.pageTitle}>Dashboard</h1>
-            <p style={S.pageSubtitle}>
-              <Calendar size={12} color={TOKENS.neutral[400]} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-              {today}
-            </p>
-          </div>
-
-          <div style={S.headerActions} className="header-actions">
-            <div style={S.searchWrapper}>
-              <Search size={15} color={TOKENS.neutral[400]} />
-              <input className="search-input" placeholder="Search leads, contacts..." style={S.searchInput} />
-              <kbd style={S.searchKbd}>⌘K</kbd>
-            </div>
-            <button style={S.iconButton} className="icon-btn" aria-label="Refresh"><RefreshCw size={16} color={TOKENS.neutral[500]} /></button>
-            <button style={S.iconButton} className="icon-btn" aria-label="Filter"><Filter size={16} color={TOKENS.neutral[500]} /></button>
-            <button style={S.notifButton} className="icon-btn" aria-label="Notifications">
-              <Bell size={16} color={TOKENS.neutral[500]} />
-              <span style={S.notifDot} />
-            </button>
-            <div style={S.headerDivider} />
-            <button style={S.exportBtn} className="btn-secondary"><Download size={14} /><span>Export</span></button>
-            <button style={S.addLeadBtn} className="btn-primary"><Plus size={15} strokeWidth={2.5} /><span>Add Lead</span></button>
-          </div>
+      {/* ══ BANNER (matches Pipeline header exactly) ══ */}
+      <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-4 flex items-center gap-3 shrink-0">
+        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+          <LayoutDashboard className="text-white" size={15} />
         </div>
-      </header>
-
-      {/* ═══ INSIGHTS BAR ═══ */}
-      <div style={S.insightsBar}>
-        <div style={S.insightItem}><Zap size={13} color={TOKENS.warning.base} /><span style={S.insightText}><strong style={{ color: TOKENS.neutral[800] }}>3 leads</strong> need follow-up today</span></div>
-        <div style={S.insightDivider} />
-        <div style={S.insightItem}><Target size={13} color={TOKENS.success.base} /><span style={S.insightText}>Monthly target: <strong style={{ color: TOKENS.success.dark }}>78%</strong> achieved</span></div>
-        <div style={S.insightDivider} />
-        <div style={S.insightItem}><Award size={13} color={TOKENS.primary[500]} /><span style={S.insightText}>Win rate is <strong style={{ color: TOKENS.primary[700] }}>up 3.2%</strong> this month</span></div>
+        <div className="flex-1">
+          <h1 className="text-[16px] font-bold text-white leading-tight">Dashboard</h1>
+          <p className="text-[11px] text-indigo-200 mt-0.5 flex items-center gap-1.5">
+            <Calendar size={10} />{today}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-colors">
+            <RefreshCw size={14} />
+          </button>
+          <button className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-md text-[12px] font-semibold transition-colors">
+            <Download size={13} /> Export
+          </button>
+          <button className="relative p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-colors">
+            <Bell size={14} />
+            <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-400 rounded-full" />
+          </button>
+          <button className="flex items-center gap-1.5 bg-white text-indigo-700 hover:bg-indigo-50 px-3 py-1.5 rounded-md text-[12px] font-bold transition-colors shadow-sm">
+            <Plus size={13} /> Add Lead
+          </button>
+        </div>
       </div>
 
-      {/* ═══ STAT CARDS ═══ */}
-      <div style={S.content}>
-        <div style={S.statsGrid} className="stats-grid">
-          <StatCard title="Total Revenue" value={`$${stats.total_value.toLocaleString()}`} change={12.5} icon={DollarSign} config={STAT_CONFIGS.revenue} delay={0} />
-          <StatCard title="Total Leads"   value={stats.total_leads}                         change={8}    icon={Users}       config={STAT_CONFIGS.leads}   delay={1} />
-          <StatCard title="Win Rate"      value={`${stats.win_rate}%`}                      change={3.2}  icon={TrendingUp}  config={STAT_CONFIGS.winRate} delay={2} />
-          <StatCard title="Pending"       value={getStatusCount('new')}                     change={-2}   icon={Clock}       config={STAT_CONFIGS.pending} delay={3} />
+      {/* ══ TOOLBAR (mirrors Pipeline toolbar) ══ */}
+      <div className="bg-white border-b border-slate-200 px-5 py-2.5 flex items-center justify-between gap-3 shrink-0">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+          <input
+            type="text" placeholder="Search leads, contacts…"
+            className="w-56 pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-[12px] outline-none focus:ring-2 focus:ring-indigo-400/20 focus:border-indigo-400 transition-all"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">
+            <Filter size={12} /> Filter
+          </button>
+        </div>
+      </div>
+
+      {/* ══ INSIGHTS BAR ══ */}
+      <div className="bg-indigo-50/60 border-b border-indigo-100 px-5 py-2 flex items-center gap-4 flex-wrap shrink-0">
+        <div className="flex items-center gap-1.5">
+          <Zap size={12} className="text-amber-500" />
+          <span className="text-[11px] text-slate-600"><strong className="text-slate-800 font-bold">3 leads</strong> need follow-up today</span>
+        </div>
+        <span className="w-px h-3.5 bg-indigo-200" />
+        <div className="flex items-center gap-1.5">
+          <Target size={12} className="text-emerald-500" />
+          <span className="text-[11px] text-slate-600">Monthly target: <strong className="text-emerald-700 font-bold">78%</strong> achieved</span>
+        </div>
+        <span className="w-px h-3.5 bg-indigo-200" />
+        <div className="flex items-center gap-1.5">
+          <Award size={12} className="text-indigo-500" />
+          <span className="text-[11px] text-slate-600">Win rate is <strong className="text-indigo-700 font-bold">up 3.2%</strong> this month</span>
+        </div>
+      </div>
+
+      {/* ══ SCROLLABLE BODY ══ */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+        {/* ── STAT CARDS ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatCard title="Total Revenue" value={`$${stats.total_value.toLocaleString()}`} change={12.5} icon={DollarSign} gradientKey="revenue" delay={0} />
+          <StatCard title="Total Leads"   value={stats.total_leads}                         change={8}    icon={Users}       gradientKey="leads"   delay={1} />
+          <StatCard title="Win Rate"      value={`${stats.win_rate}%`}                      change={3.2}  icon={TrendingUp}  gradientKey="winRate" delay={2} />
+          <StatCard title="Pending"       value={getStatusCount('new')}                     change={-2}   icon={Clock}       gradientKey="pending" delay={3} />
         </div>
 
-        {/* ═══ CHARTS ROW ═══ */}
-        <div style={S.chartsRow} className="charts-row">
+        {/* ── CHARTS ROW ── */}
+        <div className="flex gap-3 flex-wrap lg:flex-nowrap">
 
           {/* Pipeline bar chart */}
-          <div style={{ ...S.card, flex: 2, minWidth: 340 }} className="dash-card">
-            <div style={S.cardHeader}>
+          <div className="dash-card bg-white rounded-xl border border-slate-200 p-4 flex-[2] min-w-[300px] dash-fadeinup" style={{ animationDelay: '0.1s' }}>
+            <div className="flex items-start justify-between mb-1">
               <div>
-                <div style={S.cardTitleRow}><TitleDot color="#6366f1" /><h3 style={S.cardTitle}>Pipeline Overview</h3></div>
-                <p style={S.cardSubtitle}>Lead distribution by stage</p>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                  <h3 className="text-[13px] font-bold text-slate-800">Pipeline Overview</h3>
+                </div>
+                <p className="text-[10px] text-slate-400 ml-4">Lead distribution by stage</p>
               </div>
-              <div style={S.cardActions}>
-                <span style={S.periodBadge}>This Month</span>
-                <button style={S.moreBtn} className="icon-btn"><MoreHorizontal size={16} color={TOKENS.neutral[400]} /></button>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 rounded-full px-2.5 py-0.5">This Month</span>
+                <button className="p-1 hover:bg-slate-100 rounded-md transition-colors"><MoreHorizontal size={14} className="text-slate-400" /></button>
               </div>
             </div>
-            <div style={{ marginTop: 20 }}>
-              <ResponsiveContainer width="100%" height={220}>
+
+            <div className="mt-3">
+              <ResponsiveContainer width="100%" height={210}>
                 <BarChart data={pipelineData} barCategoryGap="35%" margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                   <CartesianGrid vertical={false} stroke={CHART_COLORS.grid} strokeDasharray="3 3" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: TOKENS.neutral[500], fontSize: 12, fontFamily: TOKENS.fontFamily, fontWeight: 500 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: TOKENS.neutral[400], fontSize: 11, fontFamily: TOKENS.fontFamily }} width={30} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false}
+                    tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }} />
+                  <YAxis axisLine={false} tickLine={false}
+                    tick={{ fill: '#94a3b8', fontSize: 10 }} width={28} />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99,102,241,0.04)', radius: 6 } as any} />
-                  <Bar dataKey="value" shape={<CustomBar />} maxBarSize={52} />
+                  <Bar dataKey="value" shape={<RoundedBar />} maxBarSize={48} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div style={S.legendRow}>
+
+            <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-slate-100">
               {pipelineData.map((item, i) => (
-                <div key={item.name} style={S.legendItem}>
-                  <span style={{ ...S.legendDot, background: CHART_COLORS.bar[i] }} />
-                  <span style={S.legendLabel}>{item.name}</span>
-                  <span style={S.legendValue}>{item.value}</span>
+                <div key={item.name} className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full" style={{ background: CHART_COLORS.bar[i] }} />
+                  <span className="text-[11px] text-slate-500 font-medium">{item.name}</span>
+                  <span className="text-[11px] font-bold text-slate-700">{item.value}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Win rate donut */}
-          <div style={{ ...S.card, flex: 1, minWidth: 260 }} className="dash-card">
-            <div style={S.cardHeader}>
-              <div>
-                <div style={S.cardTitleRow}><TitleDot color="#06b6d4" /><h3 style={S.cardTitle}>Win Rate</h3></div>
-                <p style={S.cardSubtitle}>Closed vs open leads</p>
-              </div>
+          {/* Win-rate donut */}
+          <div className="dash-card bg-white rounded-xl border border-slate-200 p-4 flex-1 min-w-[240px] dash-fadeinup" style={{ animationDelay: '0.15s' }}>
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="w-2 h-2 rounded-full bg-cyan-500" />
+              <h3 className="text-[13px] font-bold text-slate-800">Win Rate</h3>
             </div>
-            <div style={{ position: 'relative', height: 190, marginTop: 12 }}>
+            <p className="text-[10px] text-slate-400 ml-4 mb-3">Closed vs open leads</p>
+
+            <div className="relative h-44">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value" stroke="none" startAngle={90} endAngle={-270} cornerRadius={4}>
-                    {pieData.map((entry, idx) => <Cell key={idx} fill={entry.color} />)}
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={56} outerRadius={74}
+                    dataKey="value" stroke="none" startAngle={90} endAngle={-270} cornerRadius={4}>
+                    {pieData.map((e, i) => <Cell key={i} fill={e.color} />)}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
-              <div style={S.pieCenter}>
-                <p style={S.piePct}>{stats.win_rate}%</p>
-                <p style={S.pieLabel}>Won</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <p className="text-[26px] font-bold text-slate-900 leading-none tracking-tight">{stats.win_rate}%</p>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Won</p>
               </div>
             </div>
-            <div style={S.pieLegend}>
+
+            <div className="flex justify-center gap-5 mt-3 pt-3 border-t border-slate-100">
               {pieData.map(p => (
-                <div key={p.name} style={S.pieStatItem}>
-                  <div style={{ ...S.pieStatDot, background: p.color }} />
+                <div key={p.name} className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: p.color }} />
                   <div>
-                    <p style={S.pieStatLabel}>{p.name}</p>
-                    <p style={S.pieStatValue}>{p.value} leads</p>
+                    <p className="text-[10px] text-slate-400 font-medium">{p.name}</p>
+                    <p className="text-[12px] font-bold text-slate-700">{p.value} leads</p>
                   </div>
                 </div>
               ))}
@@ -1163,259 +1112,101 @@ export const Dashboard = () => {
           </div>
         </div>
 
-        {/* ═══ BOTTOM ROW ═══ */}
-        <div style={S.bottomRow} className="bottom-row">
+        {/* ── BOTTOM ROW ── */}
+        <div className="flex gap-3 flex-wrap lg:flex-nowrap">
 
           {/* Weekly area chart */}
-          <div style={{ ...S.card, flex: 1, minWidth: 340 }} className="dash-card">
-            <div style={S.cardHeader}>
+          <div className="dash-card bg-white rounded-xl border border-slate-200 p-4 flex-1 min-w-[300px] dash-fadeinup" style={{ animationDelay: '0.2s' }}>
+            <div className="flex items-start justify-between mb-1">
               <div>
-                <div style={S.cardTitleRow}><TitleDot color="#ec4899" /><h3 style={S.cardTitle}>Weekly Leads</h3></div>
-                <p style={S.cardSubtitle}>New leads added each day</p>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="w-2 h-2 rounded-full bg-pink-500" />
+                  <h3 className="text-[13px] font-bold text-slate-800">Weekly Leads</h3>
+                </div>
+                <p className="text-[10px] text-slate-400 ml-4">New leads added each day</p>
               </div>
-              <div style={S.cardActions}>
-                <div style={S.metricBadge}><Activity size={12} color={TOKENS.primary[600]} /><span style={S.metricText}>Total: <strong>{totalWeeklyLeads}</strong></span></div>
-                <div style={S.peakBadge}><TrendingUp size={12} color={TOKENS.success.dark} /><span style={S.peakText}>Peak: {peakDay.day}</span></div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-full px-2 py-0.5 flex items-center gap-1">
+                  <Activity size={10} /> Total: <strong>{totalWeeklyLeads}</strong>
+                </span>
+                <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full px-2 py-0.5 flex items-center gap-1">
+                  <TrendingUp size={10} /> Peak: {peakDay.day}
+                </span>
               </div>
             </div>
-            <div style={{ marginTop: 20 }}>
-              <ResponsiveContainer width="100%" height={200}>
+
+            <div className="mt-3">
+              <ResponsiveContainer width="100%" height={190}>
                 <AreaChart data={weeklyData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
                   <defs>
                     <linearGradient id="leadsGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={CHART_COLORS.line} stopOpacity={0.2} />
+                      <stop offset="0%" stopColor={CHART_COLORS.line} stopOpacity={0.18} />
                       <stop offset="100%" stopColor={CHART_COLORS.line} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid vertical={false} stroke={CHART_COLORS.grid} strokeDasharray="3 3" />
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: TOKENS.neutral[500], fontSize: 12, fontFamily: TOKENS.fontFamily, fontWeight: 500 }} />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false}
+                    tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }} />
                   <YAxis hide />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="leads" stroke={CHART_COLORS.line} strokeWidth={2.5} fill="url(#leadsGrad)"
-                    dot={{ fill: '#fff', stroke: CHART_COLORS.line, strokeWidth: 2.5, r: 4.5 }}
-                    activeDot={{ r: 6, fill: CHART_COLORS.line, stroke: '#fff', strokeWidth: 2 }}
+                  <Area type="monotone" dataKey="leads" stroke={CHART_COLORS.line} strokeWidth={2.5}
+                    fill="url(#leadsGrad)"
+                    dot={{ fill: '#fff', stroke: CHART_COLORS.line, strokeWidth: 2.5, r: 4 }}
+                    activeDot={{ r: 5.5, fill: CHART_COLORS.line, stroke: '#fff', strokeWidth: 2 }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            <div style={S.daySummary}>
-              {weeklyData.map(d => (
-                <div key={d.day} style={{
-                  ...S.dayPill,
-                  background: d.day === peakDay.day ? TOKENS.primary[50] : TOKENS.neutral[50],
-                  borderColor: d.day === peakDay.day ? TOKENS.primary[200] : TOKENS.neutral[200],
-                }}>
-                  <span style={{ fontSize: 10, fontWeight: 600, fontFamily: TOKENS.fontFamily, letterSpacing: '0.02em', color: d.day === peakDay.day ? TOKENS.primary[700] : TOKENS.neutral[500] }}>{d.day}</span>
-                  <span style={{ fontSize: 14, fontWeight: 800, fontFamily: TOKENS.fontFamily, marginTop: 2, color: d.day === peakDay.day ? TOKENS.primary[700] : TOKENS.neutral[800] }}>{d.leads}</span>
-                </div>
-              ))}
+
+            {/* Day pills */}
+            <div className="flex gap-1.5 mt-3 pt-3 border-t border-slate-100 flex-wrap">
+              {weeklyData.map(d => {
+                const isPeak = d.day === peakDay.day;
+                return (
+                  <div key={d.day} className={`flex-1 min-w-[36px] flex flex-col items-center py-1.5 rounded-md border ${
+                    isPeak ? 'bg-indigo-50 border-indigo-200' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <span className={`text-[9px] font-bold uppercase tracking-wide ${isPeak ? 'text-indigo-600' : 'text-slate-500'}`}>{d.day}</span>
+                    <span className={`text-[13px] font-bold mt-0.5 ${isPeak ? 'text-indigo-700' : 'text-slate-800'}`}>{d.leads}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {/* Recent activity */}
-          <div style={{ ...S.card, flex: 1, minWidth: 320 }} className="dash-card">
-            <div style={S.cardHeader}>
+          <div className="dash-card bg-white rounded-xl border border-slate-200 p-4 flex-1 min-w-[280px] dash-fadeinup" style={{ animationDelay: '0.25s' }}>
+            <div className="flex items-start justify-between mb-4">
               <div>
-                <div style={S.cardTitleRow}><TitleDot color="#f59e0b" /><h3 style={S.cardTitle}>Recent Activity</h3></div>
-                <p style={S.cardSubtitle}>Latest interactions &amp; updates</p>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  <h3 className="text-[13px] font-bold text-slate-800">Recent Activity</h3>
+                </div>
+                <p className="text-[10px] text-slate-400 ml-4">Latest interactions &amp; updates</p>
               </div>
-              <button style={S.viewAllBtn} className="view-all-btn">View all<ChevronRight size={14} /></button>
+              <button className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+                View all <ChevronRight size={13} />
+              </button>
             </div>
-            <div style={S.activityList}>
-              {stats.recent_activities.slice(0, 5).map((activity, idx) => (
-                <ActivityItem key={activity.id} activity={activity} index={idx} />
+
+            <div>
+              {stats.recent_activities.slice(0, 5).map((a, i) => (
+                <ActivityItem key={a.id} activity={a} index={i} />
               ))}
               {stats.recent_activities.length === 0 && (
-                <div style={S.emptyState}>
-                  <Activity size={32} color={TOKENS.neutral[300]} />
-                  <p style={S.emptyTitle}>No recent activity</p>
-                  <p style={S.emptyDesc}>Activities will appear here as they happen</p>
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Activity size={24} className="text-slate-200 mb-2" />
+                  <p className="text-[12px] font-bold text-slate-400">No recent activity</p>
+                  <p className="text-[10px] text-slate-300 mt-0.5">Changes will appear here</p>
                 </div>
               )}
             </div>
           </div>
         </div>
-      </div>
+
+      </div>{/* end scrollable body */}
     </div>
   );
-};
-
-/* ═══ Loading State ═══ */
-const LoadingState = () => (
-  <div style={S.loadingWrap}>
-    <div style={S.loadingCard}>
-      <div style={S.spinner} />
-      <p style={S.loadingTitle}>Loading dashboard</p>
-      <p style={S.loadingDesc}>Fetching your latest data…</p>
-    </div>
-  </div>
-);
-
-/* ═══ Stat Card ═══ */
-const StatCard = ({ title, value, change, icon: Icon, config, delay }: any) => {
-  const isPositive = change >= 0;
-  return (
-    <div className="stat-card" style={{
-      borderRadius: TOKENS.radius.xl, padding: 0,
-      background: TOKENS.cardBg, border: `1px solid ${TOKENS.cardBorder}`,
-      boxShadow: TOKENS.shadowSm, overflow: 'hidden',
-      animation: `fadeInUp 0.5s ease ${delay * 0.08}s both`,
-    }}>
-      <div style={{ height: 3, background: config.gradient }} />
-      <div style={{ padding: '18px 20px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' as const, color: TOKENS.neutral[500], margin: 0, fontFamily: TOKENS.fontFamily }}>{title}</p>
-            <p style={{ fontSize: 30, fontWeight: 800, margin: '8px 0 0', lineHeight: 1, color: TOKENS.neutral[900], fontFamily: TOKENS.fontFamily, letterSpacing: '-0.5px' }}>{value}</p>
-          </div>
-          <div style={{
-            width: 44, height: 44, borderRadius: TOKENS.radius.lg, background: config.gradient,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: `0 4px 12px ${config.accentColor}30`,
-          }}>
-            <Icon size={20} color="#fff" strokeWidth={2} />
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, fontWeight: 700,
-            padding: '3px 10px', borderRadius: TOKENS.radius.full,
-            background: isPositive ? TOKENS.success.light : TOKENS.danger.light,
-            color: isPositive ? TOKENS.success.dark : TOKENS.danger.dark, fontFamily: TOKENS.fontFamily,
-          }}>
-            {isPositive ? <ArrowUp size={11} strokeWidth={2.5} /> : <ArrowDown size={11} strokeWidth={2.5} />}
-            {Math.abs(change)}%
-          </span>
-          <span style={{ fontSize: 11, color: TOKENS.neutral[400], fontFamily: TOKENS.fontFamily }}>vs last month</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ═══ Activity Item ═══ */
-const ActivityItem = ({ activity, index }: any) => {
-  const cfgMap: Record<string, { icon: any; bg: string; color: string; accent: string; label: string }> = {
-    call:    { icon: Phone,    bg: '#eff6ff', color: '#2563eb', accent: '#3b82f6', label: 'Call' },
-    email:   { icon: Mail,     bg: '#faf5ff', color: '#7c3aed', accent: '#8b5cf6', label: 'Email' },
-    meeting: { icon: Calendar, bg: '#ecfdf5', color: '#059669', accent: '#10b981', label: 'Meeting' },
-    note:    { icon: FileText, bg: '#fffbeb', color: '#d97706', accent: '#f59e0b', label: 'Note' },
-  };
-  const cfg = cfgMap[activity.activity_type] || cfgMap.note;
-  const IconComp = cfg.icon;
-  const timeStr = new Date(activity.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const dateStr = new Date(activity.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' });
-
-  return (
-    <div className="activity-item" style={{
-      display: 'flex', alignItems: 'center', gap: 12,
-      padding: '12px 14px', borderRadius: TOKENS.radius.lg,
-      background: TOKENS.neutral[25], marginBottom: 6,
-      borderLeft: `3px solid ${cfg.accent}`,
-      animation: `slideIn 0.3s ease ${index * 0.05}s both`,
-    }}>
-      <div style={{ width: 36, height: 36, borderRadius: TOKENS.radius.md, background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <IconComp size={16} color={cfg.color} />
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-          <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.04em', color: cfg.color, background: cfg.bg, padding: '1px 6px', borderRadius: TOKENS.radius.sm, fontFamily: TOKENS.fontFamily }}>{cfg.label}</span>
-        </div>
-        <p style={{ fontSize: 13, fontWeight: 500, color: TOKENS.neutral[800], margin: 0, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: TOKENS.fontFamily }}>
-          {activity.summary || activity.activity_type}
-        </p>
-      </div>
-      <div style={{ textAlign: 'right' as const, flexShrink: 0 }}>
-        <p style={{ fontSize: 12, fontWeight: 600, color: TOKENS.neutral[700], margin: 0, fontFamily: TOKENS.fontFamily }}>{timeStr}</p>
-        <p style={{ fontSize: 10, color: TOKENS.neutral[400], margin: '2px 0 0', fontFamily: TOKENS.fontFamily }}>{dateStr}</p>
-      </div>
-      <ChevronRight size={14} color={TOKENS.neutral[300]} style={{ flexShrink: 0 }} />
-    </div>
-  );
-};
-
-/* ═══════════════════ STYLES ═══════════════════ */
-const S: Record<string, React.CSSProperties> = {
-  page: { minHeight: '100%', overflowY: 'auto', background: TOKENS.pageBg, fontFamily: TOKENS.fontFamily, boxSizing: 'border-box' },
-
-  loadingWrap: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: TOKENS.pageBg },
-  loadingCard: { display: 'flex', flexDirection: 'column', alignItems: 'center', background: '#fff', borderRadius: TOKENS.radius.xl, padding: '48px 56px', boxShadow: TOKENS.shadowLg, border: `1px solid ${TOKENS.cardBorder}`, animation: 'scaleIn 0.3s ease' },
-  spinner: { width: 36, height: 36, border: `3px solid ${TOKENS.neutral[200]}`, borderTop: `3px solid ${TOKENS.primary[500]}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginBottom: 16 },
-  loadingTitle: { fontSize: 15, fontWeight: 700, color: TOKENS.neutral[800], margin: '0 0 4px', fontFamily: TOKENS.fontFamily },
-  loadingDesc: { fontSize: 13, color: TOKENS.neutral[400], margin: 0, fontFamily: TOKENS.fontFamily },
-
-  header: { background: TOKENS.headerBg, borderBottom: `1px solid ${TOKENS.headerBorder}`, position: 'sticky', top: 0, zIndex: 40, backdropFilter: 'blur(12px)' },
-  headerInner: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: 16, padding: '16px 28px', maxWidth: 1600, margin: '0 auto' },
-
-  breadcrumb: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 },
-  breadcrumbIconWrap: { width: 20, height: 20, borderRadius: TOKENS.radius.sm, background: TOKENS.primary[50], display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  breadcrumbText: { fontSize: 12, color: TOKENS.neutral[400], fontWeight: 500, fontFamily: TOKENS.fontFamily },
-  breadcrumbDivider: { fontSize: 12, color: TOKENS.neutral[300] },
-  breadcrumbCurrent: { fontSize: 12, color: TOKENS.primary[600], fontWeight: 600, fontFamily: TOKENS.fontFamily },
-
-  pageTitle: { fontSize: 24, fontWeight: 800, color: TOKENS.neutral[900], margin: 0, letterSpacing: '-0.4px', fontFamily: TOKENS.fontFamily, lineHeight: 1.2 },
-  pageSubtitle: { fontSize: 13, color: TOKENS.neutral[400], margin: '4px 0 0', fontFamily: TOKENS.fontFamily, display: 'flex', alignItems: 'center' },
-
-  headerActions: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const },
-  searchWrapper: { display: 'flex', alignItems: 'center', gap: 8, background: TOKENS.neutral[50], border: `1px solid ${TOKENS.neutral[200]}`, borderRadius: TOKENS.radius.lg, padding: '7px 12px' },
-  searchInput: { background: 'none', border: 'none', outline: 'none', color: TOKENS.neutral[700], fontSize: 13, width: 180, fontFamily: TOKENS.fontFamily, fontWeight: 400 },
-  searchKbd: { fontSize: 10, fontWeight: 500, color: TOKENS.neutral[400], background: TOKENS.neutral[100], border: `1px solid ${TOKENS.neutral[200]}`, borderRadius: TOKENS.radius.sm, padding: '1px 5px', fontFamily: TOKENS.fontMono },
-
-  iconButton: { display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: TOKENS.radius.lg, background: TOKENS.neutral[50], border: `1px solid ${TOKENS.neutral[200]}`, cursor: 'pointer', padding: 0 },
-  notifButton: { position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: TOKENS.radius.lg, background: TOKENS.neutral[50], border: `1px solid ${TOKENS.neutral[200]}`, cursor: 'pointer', padding: 0 },
-  notifDot: { position: 'absolute', top: 7, right: 7, width: 7, height: 7, borderRadius: '50%', background: TOKENS.danger.base, border: '2px solid #fff' },
-  headerDivider: { width: 1, height: 28, background: TOKENS.neutral[200], margin: '0 4px' },
-  exportBtn: { display: 'flex', alignItems: 'center', gap: 6, background: '#fff', color: TOKENS.neutral[700], border: `1px solid ${TOKENS.neutral[200]}`, borderRadius: TOKENS.radius.lg, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: TOKENS.fontFamily },
-  addLeadBtn: { display: 'flex', alignItems: 'center', gap: 6, background: TOKENS.primary[600], color: '#fff', border: 'none', borderRadius: TOKENS.radius.lg, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: TOKENS.fontFamily, boxShadow: `0 2px 8px ${TOKENS.primary[600]}40` },
-
-  insightsBar: { display: 'flex', alignItems: 'center', gap: 16, padding: '10px 28px', margin: '16px 28px 16px', background: '#fff', border: `1px solid ${TOKENS.neutral[200]}`, borderRadius: TOKENS.radius.lg, boxShadow: TOKENS.shadowXs, flexWrap: 'wrap' as const, animation: 'fadeIn 0.4s ease' },
-  insightItem: { display: 'flex', alignItems: 'center', gap: 6 },
-  insightText: { fontSize: 12, color: TOKENS.neutral[500], fontFamily: TOKENS.fontFamily },
-  insightDivider: { width: 1, height: 16, background: TOKENS.neutral[200] },
-
-  content: { padding: '0 28px 52px', maxWidth: 1600, margin: '0 auto' },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 20 },
-
-  chartsRow: { display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' as const },
-  bottomRow: { display: 'flex', gap: 16, flexWrap: 'wrap' as const },
-
-  card: { background: TOKENS.cardBg, borderRadius: TOKENS.radius.xl, padding: '20px 22px', border: `1px solid ${TOKENS.cardBorder}`, boxShadow: TOKENS.shadowSm, boxSizing: 'border-box' as const, animation: 'fadeInUp 0.4s ease both' },
-  cardHeader: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: 8 },
-  cardTitleRow: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 },
-  cardTitle: { fontSize: 15, fontWeight: 700, color: TOKENS.neutral[900], margin: 0, fontFamily: TOKENS.fontFamily },
-  cardSubtitle: { fontSize: 12, color: TOKENS.neutral[400], margin: '2px 0 0', fontFamily: TOKENS.fontFamily, paddingLeft: 16 },
-  cardActions: { display: 'flex', alignItems: 'center', gap: 8 },
-  periodBadge: { fontSize: 11, fontWeight: 600, color: TOKENS.neutral[500], background: TOKENS.neutral[100], borderRadius: TOKENS.radius.full, padding: '3px 10px', fontFamily: TOKENS.fontFamily },
-  moreBtn: { background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: TOKENS.radius.sm },
-  viewAllBtn: { display: 'flex', alignItems: 'center', gap: 2, background: 'none', border: 'none', color: TOKENS.primary[500], fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: TOKENS.fontFamily, whiteSpace: 'nowrap' as const },
-
-  metricBadge: { display: 'flex', alignItems: 'center', gap: 5, background: TOKENS.primary[50], border: `1px solid ${TOKENS.primary[200]}`, borderRadius: TOKENS.radius.full, padding: '3px 10px' },
-  metricText: { fontSize: 11, color: TOKENS.primary[700], fontFamily: TOKENS.fontFamily },
-  peakBadge: { display: 'flex', alignItems: 'center', gap: 5, background: TOKENS.success.light, border: `1px solid ${TOKENS.success.border}`, borderRadius: TOKENS.radius.full, padding: '3px 10px' },
-  peakText: { fontSize: 11, fontWeight: 600, color: TOKENS.success.dark, fontFamily: TOKENS.fontFamily },
-
-  legendRow: { display: 'flex', gap: 16, flexWrap: 'wrap' as const, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${TOKENS.neutral[100]}` },
-  legendItem: { display: 'flex', alignItems: 'center', gap: 6 },
-  legendDot: { width: 8, height: 8, borderRadius: '50%', flexShrink: 0 },
-  legendLabel: { fontSize: 12, color: TOKENS.neutral[500], fontFamily: TOKENS.fontFamily, fontWeight: 500 },
-  legendValue: { fontSize: 12, fontWeight: 700, color: TOKENS.neutral[800], marginLeft: 2, fontFamily: TOKENS.fontFamily },
-
-  pieCenter: { position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' },
-  piePct: { fontSize: 28, fontWeight: 800, color: TOKENS.neutral[900], margin: 0, fontFamily: TOKENS.fontFamily, letterSpacing: '-0.5px' },
-  pieLabel: { fontSize: 11, color: TOKENS.neutral[400], margin: '2px 0 0', fontWeight: 500, fontFamily: TOKENS.fontFamily, textTransform: 'uppercase', letterSpacing: '0.06em' },
-  pieLegend: { display: 'flex', justifyContent: 'center', gap: 24, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${TOKENS.neutral[100]}` },
-  pieStatItem: { display: 'flex', alignItems: 'center', gap: 8 },
-  pieStatDot: { width: 10, height: 10, borderRadius: '50%', flexShrink: 0 },
-  pieStatLabel: { fontSize: 12, color: TOKENS.neutral[500], margin: 0, fontFamily: TOKENS.fontFamily, fontWeight: 500 },
-  pieStatValue: { fontSize: 13, fontWeight: 700, color: TOKENS.neutral[800], margin: '1px 0 0', fontFamily: TOKENS.fontFamily },
-
-  daySummary: { display: 'flex', gap: 6, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${TOKENS.neutral[100]}`, flexWrap: 'wrap' as const },
-  dayPill: { flex: 1, minWidth: 38, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '6px 4px', borderRadius: TOKENS.radius.md, border: '1px solid' },
-
-  activityList: { display: 'flex', flexDirection: 'column', gap: 0, marginTop: 16 },
-  emptyState: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 16px', textAlign: 'center' },
-  emptyTitle: { fontSize: 14, fontWeight: 600, color: TOKENS.neutral[600], margin: '12px 0 4px', fontFamily: TOKENS.fontFamily },
-  emptyDesc: { fontSize: 12, color: TOKENS.neutral[400], margin: 0, fontFamily: TOKENS.fontFamily },
 };
 
 export default Dashboard;
