@@ -743,6 +743,759 @@
 // export default Dashboard;
 
 
+// import React, { useEffect, useState } from 'react';
+// import {
+//   DollarSign,
+//   Users,
+//   TrendingUp,
+//   Clock,
+//   Phone,
+//   Mail,
+//   Calendar,
+//   FileText,
+//   ArrowUp,
+//   ArrowDown,
+//   ChevronRight,
+//   Plus,
+//   Sparkles,
+// } from 'lucide-react';
+// import {
+//   BarChart,
+//   Bar,
+//   XAxis,
+//   YAxis,
+//   Tooltip,
+//   ResponsiveContainer,
+//   PieChart,
+//   Pie,
+//   Cell,
+//   Line,
+//   CartesianGrid,
+//   Area,
+//   AreaChart,
+// } from 'recharts';
+// import { api } from '../Utils/api';
+// import type { DashboardStats } from '../Utils/types';
+
+// type ActivityItemType = {
+//   id: number;
+//   activity_type: string;
+//   summary?: string;
+//   created_at: string;
+// };
+
+// export const Dashboard = () => {
+//   const [stats, setStats] = useState<DashboardStats | null>(null);
+//   const [loading, setLoading] = useState(true);
+
+//   useEffect(() => {
+//     api
+//       .getDashboardStats()
+//       .then((data) => {
+//         setStats(data);
+//         setLoading(false);
+//       })
+//       .catch(() => setLoading(false));
+//   }, []);
+
+//   if (loading || !stats) {
+//     return (
+//       <div className="flex items-center justify-center h-full bg-slate-100">
+//         <div className="text-center">
+//           <div className="w-10 h-10 border-2 border-slate-300 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4" />
+//           <p className="text-slate-500">Loading dashboard...</p>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   const getStatusCount = (status: string) =>
+//     stats.status_distribution.find((s) => s.status === status)?.count || 0;
+
+//   const wonCount = getStatusCount('won');
+//   const contactedCount = getStatusCount('contacted');
+//   const newCount = getStatusCount('new');
+
+//   const pipelineData = [
+//     { name: 'New', value: newCount, color: '#60a5fa' },
+//     { name: 'Contacted', value: contactedCount, color: '#818cf8' },
+//     { name: 'Negotiation', value: getStatusCount('negotiation'), color: '#f59e0b' },
+//     { name: 'Won', value: wonCount, color: '#22c55e' },
+//   ];
+
+//   const weeklyData = [
+//     { day: 'Mon', leads: 4, calls: 12 },
+//     { day: 'Tue', leads: 7, calls: 18 },
+//     { day: 'Wed', leads: 5, calls: 15 },
+//     { day: 'Thu', leads: 9, calls: 22 },
+//     { day: 'Fri', leads: 6, calls: 17 },
+//     { day: 'Sat', leads: 3, calls: 10 },
+//     { day: 'Sun', leads: 5, calls: 13 },
+//   ];
+
+//   const pieData = [
+//     { name: 'New', value: getStatusCount('new'), color: '#38bdf8' },
+//     { name: 'Contacted', value: getStatusCount('contacted'), color: '#6366f1' },
+//     { name: 'Negotiation', value: getStatusCount('negotiation'), color: '#f59e0b' },
+//     { name: 'Won', value: getStatusCount('won'), color: '#22c55e' },
+//     { name: 'Lost', value: getStatusCount('lost'), color: '#f43f5e' },
+//   ];
+
+//   return (
+//     <div className="min-h-full p-6 bg-gradient-to-br from-blue-100 via-white to-cyan-100 relative">
+//       <div className="pointer-events-none absolute -top-20 -left-20 w-72 h-72 bg-blue-300/30 rounded-full blur-3xl" />
+//       <div className="pointer-events-none absolute top-40 -right-24 w-80 h-80 bg-cyan-300/25 rounded-full blur-3xl" />
+//       <div className="pointer-events-none absolute bottom-0 left-1/3 w-96 h-56 bg-indigo-200/30 rounded-full blur-3xl" />
+
+//       <div className="relative bg-white/75 backdrop-blur-md border border-white rounded-3xl p-6 shadow-[0_10px_40px_rgba(37,99,235,0.15)] mb-6">
+//         <div className="flex items-center justify-between flex-wrap gap-4">
+//           <div>
+//             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 text-xs font-semibold mb-3 border border-blue-200">
+//               <Sparkles size={14} />
+//               Revenue Intelligence
+//             </div>
+//             <h1 className="text-3xl font-bold text-slate-900">Sales Performance Hub</h1>
+//             <p className="text-slate-600 mt-1">Track pipeline health, conversions, and daily momentum.</p>
+//           </div>
+//           <button className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-4 py-2.5 rounded-xl hover:from-blue-700 hover:to-cyan-600 transition-all shadow-lg shadow-blue-200">
+//             <Plus size={18} />
+//             Add Lead
+//           </button>
+//         </div>
+//       </div>
+
+//       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+//         <StatCard title="Total Revenue" value={`$${stats.total_value.toLocaleString()}`} change={12.5} icon={DollarSign} gradient="from-blue-500 to-cyan-600" />
+//         <StatCard title="Total Leads" value={stats.total_leads} change={8} icon={Users} gradient="from-blue-500 to-indigo-600" />
+//         <StatCard title="Win Rate" value={`${stats.win_rate}%`} change={3.2} icon={TrendingUp} gradient="from-sky-500 to-blue-700" />
+//         <StatCard title="Pending Leads" value={newCount} change={-2} icon={Clock} gradient="from-cyan-500 to-blue-600" />
+//       </div>
+
+//       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+//         <div className="xl:col-span-2 bg-white/85 backdrop-blur-sm rounded-3xl p-6 border border-blue-100 shadow-[0_8px_30px_rgba(30,64,175,0.12)]">
+//           <h2 className="text-lg font-semibold text-slate-900 mb-4">Pipeline by Stage</h2>
+//           <div className="h-72">
+//             <ResponsiveContainer width="100%" height="100%">
+//               <BarChart data={pipelineData}>
+//                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+//                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} />
+//                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} />
+//                 <Tooltip
+//                   cursor={{ fill: 'rgba(15, 23, 42, 0.04)' }}
+//                   contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', background: '#fff' }}
+//                 />
+//                 <Bar dataKey="value" radius={[10, 10, 0, 0]}>
+//                   {pipelineData.map((entry) => (
+//                     <Cell key={entry.name} fill={entry.color} />
+//                   ))}
+//                 </Bar>
+//               </BarChart>
+//             </ResponsiveContainer>
+//           </div>
+//         </div>
+
+//         <div className="bg-white/85 backdrop-blur-sm rounded-3xl p-6 border border-blue-100 shadow-[0_8px_30px_rgba(30,64,175,0.12)]">
+//           <h2 className="text-lg font-semibold text-slate-900 mb-4">Conversion Snapshot</h2>
+//           <div className="h-56 relative">
+//             <ResponsiveContainer width="100%" height="100%">
+//               <PieChart>
+//                 <Pie data={pieData} dataKey="value" innerRadius={60} outerRadius={82} stroke="none">
+//                   {pieData.map((entry) => (
+//                     <Cell key={entry.name} fill={entry.color} />
+//                   ))}
+//                 </Pie>
+//               </PieChart>
+//             </ResponsiveContainer>
+//             <div className="absolute inset-0 flex items-center justify-center">
+//               <div className="text-center">
+//                 <p className="text-3xl font-bold text-slate-900">{stats.win_rate}%</p>
+//                 <p className="text-xs text-slate-500">Win Ratio</p>
+//               </div>
+//             </div>
+//           </div>
+//           <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+//             {pieData.map((item) => (
+//               <LegendRow key={item.name} color={item.color} label={`${item.name} (${item.value})`} />
+//             ))}
+//           </div>
+//         </div>
+//       </div>
+
+//       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+//         <div className="bg-white/85 backdrop-blur-sm rounded-3xl p-6 border border-blue-100 shadow-[0_8px_30px_rgba(30,64,175,0.12)]">
+//           <h2 className="text-lg font-semibold text-slate-900 mb-4">Weekly Leads vs Calls</h2>
+//           <div className="h-60">
+//             <ResponsiveContainer width="100%" height="100%">
+//               <AreaChart data={weeklyData}>
+//                 <defs>
+//                   <linearGradient id="leadFill" x1="0" y1="0" x2="0" y2="1">
+//                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
+//                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
+//                   </linearGradient>
+//                 </defs>
+//                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+//                 <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} />
+//                 <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} />
+//                 <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', background: '#fff' }} />
+//                 <Area type="monotone" dataKey="leads" stroke="#2563eb" fill="url(#leadFill)" strokeWidth={2.5} />
+//                 <Line type="monotone" dataKey="calls" stroke="#7c3aed" strokeWidth={2.5} dot={{ r: 3 }} />
+//               </AreaChart>
+//             </ResponsiveContainer>
+//           </div>
+//         </div>
+
+//         <div className="bg-white/85 backdrop-blur-sm rounded-3xl p-6 border border-blue-100 shadow-[0_8px_30px_rgba(30,64,175,0.12)]">
+//           <div className="flex items-center justify-between mb-4">
+//             <h2 className="text-lg font-semibold text-slate-900">Recent Activity</h2>
+//             <span className="text-xs text-slate-500">Last 5 updates</span>
+//           </div>
+//           <div className="space-y-3">
+//             {stats.recent_activities.slice(0, 5).map((activity) => (
+//               <ActivityItem key={activity.id} activity={activity} />
+//             ))}
+//             {stats.recent_activities.length === 0 && (
+//               <p className="text-slate-400 text-center py-10">No recent activity</p>
+//             )}
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// const StatCard = ({
+//   title,
+//   value,
+//   change,
+//   icon: Icon,
+//   gradient,
+// }: {
+//   title: string;
+//   value: string | number;
+//   change: number;
+//   icon: React.ComponentType<{ size?: number; className?: string }>;
+//   gradient: string;
+// }) => (
+//   <div className="rounded-3xl p-[1px] bg-gradient-to-br from-blue-200/60 to-cyan-200/40 shadow-md">
+//     <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-5 border border-white">
+//       <div className="flex items-start justify-between">
+//         <div>
+//           <p className="text-sm text-slate-500 mb-1">{title}</p>
+//           <p className="text-2xl font-bold text-slate-900">{value}</p>
+//         </div>
+//         <div className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient}`}>
+//           <Icon size={18} className="text-white" />
+//         </div>
+//       </div>
+//       <div className="mt-3 flex items-center gap-1.5">
+//         {change >= 0 ? <ArrowUp size={14} className="text-emerald-500" /> : <ArrowDown size={14} className="text-rose-500" />}
+//         <span className={`text-sm font-semibold ${change >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{Math.abs(change)}%</span>
+//         <span className="text-sm text-slate-400">vs last month</span>
+//       </div>
+//     </div>
+//   </div>
+// );
+
+// const LegendRow = ({ color, label }: { color: string; label: string }) => (
+//   <div className="flex items-center gap-2">
+//     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+//     <span className="text-slate-600">{label}</span>
+//   </div>
+// );
+
+// const ActivityItem = ({ activity }: { activity: ActivityItemType }) => {
+//   const icons: Record<string, { icon: React.ComponentType<{ size?: number; className?: string }>; bg: string; color: string }> = {
+//     call: { icon: Phone, bg: 'bg-sky-100', color: 'text-sky-600' },
+//     email: { icon: Mail, bg: 'bg-violet-100', color: 'text-violet-600' },
+//     meeting: { icon: Calendar, bg: 'bg-emerald-100', color: 'text-emerald-600' },
+//     note: { icon: FileText, bg: 'bg-amber-100', color: 'text-amber-600' },
+//   };
+
+//   const config = icons[activity.activity_type] || icons.note;
+//   const Icon = config.icon;
+
+//   return (
+//     <div className="group flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+//       <div className={`p-2.5 rounded-lg ${config.bg}`}>
+//         <Icon size={15} className={config.color} />
+//       </div>
+//       <div className="flex-1 min-w-0">
+//         <p className="text-sm font-medium text-slate-800 truncate">{activity.summary || activity.activity_type}</p>
+//         <p className="text-xs text-slate-400">
+//           {new Date(activity.created_at).toLocaleTimeString([], {
+//             hour: '2-digit',
+//             minute: '2-digit',
+//           })}
+//         </p>
+//       </div>
+//       <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-500" />
+//     </div>
+//   );
+// };
+
+// export default Dashboard;
+
+
+// import React, { useEffect, useState } from 'react';
+// import {
+//   DollarSign,
+//   Users,
+//   TrendingUp,
+//   Clock,
+//   Phone,
+//   Mail,
+//   Calendar,
+//   FileText,
+//   ArrowUp,
+//   ArrowDown,
+//   ChevronRight,
+//   Plus,
+//   Sparkles,
+//   LayoutDashboard,
+// } from 'lucide-react';
+// import {
+//   BarChart,
+//   Bar,
+//   XAxis,
+//   YAxis,
+//   Tooltip,
+//   ResponsiveContainer,
+//   PieChart,
+//   Pie,
+//   Cell,
+//   Line,
+//   CartesianGrid,
+//   Area,
+//   AreaChart,
+// } from 'recharts';
+// import { api } from '../Utils/api';
+// import type { DashboardStats } from '../Utils/types';
+
+// type ActivityItemType = {
+//   id: number;
+//   activity_type: string;
+//   summary?: string;
+//   created_at: string;
+// };
+
+// /* ─── Keyframes injected once ─────────────────────────── */
+// const injectStyles = () => {
+//   const id = 'dash-v2-styles';
+//   if (document.getElementById(id)) return;
+//   const s = document.createElement('style');
+//   s.id = id;
+//   s.textContent = `
+//     @keyframes fadeInUp {
+//       from { opacity:0; transform:translateY(10px); }
+//       to   { opacity:1; transform:translateY(0);    }
+//     }
+//     @keyframes slideIn {
+//       from { opacity:0; transform:translateX(-6px); }
+//       to   { opacity:1; transform:translateX(0);    }
+//     }
+//     @keyframes spin { to { transform:rotate(360deg); } }
+//     .dv2-card { transition: transform 0.22s ease, box-shadow 0.22s ease; }
+//     .dv2-card:hover { transform:translateY(-2px); box-shadow:0 10px 24px -4px rgba(0,0,0,0.1); }
+//     .dv2-stat { transition: transform 0.25s ease, box-shadow 0.25s ease; cursor:pointer; }
+//     .dv2-stat:hover { transform:translateY(-3px); box-shadow:0 14px 28px -6px rgba(0,0,0,0.12); }
+//     .dv2-act  { transition: background 0.15s ease, transform 0.15s ease; cursor:pointer; }
+//     .dv2-act:hover  { background:#f1f5f9 !important; transform:translateX(3px); }
+//     .dv2-fadeinup { animation: fadeInUp 0.4s ease both; }
+//     .dv2-slidein  { animation: slideIn  0.3s ease both; }
+//   `;
+//   document.head.appendChild(s);
+// };
+
+// /* ─── Custom Tooltip ──────────────────────────────────── */
+// const CustomTooltip = ({ active, payload, label }: any) => {
+//   if (!active || !payload?.length) return null;
+//   return (
+//     <div className="bg-slate-900 rounded-xl px-4 py-2.5 shadow-xl border-0">
+//       <p className="text-[10px] font-medium text-slate-400 mb-1">{label}</p>
+//       {payload.map((e: any, i: number) => (
+//         <p key={i} className="text-[13px] font-bold text-white m-0">
+//           {e.value} {e.name || ''}
+//         </p>
+//       ))}
+//     </div>
+//   );
+// };
+
+// /* ─── Stat card gradient configs ─────────────────────── */
+// const STAT_GRADIENTS: Record<string, { from: string; to: string; glow: string }> = {
+//   revenue: { from: '#667eea', to: '#764ba2', glow: 'rgba(102,126,234,0.32)' },
+//   leads:   { from: '#f093fb', to: '#f5576c', glow: 'rgba(240,147,251,0.32)' },
+//   winRate: { from: '#4facfe', to: '#00f2fe', glow: 'rgba(79,172,254,0.32)'  },
+//   pending: { from: '#43e97b', to: '#38f9d7', glow: 'rgba(67,233,123,0.32)'  },
+// };
+
+// /* ─── Stat Card ───────────────────────────────────────── */
+// const StatCard = ({
+//   title, value, change, icon: Icon, gradientKey, delay,
+// }: {
+//   title: string; value: string | number; change: number;
+//   icon: React.ComponentType<{ size?: number }>;
+//   gradientKey: string; delay: number;
+// }) => {
+//   const g = STAT_GRADIENTS[gradientKey];
+//   const positive = change >= 0;
+//   return (
+//     <div
+//       className="dv2-stat dv2-fadeinup bg-white rounded-xl border border-slate-200 overflow-hidden"
+//       style={{ animationDelay: `${delay * 0.08}s` }}
+//     >
+//       {/* accent bar mirrors Pipeline's STATUS_CONFIG gradient bar */}
+//       <div className="h-[3px] w-full" style={{ background: `linear-gradient(135deg,${g.from},${g.to})` }} />
+//       <div className="p-4">
+//         <div className="flex items-start justify-between mb-3">
+//           <div>
+//             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">{title}</p>
+//             <p className="text-[26px] font-bold text-slate-900 leading-none tracking-tight">{value}</p>
+//           </div>
+//           <div
+//             className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white"
+//             style={{
+//               background: `linear-gradient(135deg,${g.from},${g.to})`,
+//               boxShadow: `0 4px 12px ${g.glow}`,
+//             }}
+//           >
+//             <Icon size={18} />
+//           </div>
+//         </div>
+//         <div className="flex items-center gap-2">
+//           <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+//             positive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+//           }`}>
+//             {positive
+//               ? <ArrowUp size={10} strokeWidth={2.5} />
+//               : <ArrowDown size={10} strokeWidth={2.5} />}
+//             {Math.abs(change)}%
+//           </span>
+//           <span className="text-[10px] text-slate-400">vs last month</span>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// /* ─── Legend Row ──────────────────────────────────────── */
+// const LegendRow = ({ color, label }: { color: string; label: string }) => (
+//   <div className="flex items-center gap-1.5">
+//     <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+//     <span className="text-[11px] text-slate-600 font-medium">{label}</span>
+//   </div>
+// );
+
+// /* ─── Activity Item ───────────────────────────────────── */
+// const ACTIVITY_CFG: Record<string, { icon: any; bg: string; text: string; accent: string; label: string }> = {
+//   call:    { icon: Phone,    bg: 'bg-blue-50',    text: 'text-blue-600',    accent: '#3b82f6', label: 'Call'    },
+//   email:   { icon: Mail,     bg: 'bg-violet-50',  text: 'text-violet-600',  accent: '#8b5cf6', label: 'Email'   },
+//   meeting: { icon: Calendar, bg: 'bg-emerald-50', text: 'text-emerald-600', accent: '#10b981', label: 'Meeting' },
+//   note:    { icon: FileText, bg: 'bg-amber-50',   text: 'text-amber-600',   accent: '#f59e0b', label: 'Note'    },
+// };
+
+// const ActivityItem = ({ activity, index }: { activity: ActivityItemType; index: number }) => {
+//   const cfg = ACTIVITY_CFG[activity.activity_type] || ACTIVITY_CFG.note;
+//   const IconComp = cfg.icon;
+//   const timeStr = new Date(activity.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+//   return (
+//     <div
+//       className="dv2-act dv2-slidein flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50/80 mb-1.5"
+//       style={{ animationDelay: `${index * 0.05}s`, borderLeft: `3px solid ${cfg.accent}` }}
+//     >
+//       <div className={`w-8 h-8 rounded-lg ${cfg.bg} ${cfg.text} flex items-center justify-center shrink-0`}>
+//         <IconComp size={14} />
+//       </div>
+//       <div className="flex-1 min-w-0">
+//         <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.text}`}>
+//           {cfg.label}
+//         </span>
+//         <p className="text-[12px] font-medium text-slate-800 truncate mt-0.5">
+//           {activity.summary || activity.activity_type}
+//         </p>
+//       </div>
+//       <p className="text-[11px] font-semibold text-slate-500 shrink-0">{timeStr}</p>
+//       <ChevronRight size={13} className="text-slate-300 shrink-0" />
+//     </div>
+//   );
+// };
+
+// /* ═══════════════ MAIN DASHBOARD ═══════════════ */
+// export const Dashboard = () => {
+//   const [stats, setStats] = useState<DashboardStats | null>(null);
+//   const [loading, setLoading] = useState(true);
+
+//   useEffect(() => { injectStyles(); }, []);
+
+//   useEffect(() => {
+//     api
+//       .getDashboardStats()
+//       .then((data) => { setStats(data); setLoading(false); })
+//       .catch(() => setLoading(false));
+//   }, []);
+
+//   if (loading || !stats) {
+//     return (
+//       <div className="flex items-center justify-center h-full bg-[#f4f6fb]">
+//         <div className="flex flex-col items-center bg-white rounded-2xl px-14 py-12 border border-slate-200 shadow-lg">
+//           <div
+//             className="w-8 h-8 rounded-full border-[3px] border-slate-200 border-t-indigo-500 mb-4"
+//             style={{ animation: 'spin 0.8s linear infinite' }}
+//           />
+//           <p className="text-[13px] font-bold text-slate-700 mb-0.5">Loading dashboard</p>
+//           <p className="text-[11px] text-slate-400">Fetching your latest data…</p>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   const getStatusCount = (status: string) =>
+//     stats.status_distribution.find((s) => s.status === status)?.count || 0;
+
+//   const wonCount       = getStatusCount('won');
+//   const contactedCount = getStatusCount('contacted');
+//   const newCount       = getStatusCount('new');
+
+//   const pipelineData = [
+//     { name: 'New',         value: newCount,                      color: '#3b82f6' },
+//     { name: 'Contacted',   value: contactedCount,                color: '#6366f1' },
+//     { name: 'Negotiation', value: getStatusCount('negotiation'), color: '#f59e0b' },
+//     { name: 'Won',         value: wonCount,                      color: '#10b981' },
+//   ];
+
+//   const weeklyData = [
+//     { day: 'Mon', leads: 4,  calls: 12 },
+//     { day: 'Tue', leads: 7,  calls: 18 },
+//     { day: 'Wed', leads: 5,  calls: 15 },
+//     { day: 'Thu', leads: 9,  calls: 22 },
+//     { day: 'Fri', leads: 6,  calls: 17 },
+//     { day: 'Sat', leads: 3,  calls: 10 },
+//     { day: 'Sun', leads: 5,  calls: 13 },
+//   ];
+
+//   const pieData = [
+//     { name: 'New',         value: getStatusCount('new'),          color: '#3b82f6' },
+//     { name: 'Contacted',   value: getStatusCount('contacted'),    color: '#6366f1' },
+//     { name: 'Negotiation', value: getStatusCount('negotiation'),  color: '#f59e0b' },
+//     { name: 'Won',         value: getStatusCount('won'),          color: '#10b981' },
+//     { name: 'Lost',        value: getStatusCount('lost'),         color: '#94a3b8' },
+//   ];
+
+//   return (
+//     <div className="flex flex-col h-full bg-[#f4f6fb] overflow-hidden">
+
+//       {/* ── BANNER — identical pattern to Pipeline ── */}
+//       <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-4 flex items-center gap-3 shrink-0">
+//         <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+//           <LayoutDashboard className="text-white" size={15} />
+//         </div>
+//         <div className="flex-1">
+//           <h1 className="text-[18px] font-bold text-white leading-tight">Sales Performance Hub</h1>
+//           <p className="text-[11px] text-indigo-200 mt-0.5">Track pipeline health, conversions, and daily momentum</p>
+//         </div>
+//         <div className="flex items-center gap-2">
+//           {/* <div className="inline-flex items-center gap-1.5 bg-white/10 border border-white/10 text-indigo-200 px-2.5 py-1 rounded-md text-[11px] font-semibold">
+//             <Sparkles size={11} /> Revenue Intelligence
+//           </div> */}
+//           <button className="flex items-center gap-1.5 bg-white text-indigo-700 hover:bg-indigo-50 px-3 py-1.5 rounded-md text-[14px] font-bold transition-colors shadow-sm">
+//             <Plus size={13} /> Add Lead
+//           </button>
+//         </div>
+//       </div>
+
+//       {/* ── SCROLLABLE BODY ── */}
+//       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+//         {/* ── STAT CARDS ── */}
+//         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+//           <StatCard title="Total Revenue" value={`$${stats.total_value.toLocaleString()}`} change={12.5} icon={DollarSign} gradientKey="revenue" delay={0} />
+//           <StatCard title="Total Leads"   value={stats.total_leads}                         change={8}    icon={Users}       gradientKey="leads"   delay={1} />
+//           <StatCard title="Win Rate"      value={`${stats.win_rate}%`}                      change={3.2}  icon={TrendingUp}  gradientKey="winRate" delay={2} />
+//           <StatCard title="Pending Leads" value={newCount}                                  change={-2}   icon={Clock}       gradientKey="pending" delay={3} />
+//         </div>
+
+//         {/* ── CHARTS ROW 1 ── */}
+//         <div className="flex gap-3 flex-wrap lg:flex-nowrap">
+
+//           {/* Pipeline bar chart */}
+//           <div
+//             className="dv2-card dv2-fadeinup bg-white rounded-xl border border-slate-200 p-4 flex-[2] min-w-[280px]"
+//             style={{ animationDelay: '0.10s' }}
+//           >
+//             <div className="flex items-start justify-between mb-4">
+//               <div>
+//                 <div className="flex items-center gap-2 mb-0.5">
+//                   <span className="w-2 h-2 rounded-full bg-indigo-500" />
+//                   <h2 className="text-[13px] font-bold text-slate-800">Pipeline by Stage</h2>
+//                 </div>
+//                 <p className="text-[10px] text-slate-400 ml-4">Lead distribution across pipeline</p>
+//               </div>
+//               <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 rounded-full px-2.5 py-0.5">
+//                 This Month
+//               </span>
+//             </div>
+//             <div className="h-60">
+//               <ResponsiveContainer width="100%" height="100%">
+//                 <BarChart data={pipelineData} barCategoryGap="35%" margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+//                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+//                   <XAxis dataKey="name" axisLine={false} tickLine={false}
+//                     tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }} />
+//                   <YAxis axisLine={false} tickLine={false}
+//                     tick={{ fill: '#94a3b8', fontSize: 10 }} width={28} />
+//                   <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99,102,241,0.04)', radius: 6 } as any} />
+//                   <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={48}>
+//                     {pipelineData.map((entry) => (
+//                       <Cell key={entry.name} fill={entry.color} />
+//                     ))}
+//                   </Bar>
+//                 </BarChart>
+//               </ResponsiveContainer>
+//             </div>
+//             <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-slate-100">
+//               {pipelineData.map((item) => (
+//                 <div key={item.name} className="flex items-center gap-1.5">
+//                   <span className="w-2 h-2 rounded-full" style={{ background: item.color }} />
+//                   <span className="text-[11px] text-slate-500 font-medium">{item.name}</span>
+//                   <span className="text-[11px] font-bold text-slate-700">{item.value}</span>
+//                 </div>
+//               ))}
+//             </div>
+//           </div>
+
+//           {/* Conversion donut */}
+//           <div
+//             className="dv2-card dv2-fadeinup bg-white rounded-xl border border-slate-200 p-4 flex-1 min-w-[230px]"
+//             style={{ animationDelay: '0.14s' }}
+//           >
+//             <div className="flex items-center gap-2 mb-0.5">
+//               <span className="w-2 h-2 rounded-full bg-cyan-500" />
+//               <h2 className="text-[13px] font-bold text-slate-800">Conversion Snapshot</h2>
+//             </div>
+//             <p className="text-[10px] text-slate-400 ml-4 mb-3">Leads by current status</p>
+//             <div className="h-48 relative">
+//               <ResponsiveContainer width="100%" height="100%">
+//                 <PieChart>
+//                   <Pie
+//                     data={pieData} dataKey="value"
+//                     innerRadius={56} outerRadius={74}
+//                     stroke="none" startAngle={90} endAngle={-270} cornerRadius={3}
+//                   >
+//                     {pieData.map((entry) => (
+//                       <Cell key={entry.name} fill={entry.color} />
+//                     ))}
+//                   </Pie>
+//                 </PieChart>
+//               </ResponsiveContainer>
+//               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+//                 <div className="text-center">
+//                   <p className="text-[26px] font-bold text-slate-900 leading-none tracking-tight">{stats.win_rate}%</p>
+//                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">Win Ratio</p>
+//                 </div>
+//               </div>
+//             </div>
+//             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-slate-100">
+//               {pieData.map((item) => (
+//                 <LegendRow key={item.name} color={item.color} label={`${item.name} (${item.value})`} />
+//               ))}
+//             </div>
+//           </div>
+//         </div>
+
+//         {/* ── CHARTS ROW 2 ── */}
+//         <div className="flex gap-3 flex-wrap lg:flex-nowrap">
+
+//           {/* Weekly leads vs calls area chart */}
+//           <div
+//             className="dv2-card dv2-fadeinup bg-white rounded-xl border border-slate-200 p-4 flex-1 min-w-[280px]"
+//             style={{ animationDelay: '0.18s' }}
+//           >
+//             <div className="flex items-start justify-between mb-4">
+//               <div>
+//                 <div className="flex items-center gap-2 mb-0.5">
+//                   <span className="w-2 h-2 rounded-full bg-pink-500" />
+//                   <h2 className="text-[13px] font-bold text-slate-800">Weekly Leads vs Calls</h2>
+//                 </div>
+//                 <p className="text-[10px] text-slate-400 ml-4">Activity volume per day</p>
+//               </div>
+//               <div className="flex items-center gap-2">
+//                 <span className="flex items-center gap-1 text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-full px-2 py-0.5">
+//                   <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Leads
+//                 </span>
+//                 <span className="flex items-center gap-1 text-[10px] font-semibold bg-violet-50 text-violet-600 border border-violet-100 rounded-full px-2 py-0.5">
+//                   <span className="w-1.5 h-1.5 rounded-full bg-violet-500" /> Calls
+//                 </span>
+//               </div>
+//             </div>
+//             <div className="h-52">
+//               <ResponsiveContainer width="100%" height="100%">
+//                 <AreaChart data={weeklyData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+//                   <defs>
+//                     <linearGradient id="leadFill2" x1="0" y1="0" x2="0" y2="1">
+//                       <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.18} />
+//                       <stop offset="95%" stopColor="#6366f1" stopOpacity={0}    />
+//                     </linearGradient>
+//                   </defs>
+//                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+//                   <XAxis dataKey="day" axisLine={false} tickLine={false}
+//                     tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }} />
+//                   <YAxis axisLine={false} tickLine={false}
+//                     tick={{ fill: '#94a3b8', fontSize: 10 }} width={28} />
+//                   <Tooltip content={<CustomTooltip />} />
+//                   <Area
+//                     type="monotone" dataKey="leads"
+//                     stroke="#6366f1" fill="url(#leadFill2)" strokeWidth={2.5}
+//                     dot={{ fill: '#fff', stroke: '#6366f1', strokeWidth: 2.5, r: 4 }}
+//                     activeDot={{ r: 5.5, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }}
+//                   />
+//                   <Line
+//                     type="monotone" dataKey="calls"
+//                     stroke="#7c3aed" strokeWidth={2}
+//                     dot={{ r: 3, fill: '#7c3aed' }}
+//                   />
+//                 </AreaChart>
+//               </ResponsiveContainer>
+//             </div>
+//           </div>
+
+//           {/* Recent activity */}
+//           <div
+//             className="dv2-card dv2-fadeinup bg-white rounded-xl border border-slate-200 p-4 flex-1 min-w-[260px]"
+//             style={{ animationDelay: '0.22s' }}
+//           >
+//             <div className="flex items-start justify-between mb-4">
+//               <div>
+//                 <div className="flex items-center gap-2 mb-0.5">
+//                   <span className="w-2 h-2 rounded-full bg-amber-500" />
+//                   <h2 className="text-[13px] font-bold text-slate-800">Recent Activity</h2>
+//                 </div>
+//                 <p className="text-[10px] text-slate-400 ml-4">Last 5 updates</p>
+//               </div>
+//               <button className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+//                 View all <ChevronRight size={12} />
+//               </button>
+//             </div>
+//             <div>
+//               {stats.recent_activities.slice(0, 5).map((activity, i) => (
+//                 <ActivityItem key={activity.id} activity={activity} index={i} />
+//               ))}
+//               {stats.recent_activities.length === 0 && (
+//                 <div className="flex flex-col items-center justify-center py-10 text-center">
+//                   <p className="text-[12px] font-bold text-slate-400">No recent activity</p>
+//                   <p className="text-[10px] text-slate-300 mt-0.5">Changes will appear here</p>
+//                 </div>
+//               )}
+//             </div>
+//           </div>
+//         </div>
+
+//       </div>{/* end scrollable body */}
+//     </div>
+//   );
+// };
+
+// export default Dashboard;
+
+
 import React, { useEffect, useState } from 'react';
 import {
   DollarSign,
@@ -758,6 +1511,7 @@ import {
   ChevronRight,
   Plus,
   Sparkles,
+  LayoutDashboard,
 } from 'lucide-react';
 import {
   BarChart,
@@ -784,21 +1538,9 @@ type ActivityItemType = {
   created_at: string;
 };
 
-/* ─── Chart palette (indigo/pink/cyan/emerald — mirrors Pipeline STATUS_CONFIG) ─── */
-const CHART_COLORS = {
-  bar:  ['#6366f1', '#ec4899', '#06b6d4', '#10b981'],
-  pie:  ['#6366f1', '#e2e8f0'],
-  line: '#6366f1',
-  grid: '#f1f5f9',
-};
-
-const today = new Date().toLocaleDateString('en-US', {
-  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-});
-
-/* ─── Inject animation keyframes once ─── */
-const injectGlobalStyles = () => {
-  const id = 'dash-pipeline-styles';
+/* ─── Keyframes injected once ─────────────────────────── */
+const injectStyles = () => {
+  const id = 'dash-v2-styles';
   if (document.getElementById(id)) return;
   const s = document.createElement('style');
   s.id = id;
@@ -812,88 +1554,109 @@ const injectGlobalStyles = () => {
       to   { opacity:1; transform:translateX(0);    }
     }
     @keyframes spin { to { transform:rotate(360deg); } }
-    .dash-fadeinup { animation: fadeInUp 0.4s ease both; }
-    .dash-slidein  { animation: slideIn  0.3s ease both; }
-    .stat-card { transition: transform 0.25s cubic-bezier(.4,0,.2,1), box-shadow 0.25s cubic-bezier(.4,0,.2,1); cursor:pointer; }
-    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 24px -4px rgba(0,0,0,0.12); }
-    .dash-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-    .dash-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -4px rgba(0,0,0,0.1); }
-    .activity-item { transition: background 0.15s ease, transform 0.15s ease; cursor:pointer; }
-    .activity-item:hover { background: #f1f5f9 !important; transform: translateX(3px); }
+    .dv2-card { transition: transform 0.22s ease, box-shadow 0.22s ease; }
+    .dv2-card:hover { transform:translateY(-2px); box-shadow:0 10px 24px -4px rgba(0,0,0,0.1); }
+    .dv2-stat { transition: transform 0.25s ease, box-shadow 0.25s ease; cursor:pointer; }
+    .dv2-stat:hover { transform:translateY(-3px); box-shadow:0 14px 28px -6px rgba(0,0,0,0.18); }
+    .dv2-act  { transition: background 0.15s ease, transform 0.15s ease; cursor:pointer; }
+    .dv2-act:hover  { background:#f1f5f9 !important; transform:translateX(3px); }
+    .dv2-fadeinup { animation: fadeInUp 0.4s ease both; }
+    .dv2-slidein  { animation: slideIn  0.3s ease both; }
   `;
   document.head.appendChild(s);
 };
 
-/* ─── Custom Tooltip ─── */
+/* ─── Custom Tooltip ──────────────────────────────────── */
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-slate-900 rounded-xl px-4 py-2.5 shadow-xl">
-      <p className="text-[11px] font-medium text-slate-400 mb-1">{label}</p>
+    <div className="bg-slate-900 rounded-xl px-4 py-2.5 shadow-xl border-0">
+      <p className="text-[10px] font-medium text-slate-400 mb-1">{label}</p>
       {payload.map((e: any, i: number) => (
-        <p key={i} className="text-[14px] font-bold text-white m-0">{e.value} {e.name || 'leads'}</p>
+        <p key={i} className="text-[13px] font-bold text-white m-0">
+          {e.value} {e.name || ''}
+        </p>
       ))}
     </div>
   );
 };
 
-/* ─── Rounded bar shape ─── */
-const RoundedBar = (props: any) => {
-  const { x, y, width, height, index } = props;
-  return (
-    <rect x={x} y={y} width={width} height={height}
-      fill={CHART_COLORS.bar[index % CHART_COLORS.bar.length]}
-      rx={5} ry={5}
-      style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.08))' }}
-    />
-  );
+/* ─── Stat card solid color configs ─────────────────────── */
+const STAT_COLORS: Record<string, {
+  bg: string; iconBg: string; iconColor: string; badge: string; badgeText: string;
+}> = {
+  revenue: { bg: '#4f46e5', iconBg: 'rgba(255,255,255,0.18)', iconColor: '#ffffff', badge: 'rgba(255,255,255,0.18)', badgeText: '#ffffff' },
+  leads:   { bg: '#0ea5e9', iconBg: 'rgba(255,255,255,0.18)', iconColor: '#ffffff', badge: 'rgba(255,255,255,0.18)', badgeText: '#ffffff' },
+  winRate: { bg: '#10b981', iconBg: 'rgba(255,255,255,0.18)', iconColor: '#ffffff', badge: 'rgba(255,255,255,0.18)', badgeText: '#ffffff' },
+  pending: { bg: '#f59e0b', iconBg: 'rgba(255,255,255,0.18)', iconColor: '#ffffff', badge: 'rgba(255,255,255,0.18)', badgeText: '#ffffff' },
 };
 
-/* ═══════════════ STAT CARD ═══════════════ */
-const STAT_GRADIENTS: Record<string, { from: string; to: string; shadow: string }> = {
-  revenue: { from: '#667eea', to: '#764ba2', shadow: 'rgba(102,126,234,0.35)' },
-  leads:   { from: '#f093fb', to: '#f5576c', shadow: 'rgba(240,147,251,0.35)' },
-  winRate: { from: '#4facfe', to: '#00f2fe', shadow: 'rgba(79,172,254,0.35)' },
-  pending: { from: '#43e97b', to: '#38f9d7', shadow: 'rgba(67,233,123,0.35)' },
-};
-
-const StatCard = ({ title, value, change, icon: Icon, gradientKey, delay }: {
-  title: string; value: string | number; change: number;
-  icon: any; gradientKey: string; delay: number;
+/* ─── Stat Card ─────────────────────────────────────────
+   FIX: icon typed as React.ComponentType<{ size?: number }>
+   Color is applied via the wrapper div's style, not as a
+   prop on the icon itself — avoids the TS overload error.
+──────────────────────────────────────────────────────── */
+const StatCard = ({
+  title, value, change, icon: Icon, gradientKey, delay,
+}: {
+  title: string;
+  value: string | number;
+  change: number;
+  icon: React.ComponentType<{ size?: number }>;   // ← no `color` here
+  gradientKey: string;
+  delay: number;
 }) => {
-  const g = STAT_GRADIENTS[gradientKey];
+  const c = STAT_COLORS[gradientKey];
   const positive = change >= 0;
+
   return (
-    <div className="stat-card bg-white rounded-xl border border-slate-200 overflow-hidden dash-fadeinup"
-      style={{ animationDelay: `${delay * 0.08}s` }}>
-      {/* top accent bar */}
-      <div className="h-[3px] w-full" style={{ background: `linear-gradient(135deg, ${g.from}, ${g.to})` }} />
-      <div className="p-4">
+    <div
+      className="dv2-stat dv2-fadeinup rounded-2xl overflow-hidden"
+      style={{ animationDelay: `${delay * 0.08}s`, backgroundColor: c.bg }}
+    >
+      <div className="p-5">
+        {/* Top row: label + icon */}
         <div className="flex items-start justify-between mb-4">
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">{title}</p>
-            <p className="text-[28px] font-bold text-slate-900 leading-none tracking-tight">{value}</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
-            style={{ background: `linear-gradient(135deg, ${g.from}, ${g.to})`, boxShadow: `0 4px 12px ${g.shadow}` }}>
-            <Icon size={18} color="#fff" strokeWidth={2} />
+          <p className="text-[11px] font-black text-white/70 uppercase tracking-widest leading-tight">{title}</p>
+          {/* FIX: color applied via style on the wrapper, not as a prop to the icon */}
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: c.iconBg, color: c.iconColor }}
+          >
+            <Icon size={18} />
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
-            positive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
-          }`}>
-            {positive ? <ArrowUp size={10} strokeWidth={2.5} /> : <ArrowDown size={10} strokeWidth={2.5} />}
-            {Math.abs(change)}%
-          </span>
-          <span className="text-[10px] text-slate-400">vs last month</span>
+
+        {/* Value */}
+        <p className="text-[32px] font-black text-white leading-none tracking-tight mb-3">{value}</p>
+
+        {/* Change badge */}
+        <div
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold"
+          style={{ backgroundColor: c.badge, color: c.badgeText }}
+        >
+          {positive
+            ? <ArrowUp size={10} strokeWidth={3} />
+            : <ArrowDown size={10} strokeWidth={3} />}
+          {Math.abs(change)}% vs last month
         </div>
       </div>
+
+      {/* Bottom accent strip */}
+      <div className="h-1 w-full" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }} />
     </div>
   );
 };
 
-/* ═══════════════ ACTIVITY ITEM ═══════════════ */
+/* ─── Legend Row ──────────────────────────────────────── */
+const LegendRow = ({ color, label }: { color: string; label: string }) => (
+  <div className="flex items-center gap-1.5">
+    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+    <span className="text-[11px] text-slate-600 font-medium">{label}</span>
+  </div>
+);
+
+/* ─── Activity Item ───────────────────────────────────── */
 const ACTIVITY_CFG: Record<string, { icon: any; bg: string; text: string; accent: string; label: string }> = {
   call:    { icon: Phone,    bg: 'bg-blue-50',    text: 'text-blue-600',    accent: '#3b82f6', label: 'Call'    },
   email:   { icon: Mail,     bg: 'bg-violet-50',  text: 'text-violet-600',  accent: '#8b5cf6', label: 'Email'   },
@@ -901,14 +1664,15 @@ const ACTIVITY_CFG: Record<string, { icon: any; bg: string; text: string; accent
   note:    { icon: FileText, bg: 'bg-amber-50',   text: 'text-amber-600',   accent: '#f59e0b', label: 'Note'    },
 };
 
-const ActivityItem = ({ activity, index }: { activity: any; index: number }) => {
-  const cfg = ACTIVITY_CFG[activity.activity_type] || ACTIVITY_CFG.note;
+const ActivityItem = ({ activity, index }: { activity: ActivityItemType; index: number }) => {
+  const cfg      = ACTIVITY_CFG[activity.activity_type] || ACTIVITY_CFG.note;
   const IconComp = cfg.icon;
-  const timeStr = new Date(activity.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const dateStr = new Date(activity.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const timeStr  = new Date(activity.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   return (
-    <div className="activity-item flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50/80 mb-1.5 dash-slidein"
-      style={{ animationDelay: `${index * 0.05}s`, borderLeft: `3px solid ${cfg.accent}` }}>
+    <div
+      className="dv2-act dv2-slidein flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50/80 mb-1.5"
+      style={{ animationDelay: `${index * 0.05}s`, borderLeft: `3px solid ${cfg.accent}` }}
+    >
       <div className={`w-8 h-8 rounded-lg ${cfg.bg} ${cfg.text} flex items-center justify-center shrink-0`}>
         <IconComp size={14} />
       </div>
@@ -920,50 +1684,36 @@ const ActivityItem = ({ activity, index }: { activity: any; index: number }) => 
           {activity.summary || activity.activity_type}
         </p>
       </div>
-      <div className="text-right shrink-0">
-        <p className="text-[11px] font-semibold text-slate-700">{timeStr}</p>
-        <p className="text-[10px] text-slate-400 mt-0.5">{dateStr}</p>
-      </div>
+      <p className="text-[11px] font-semibold text-slate-500 shrink-0">{timeStr}</p>
       <ChevronRight size={13} className="text-slate-300 shrink-0" />
     </div>
   );
 };
 
-/* ═══════════════ LOADING STATE ═══════════════ */
-const LoadingState = () => (
-  <div className="flex items-center justify-center h-full bg-[#f4f6fb]">
-    <div className="flex flex-col items-center bg-white rounded-2xl px-14 py-12 border border-slate-200 shadow-lg">
-      <div className="w-8 h-8 rounded-full border-[3px] border-slate-200 border-t-indigo-500 mb-4"
-        style={{ animation: 'spin 0.8s linear infinite' }} />
-      <p className="text-[14px] font-bold text-slate-700 mb-0.5">Loading dashboard</p>
-      <p className="text-[11px] text-slate-400">Fetching your latest data…</p>
-    </div>
-  </div>
-);
-
 /* ═══════════════ MAIN DASHBOARD ═══════════════ */
 export const Dashboard = () => {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats]   = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { injectGlobalStyles(); }, []);
+  useEffect(() => { injectStyles(); }, []);
 
   useEffect(() => {
     api
       .getDashboardStats()
-      .then((data) => {
-        setStats(data);
-        setLoading(false);
-      })
+      .then((data) => { setStats(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
   if (loading || !stats) {
     return (
-      <div className="flex items-center justify-center h-full bg-slate-100">
-        <div className="text-center">
-          <div className="w-10 h-10 border-2 border-slate-300 border-t-cyan-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-500">Loading dashboard...</p>
+      <div className="flex items-center justify-center h-full bg-[#f4f6fb]">
+        <div className="flex flex-col items-center bg-white rounded-2xl px-14 py-12 border border-slate-200 shadow-lg">
+          <div
+            className="w-8 h-8 rounded-full border-[3px] border-slate-200 border-t-indigo-500 mb-4"
+            style={{ animation: 'spin 0.8s linear infinite' }}
+          />
+          <p className="text-[13px] font-bold text-slate-700 mb-0.5">Loading dashboard</p>
+          <p className="text-[11px] text-slate-400">Fetching your latest data…</p>
         </div>
       </div>
     );
@@ -972,248 +1722,271 @@ export const Dashboard = () => {
   const getStatusCount = (status: string) =>
     stats.status_distribution.find((s) => s.status === status)?.count || 0;
 
-  const wonCount = getStatusCount('won');
+  const wonCount       = getStatusCount('won');
   const contactedCount = getStatusCount('contacted');
-  const newCount = getStatusCount('new');
+  const newCount       = getStatusCount('new');
 
   const pipelineData = [
-    { name: 'New', value: newCount, color: '#60a5fa' },
-    { name: 'Contacted', value: contactedCount, color: '#818cf8' },
+    { name: 'New',         value: newCount,                      color: '#3b82f6' },
+    { name: 'Contacted',   value: contactedCount,                color: '#6366f1' },
     { name: 'Negotiation', value: getStatusCount('negotiation'), color: '#f59e0b' },
-    { name: 'Won', value: wonCount, color: '#22c55e' },
+    { name: 'Won',         value: wonCount,                      color: '#10b981' },
   ];
 
   const weeklyData = [
-    { day: 'Mon', leads: 4, calls: 12 },
-    { day: 'Tue', leads: 7, calls: 18 },
-    { day: 'Wed', leads: 5, calls: 15 },
-    { day: 'Thu', leads: 9, calls: 22 },
-    { day: 'Fri', leads: 6, calls: 17 },
-    { day: 'Sat', leads: 3, calls: 10 },
-    { day: 'Sun', leads: 5, calls: 13 },
+    { day: 'Mon', leads: 4,  calls: 12 },
+    { day: 'Tue', leads: 7,  calls: 18 },
+    { day: 'Wed', leads: 5,  calls: 15 },
+    { day: 'Thu', leads: 9,  calls: 22 },
+    { day: 'Fri', leads: 6,  calls: 17 },
+    { day: 'Sat', leads: 3,  calls: 10 },
+    { day: 'Sun', leads: 5,  calls: 13 },
   ];
 
   const pieData = [
-    { name: 'New', value: getStatusCount('new'), color: '#38bdf8' },
-    { name: 'Contacted', value: getStatusCount('contacted'), color: '#6366f1' },
+    { name: 'New',         value: getStatusCount('new'),         color: '#3b82f6' },
+    { name: 'Contacted',   value: getStatusCount('contacted'),   color: '#6366f1' },
     { name: 'Negotiation', value: getStatusCount('negotiation'), color: '#f59e0b' },
-    { name: 'Won', value: getStatusCount('won'), color: '#22c55e' },
-    { name: 'Lost', value: getStatusCount('lost'), color: '#f43f5e' },
+    { name: 'Won',         value: getStatusCount('won'),         color: '#10b981' },
+    { name: 'Lost',        value: getStatusCount('lost'),        color: '#94a3b8' },
   ];
 
-  const totalWeeklyLeads = weeklyData.reduce((s, d) => s + d.leads, 0);
-  const peakDay = weeklyData.reduce((mx, d) => d.leads > mx.leads ? d : mx, weeklyData[0]);
-
   return (
-    <div className="min-h-full p-6 bg-gradient-to-br from-blue-100 via-white to-cyan-100 relative">
-      <div className="pointer-events-none absolute -top-20 -left-20 w-72 h-72 bg-blue-300/30 rounded-full blur-3xl" />
-      <div className="pointer-events-none absolute top-40 -right-24 w-80 h-80 bg-cyan-300/25 rounded-full blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 left-1/3 w-96 h-56 bg-indigo-200/30 rounded-full blur-3xl" />
+    <div className="flex flex-col h-full bg-[#f0f2f8] overflow-hidden">
 
-      <div className="relative bg-white/75 backdrop-blur-md border border-white rounded-3xl p-6 shadow-[0_10px_40px_rgba(37,99,235,0.15)] mb-6">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 text-xs font-semibold mb-3 border border-blue-200">
-              <Sparkles size={14} />
-              Revenue Intelligence
-            </div>
-            <h1 className="text-3xl font-bold text-slate-900">Sales Performance Hub</h1>
-            <p className="text-slate-600 mt-1">Track pipeline health, conversions, and daily momentum.</p>
+      {/* ── BANNER ── */}
+      <div
+        className="shrink-0 mx-4 mt-4 mb-0 rounded-2xl overflow-hidden"
+        style={{
+          background: 'linear-gradient(125deg, #3730a3 0%, #4f46e5 40%, #7c3aed 100%)',
+          boxShadow: '0 8px 32px -4px rgba(79,70,229,0.45)',
+        }}
+      >
+        <div
+          className="px-6 py-5 flex items-center gap-4"
+          style={{ backgroundImage: 'radial-gradient(ellipse at 80% 50%, rgba(255,255,255,0.08) 0%, transparent 60%)' }}
+        >
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.2)' }}
+          >
+            <LayoutDashboard className="text-white" size={20} />
           </div>
-          <button className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-4 py-2.5 rounded-xl hover:from-blue-700 hover:to-cyan-600 transition-all shadow-lg shadow-blue-200">
-            <Plus size={18} />
-            Add Lead
-          </button>
+
+          <div className="flex-1">
+            <h1 className="text-[20px] font-black text-white leading-tight tracking-tight">
+              Sales Performance Hub
+            </h1>
+            <p className="text-[12px] text-indigo-200 mt-0.5 font-medium">
+              Track pipeline health, conversions, and daily momentum
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold text-indigo-100"
+              style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)' }}
+            >
+              <Sparkles size={12} /> Revenue Intelligence
+            </div>
+            <button
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-black transition-all"
+              style={{ backgroundColor: '#ffffff', color: '#4f46e5', boxShadow: '0 2px 12px rgba(0,0,0,0.15)' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#ede9fe')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#ffffff')}
+            >
+              <Plus size={14} /> Add Lead
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Total Revenue" value={`$${stats.total_value.toLocaleString()}`} change={12.5} icon={DollarSign} gradient="from-blue-500 to-cyan-600" />
-        <StatCard title="Total Leads" value={stats.total_leads} change={8} icon={Users} gradient="from-blue-500 to-indigo-600" />
-        <StatCard title="Win Rate" value={`${stats.win_rate}%`} change={3.2} icon={TrendingUp} gradient="from-sky-500 to-blue-700" />
-        <StatCard title="Pending Leads" value={newCount} change={-2} icon={Clock} gradient="from-cyan-500 to-blue-600" />
-      </div>
+      {/* ── SCROLLABLE BODY ── */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-        <div className="xl:col-span-2 bg-white/85 backdrop-blur-sm rounded-3xl p-6 border border-blue-100 shadow-[0_8px_30px_rgba(30,64,175,0.12)]">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Pipeline by Stage</h2>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={pipelineData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} />
-                <Tooltip
-                  cursor={{ fill: 'rgba(15, 23, 42, 0.04)' }}
-                  contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', background: '#fff' }}
-                />
-                <Bar dataKey="value" radius={[10, 10, 0, 0]}>
-                  {pipelineData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        {/* ── STAT CARDS ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatCard title="Total Revenue" value={`$${stats.total_value.toLocaleString()}`} change={12.5} icon={DollarSign} gradientKey="revenue" delay={0} />
+          <StatCard title="Total Leads"   value={stats.total_leads}                         change={8}    icon={Users}      gradientKey="leads"   delay={1} />
+          <StatCard title="Win Rate"      value={`${stats.win_rate}%`}                      change={3.2}  icon={TrendingUp} gradientKey="winRate" delay={2} />
+          <StatCard title="Pending Leads" value={newCount}                                  change={-2}   icon={Clock}      gradientKey="pending" delay={3} />
         </div>
 
-        <div className="bg-white/85 backdrop-blur-sm rounded-3xl p-6 border border-blue-100 shadow-[0_8px_30px_rgba(30,64,175,0.12)]">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Conversion Snapshot</h2>
-          <div className="h-56 relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={pieData} dataKey="value" innerRadius={60} outerRadius={82} stroke="none">
-                  {pieData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-slate-900">{stats.win_rate}%</p>
-                <p className="text-xs text-slate-500">Win Ratio</p>
-              </div>
-            </div>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-            {pieData.map((item) => (
-              <LegendRow key={item.name} color={item.color} label={`${item.name} (${item.value})`} />
-            ))}
-          </div>
-        </div>
-
-        {/* ── BOTTOM ROW ── */}
+        {/* ── CHARTS ROW 1 ── */}
         <div className="flex gap-3 flex-wrap lg:flex-nowrap">
 
-          {/* Weekly area chart */}
-          <div className="dash-card bg-white rounded-xl border border-slate-200 p-4 flex-1 min-w-[300px] dash-fadeinup" style={{ animationDelay: '0.2s' }}>
-            <div className="flex items-start justify-between mb-1">
+          {/* Pipeline bar chart */}
+          <div
+            className="dv2-card dv2-fadeinup bg-white rounded-2xl border border-slate-200/80 p-5 flex-[2] min-w-[280px]"
+            style={{ animationDelay: '0.10s' }}
+          >
+            <div className="flex items-start justify-between mb-4">
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="w-2 h-2 rounded-full bg-pink-500" />
-                  <h3 className="text-[13px] font-bold text-slate-800">Weekly Leads</h3>
+                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                  <h2 className="text-[14px] font-black text-slate-800">Pipeline by Stage</h2>
                 </div>
-                <p className="text-[10px] text-slate-400 ml-4">New leads added each day</p>
+                <p className="text-[10px] text-slate-400 ml-4.5">Lead distribution across pipeline</p>
+              </div>
+              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full px-2.5 py-1">
+                This Month
+              </span>
+            </div>
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={pipelineData} barCategoryGap="35%" margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false}
+                    tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }} />
+                  <YAxis axisLine={false} tickLine={false}
+                    tick={{ fill: '#94a3b8', fontSize: 10 }} width={28} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(99,102,241,0.04)', radius: 6 } as any} />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={48}>
+                    {pipelineData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-slate-100">
+              {pipelineData.map((item) => (
+                <div key={item.name} className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: item.color }} />
+                  <span className="text-[11px] text-slate-500 font-medium">{item.name}</span>
+                  <span className="text-[12px] font-black text-slate-700">{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Conversion donut */}
+          <div
+            className="dv2-card dv2-fadeinup bg-white rounded-2xl border border-slate-200/80 p-5 flex-1 min-w-[230px]"
+            style={{ animationDelay: '0.14s' }}
+          >
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
+              <h2 className="text-[14px] font-black text-slate-800">Conversion Snapshot</h2>
+            </div>
+            <p className="text-[10px] text-slate-400 ml-4.5 mb-3">Leads by current status</p>
+            <div className="h-48 relative">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData} dataKey="value"
+                    innerRadius={56} outerRadius={74}
+                    stroke="none" startAngle={90} endAngle={-270} cornerRadius={3}
+                  >
+                    {pieData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="text-center">
+                  <p className="text-[28px] font-black text-slate-900 leading-none tracking-tight">{stats.win_rate}%</p>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Win Ratio</p>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-slate-100">
+              {pieData.map((item) => (
+                <LegendRow key={item.name} color={item.color} label={`${item.name} (${item.value})`} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── CHARTS ROW 2 ── */}
+        <div className="flex gap-3 flex-wrap lg:flex-nowrap">
+
+          {/* Weekly leads vs calls area chart */}
+          <div
+            className="dv2-card dv2-fadeinup bg-white rounded-2xl border border-slate-200/80 p-5 flex-1 min-w-[280px]"
+            style={{ animationDelay: '0.18s' }}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-pink-500" />
+                  <h2 className="text-[14px] font-black text-slate-800">Weekly Leads vs Calls</h2>
+                </div>
+                <p className="text-[10px] text-slate-400 ml-4.5">Activity volume per day</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-full px-2 py-0.5 flex items-center gap-1">
-                  <Activity size={10} /> Total: <strong>{totalWeeklyLeads}</strong>
+                <span className="flex items-center gap-1 text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-full px-2 py-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Leads
                 </span>
-                <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full px-2 py-0.5 flex items-center gap-1">
-                  <TrendingUp size={10} /> Peak: {peakDay.day}
+                <span className="flex items-center gap-1 text-[10px] font-bold bg-violet-50 text-violet-600 border border-violet-100 rounded-full px-2 py-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500" /> Calls
                 </span>
               </div>
             </div>
+            <div className="h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={weeklyData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="leadFill2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.18} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}    />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false}
+                    tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }} />
+                  <YAxis axisLine={false} tickLine={false}
+                    tick={{ fill: '#94a3b8', fontSize: 10 }} width={28} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area
+                    type="monotone" dataKey="leads"
+                    stroke="#6366f1" fill="url(#leadFill2)" strokeWidth={2.5}
+                    dot={{ fill: '#fff', stroke: '#6366f1', strokeWidth: 2.5, r: 4 }}
+                    activeDot={{ r: 5.5, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }}
+                  />
+                  <Line
+                    type="monotone" dataKey="calls"
+                    stroke="#7c3aed" strokeWidth={2}
+                    dot={{ r: 3, fill: '#7c3aed' }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="bg-white/85 backdrop-blur-sm rounded-3xl p-6 border border-blue-100 shadow-[0_8px_30px_rgba(30,64,175,0.12)]">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Weekly Leads vs Calls</h2>
-          <div className="h-60">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={weeklyData}>
-                <defs>
-                  <linearGradient id="leadFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} />
-                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', background: '#fff' }} />
-                <Area type="monotone" dataKey="leads" stroke="#2563eb" fill="url(#leadFill)" strokeWidth={2.5} />
-                <Line type="monotone" dataKey="calls" stroke="#7c3aed" strokeWidth={2.5} dot={{ r: 3 }} />
-              </AreaChart>
-            </ResponsiveContainer>
+          {/* Recent activity */}
+          <div
+            className="dv2-card dv2-fadeinup bg-white rounded-2xl border border-slate-200/80 p-5 flex-1 min-w-[260px]"
+            style={{ animationDelay: '0.22s' }}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                  <h2 className="text-[14px] font-black text-slate-800">Recent Activity</h2>
+                </div>
+                <p className="text-[10px] text-slate-400 ml-4.5">Last 5 updates</p>
+              </div>
+              <button className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg">
+                View all <ChevronRight size={12} />
+              </button>
+            </div>
+            <div>
+              {stats.recent_activities.slice(0, 5).map((activity, i) => (
+                <ActivityItem key={activity.id} activity={activity} index={i} />
+              ))}
+              {stats.recent_activities.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <p className="text-[12px] font-bold text-slate-400">No recent activity</p>
+                  <p className="text-[10px] text-slate-300 mt-0.5">Changes will appear here</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="bg-white/85 backdrop-blur-sm rounded-3xl p-6 border border-blue-100 shadow-[0_8px_30px_rgba(30,64,175,0.12)]">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-900">Recent Activity</h2>
-            <span className="text-xs text-slate-500">Last 5 updates</span>
-          </div>
-          <div className="space-y-3">
-            {stats.recent_activities.slice(0, 5).map((activity) => (
-              <ActivityItem key={activity.id} activity={activity} />
-            ))}
-            {stats.recent_activities.length === 0 && (
-              <p className="text-slate-400 text-center py-10">No recent activity</p>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const StatCard = ({
-  title,
-  value,
-  change,
-  icon: Icon,
-  gradient,
-}: {
-  title: string;
-  value: string | number;
-  change: number;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  gradient: string;
-}) => (
-  <div className="rounded-3xl p-[1px] bg-gradient-to-br from-blue-200/60 to-cyan-200/40 shadow-md">
-    <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-5 border border-white">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-slate-500 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-slate-900">{value}</p>
-        </div>
-        <div className={`p-2.5 rounded-xl bg-gradient-to-br ${gradient}`}>
-          <Icon size={18} className="text-white" />
-        </div>
-      </div>
-      <div className="mt-3 flex items-center gap-1.5">
-        {change >= 0 ? <ArrowUp size={14} className="text-emerald-500" /> : <ArrowDown size={14} className="text-rose-500" />}
-        <span className={`text-sm font-semibold ${change >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{Math.abs(change)}%</span>
-        <span className="text-sm text-slate-400">vs last month</span>
-      </div>
-    </div>
-  </div>
-);
-
-const LegendRow = ({ color, label }: { color: string; label: string }) => (
-  <div className="flex items-center gap-2">
-    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
-    <span className="text-slate-600">{label}</span>
-  </div>
-);
-
-const ActivityItem = ({ activity }: { activity: ActivityItemType }) => {
-  const icons: Record<string, { icon: React.ComponentType<{ size?: number; className?: string }>; bg: string; color: string }> = {
-    call: { icon: Phone, bg: 'bg-sky-100', color: 'text-sky-600' },
-    email: { icon: Mail, bg: 'bg-violet-100', color: 'text-violet-600' },
-    meeting: { icon: Calendar, bg: 'bg-emerald-100', color: 'text-emerald-600' },
-    note: { icon: FileText, bg: 'bg-amber-100', color: 'text-amber-600' },
-  };
-
-  const config = icons[activity.activity_type] || icons.note;
-  const Icon = config.icon;
-
-  return (
-    <div className="group flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors">
-      <div className={`p-2.5 rounded-lg ${config.bg}`}>
-        <Icon size={15} className={config.color} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-800 truncate">{activity.summary || activity.activity_type}</p>
-        <p className="text-xs text-slate-400">
-          {new Date(activity.created_at).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </p>
-      </div>
-      <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-500" />
+      </div>{/* end scrollable body */}
     </div>
   );
 };
