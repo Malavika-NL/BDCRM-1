@@ -1,3 +1,472 @@
+// import React, { useState, useEffect, useRef } from 'react';
+// import {
+//   BrainCircuit, Send, Sparkles, AlertTriangle, TrendingUp,
+//   Target, Loader2, Trash2, Bell, Zap, Search,
+//   CheckCircle2, XCircle, Clock, ArrowRight
+// } from 'lucide-react';
+// import { api } from '../Utils/api';
+// import type { AIAlert, ChatResponse } from '../Utils/types';
+
+// export const AICommandCenter: React.FC = () => {
+//   const [tab, setTab] = useState<'chat' | 'alerts' | 'digest' | 'search'>('chat');
+
+//   // Chat
+//   const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
+//   const [input, setInput] = useState('');
+//   const [chatLoading, setChatLoading] = useState(false);
+//   const endRef = useRef<HTMLDivElement>(null);
+
+//   // Alerts
+//   const [alerts, setAlerts] = useState<AIAlert[]>([]);
+//   const [unread, setUnread] = useState(0);
+
+//   // Digest
+//   const [digest, setDigest] = useState<any>(null);
+//   const [digestLoading, setDigestLoading] = useState(false);
+
+//   // Search
+//   const [searchQ, setSearchQ] = useState('');
+//   const [searchRes, setSearchRes] = useState<any>(null);
+//   const [searchLoading, setSearchLoading] = useState(false);
+
+//   useEffect(() => {
+//     loadAlerts();
+//     loadUnread();
+//     loadHistory();
+//   }, []);
+
+//   useEffect(() => {
+//     endRef.current?.scrollIntoView({ behavior: 'smooth' });
+//   }, [messages]);
+
+//   const loadAlerts = () => api.aiGetAlerts(false).then(setAlerts).catch(() => {});
+//   const loadUnread = () => api.aiUnreadCount().then(d => setUnread(d.unread || 0)).catch(() => {});
+//   const loadHistory = () => api.aiChatHistory().then(d => { if (d.messages) setMessages(d.messages); }).catch(() => {});
+
+//   const sendChat = async () => {
+//     if (!input.trim()) return;
+//     const msg = input;
+//     setInput('');
+//     setMessages(prev => [...prev, { role: 'user', content: msg }]);
+//     setChatLoading(true);
+//     try {
+//       const res: ChatResponse = await api.aiChat(msg);
+//       setMessages(prev => [...prev, { role: 'assistant', content: res.response }]);
+//     } catch {
+//       setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, something went wrong.' }]);
+//     }
+//     setChatLoading(false);
+//   };
+
+//   const clearChat = async () => {
+//     await api.aiChatClear();
+//     setMessages([]);
+//   };
+
+//   const doDigest = async () => {
+//     setDigestLoading(true);
+//     try { setDigest(await api.aiDailyDigest()); } catch (e) { console.error(e); }
+//     setDigestLoading(false);
+//   };
+
+//   const doSearch = async () => {
+//     if (!searchQ.trim()) return;
+//     setSearchLoading(true);
+//     try { setSearchRes(await api.aiSearch(searchQ)); } catch (e) { console.error(e); }
+//     setSearchLoading(false);
+//   };
+
+//   const markRead = async (id: number) => {
+//     await api.aiMarkAlertRead(id);
+//     loadAlerts();
+//     loadUnread();
+//   };
+
+//   const markAllRead = async () => {
+//     await api.aiMarkAllRead();
+//     loadAlerts();
+//     loadUnread();
+//   };
+
+//   const priorityColor: Record<string, string> = {
+//     critical: 'border-l-red-500 bg-red-50',
+//     high: 'border-l-orange-500 bg-orange-50',
+//     medium: 'border-l-amber-400 bg-amber-50',
+//     low: 'border-l-slate-300 bg-slate-50',
+//   };
+
+//   const quickQuestions = [
+//     'Which leads should I focus on today?',
+//     'Show me at-risk deals',
+//     'Pipeline health check',
+//     'Any overdue follow-ups?',
+//   ];
+
+//   const searchSuggestions = [
+//     'Show all hot leads',
+//     'Deals over $100k',
+//     'Leads from LinkedIn',
+//     'New leads this week',
+//   ];
+
+//   return (
+//     <div className="flex h-full overflow-hidden bg-slate-50">
+//       <div className="flex-1 flex flex-col overflow-hidden">
+
+//         {/* Tab Bar */}
+//         <div className="bg-white border-b border-slate-200 px-6 pt-4 flex gap-6 shrink-0">
+//           {([
+//             { id: 'chat' as const, label: 'AI Assistant', icon: BrainCircuit },
+//             { id: 'alerts' as const, label: `Alerts${unread ? ` (${unread})` : ''}`, icon: Bell },
+//             { id: 'digest' as const, label: 'Daily Digest', icon: Zap },
+//             { id: 'search' as const, label: 'AI Search', icon: Search },
+//           ]).map(t => (
+//             <button
+//               key={t.id}
+//               onClick={() => setTab(t.id)}
+//               className={`pb-3 text-sm font-semibold border-b-2 flex items-center gap-2 transition ${
+//                 tab === t.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'
+//               }`}
+//             >
+//               <t.icon size={16} /> {t.label}
+//             </button>
+//           ))}
+//         </div>
+
+//         {/* ── CHAT TAB ── */}
+//         {tab === 'chat' && (
+//           <div className="flex-1 flex flex-col overflow-hidden">
+//             <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+//               {messages.length === 0 && (
+//                 <div className="text-center py-20">
+//                   <BrainCircuit size={48} className="text-indigo-200 mx-auto mb-4" />
+//                   <h3 className="text-xl font-bold text-slate-700 mb-2">AI CRM Assistant</h3>
+//                   <p className="text-slate-500 mb-6 max-w-md mx-auto">
+//                     Ask me anything about your pipeline, leads, tasks, or deals.
+//                   </p>
+//                   <div className="flex flex-wrap gap-2 justify-center max-w-lg mx-auto">
+//                     {quickQuestions.map(q => (
+//                       <button
+//                         key={q}
+//                         onClick={() => setInput(q)}
+//                         className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition shadow-sm"
+//                       >
+//                         {q}
+//                       </button>
+//                     ))}
+//                   </div>
+//                 </div>
+//               )}
+
+//               {messages.map((m, i) => (
+//                 <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+//                   <div className={`max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed ${
+//                     m.role === 'user'
+//                       ? 'bg-indigo-600 text-white rounded-br-md'
+//                       : 'bg-white border border-slate-200 text-slate-700 rounded-bl-md shadow-sm'
+//                   }`}>
+//                     <pre className="whitespace-pre-wrap font-sans">{m.content}</pre>
+//                   </div>
+//                 </div>
+//               ))}
+
+//               {chatLoading && (
+//                 <div className="flex justify-start">
+//                   <div className="bg-white border border-slate-200 p-4 rounded-2xl rounded-bl-md shadow-sm flex items-center gap-2 text-indigo-600">
+//                     <Loader2 size={16} className="animate-spin" />
+//                     <span className="text-sm font-medium">Analyzing CRM data...</span>
+//                   </div>
+//                 </div>
+//               )}
+//               <div ref={endRef} />
+//             </div>
+
+//             <div className="p-4 border-t border-slate-200 bg-white shrink-0 flex gap-3 items-center">
+//               <button onClick={clearChat} className="p-2 text-slate-400 hover:text-red-500 transition" title="Clear chat">
+//                 <Trash2 size={18} />
+//               </button>
+//               <input
+//                 type="text"
+//                 placeholder="Ask your CRM anything..."
+//                 value={input}
+//                 onChange={e => setInput(e.target.value)}
+//                 onKeyDown={e => e.key === 'Enter' && sendChat()}
+//                 className="flex-1 p-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition text-sm"
+//               />
+//               <button
+//                 onClick={sendChat}
+//                 disabled={chatLoading || !input.trim()}
+//                 className="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700 transition disabled:opacity-50 shadow-sm"
+//               >
+//                 <Send size={18} />
+//               </button>
+//             </div>
+//           </div>
+//         )}
+
+//         {/* ── ALERTS TAB ── */}
+//         {tab === 'alerts' && (
+//           <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+//             <div className="flex justify-between items-center mb-4">
+//               <h3 className="text-lg font-bold text-slate-800">AI-Generated Alerts</h3>
+//               <button onClick={markAllRead} className="text-sm font-medium text-indigo-600 hover:underline">
+//                 Mark all read
+//               </button>
+//             </div>
+
+//             {alerts.length === 0 ? (
+//               <div className="text-center py-20">
+//                 <CheckCircle2 size={48} className="text-emerald-200 mx-auto mb-4" />
+//                 <p className="text-lg font-semibold text-slate-700">All clear!</p>
+//                 <p className="text-slate-500 text-sm mt-1">No unread alerts.</p>
+//               </div>
+//             ) : (
+//               alerts.map(alert => (
+//                 <div
+//                   key={alert.id}
+//                   className={`border-l-4 rounded-xl p-5 shadow-sm transition hover:shadow-md ${
+//                     priorityColor[alert.priority] || priorityColor.medium
+//                   }`}
+//                 >
+//                   <div className="flex justify-between items-start">
+//                     <div className="flex-1">
+//                       <div className="flex items-center gap-2 mb-1">
+//                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-white px-2 py-0.5 rounded border">
+//                           {alert.alert_type.replace(/_/g, ' ')}
+//                         </span>
+//                         <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+//                           alert.priority === 'critical' ? 'bg-red-100 text-red-700' :
+//                           alert.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+//                           'bg-slate-100 text-slate-600'
+//                         }`}>
+//                           {alert.priority}
+//                         </span>
+//                         <span className="text-[10px] text-slate-400">
+//                           {new Date(alert.created_at).toLocaleString()}
+//                         </span>
+//                       </div>
+//                       <h4 className="font-bold text-slate-800 text-sm mb-1">{alert.title}</h4>
+//                       <p className="text-xs text-slate-600 mb-2">{alert.description}</p>
+//                       {alert.suggested_action && (
+//                         <p className="text-xs text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg inline-block border border-indigo-100">
+//                           💡 {alert.suggested_action}
+//                         </p>
+//                       )}
+//                     </div>
+//                     <button
+//                       onClick={() => markRead(alert.id)}
+//                       className="text-slate-400 hover:text-emerald-600 transition p-1 shrink-0 ml-4"
+//                       title="Mark as read"
+//                     >
+//                       <CheckCircle2 size={20} />
+//                     </button>
+//                   </div>
+//                 </div>
+//               ))
+//             )}
+//           </div>
+//         )}
+
+//         {/* ── DIGEST TAB ── */}
+//         {tab === 'digest' && (
+//           <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+//             {!digest ? (
+//               <div className="text-center py-20">
+//                 <Zap size={48} className="text-amber-200 mx-auto mb-4" />
+//                 <h3 className="text-xl font-bold text-slate-700 mb-2">AI Daily Digest</h3>
+//                 <p className="text-slate-500 mb-6">Your AI-powered morning briefing</p>
+//                 <button
+//                   onClick={doDigest}
+//                   disabled={digestLoading}
+//                   className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-orange-500/25 transition flex items-center gap-2 mx-auto disabled:opacity-50"
+//                 >
+//                   {digestLoading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+//                   Generate Today's Digest
+//                 </button>
+//               </div>
+//             ) : (
+//               <div className="max-w-2xl mx-auto space-y-6">
+//                 {/* Hero */}
+//                 <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-8 rounded-2xl shadow-xl relative overflow-hidden">
+//                   <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 blur-[80px] rounded-full pointer-events-none" />
+//                   <div className="relative z-10">
+//                     <p className="text-indigo-300 text-sm mb-2">{digest.greeting}</p>
+//                     <h2 className="text-2xl font-bold mb-3">{digest.headline}</h2>
+//                     <div className="flex items-center gap-2 mt-4">
+//                       <span className="text-4xl font-black">{digest.day_score}</span>
+//                       <span className="text-indigo-300 text-sm">/10 day score</span>
+//                     </div>
+//                   </div>
+//                 </div>
+
+//                 {/* Priorities */}
+//                 {digest.top_priorities && digest.top_priorities.length > 0 && (
+//                   <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+//                     <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+//                       <Target size={18} className="text-red-500" /> Top Priorities
+//                     </h3>
+//                     <div className="space-y-3">
+//                       {digest.top_priorities.map((p: any, i: number) => (
+//                         <div key={i} className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+//                           <p className="font-bold text-sm text-slate-800 mb-1">{p.priority}</p>
+//                           <p className="text-xs text-slate-500">{p.why}</p>
+//                           <p className="text-xs text-indigo-600 mt-2 font-medium flex items-center gap-1">
+//                             <ArrowRight size={12} /> {p.action}
+//                           </p>
+//                         </div>
+//                       ))}
+//                     </div>
+//                   </div>
+//                 )}
+
+//                 {/* Wins */}
+//                 {digest.wins && digest.wins.length > 0 && (
+//                   <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-xl">
+//                     <h3 className="font-bold text-emerald-800 mb-3 flex items-center gap-2">
+//                       <CheckCircle2 size={18} /> Wins
+//                     </h3>
+//                     {digest.wins.map((w: string, i: number) => (
+//                       <p key={i} className="text-sm text-emerald-700 flex items-start gap-2 mb-1">
+//                         <CheckCircle2 size={14} className="mt-0.5 shrink-0" />{w}
+//                       </p>
+//                     ))}
+//                   </div>
+//                 )}
+
+//                 {/* Warnings */}
+//                 {digest.warnings && digest.warnings.length > 0 && (
+//                   <div className="bg-red-50 border border-red-200 p-6 rounded-xl">
+//                     <h3 className="font-bold text-red-800 mb-3 flex items-center gap-2">
+//                       <AlertTriangle size={18} /> Warnings
+//                     </h3>
+//                     {digest.warnings.map((w: string, i: number) => (
+//                       <p key={i} className="text-sm text-red-700 flex items-start gap-2 mb-1">
+//                         <XCircle size={14} className="mt-0.5 shrink-0" />{w}
+//                       </p>
+//                     ))}
+//                   </div>
+//                 )}
+
+//                 {/* Pipeline Insight */}
+//                 {digest.pipeline_insight && (
+//                   <div className="bg-blue-50 border border-blue-200 p-6 rounded-xl">
+//                     <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2">
+//                       <TrendingUp size={18} /> Pipeline
+//                     </h3>
+//                     <p className="text-sm text-blue-700">{digest.pipeline_insight}</p>
+//                   </div>
+//                 )}
+
+//                 {/* Motivation */}
+//                 {digest.motivation && (
+//                   <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 p-6 rounded-xl text-center">
+//                     <p className="text-indigo-800 font-medium italic text-lg">"{digest.motivation}"</p>
+//                   </div>
+//                 )}
+//               </div>
+//             )}
+//           </div>
+//         )}
+
+//         {/* ── SEARCH TAB ── */}
+//         {tab === 'search' && (
+//           <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+//             <div className="max-w-3xl mx-auto">
+//               <h3 className="text-lg font-bold text-slate-800 mb-2">Natural Language Search</h3>
+//               <p className="text-sm text-slate-500 mb-4">Search your CRM in plain English</p>
+
+//               <div className="flex gap-3 mb-3">
+//                 <input
+//                   type="text"
+//                   placeholder='e.g. "hot leads in negotiation with value over 50k"'
+//                   value={searchQ}
+//                   onChange={e => setSearchQ(e.target.value)}
+//                   onKeyDown={e => e.key === 'Enter' && doSearch()}
+//                   className="flex-1 p-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition text-sm"
+//                 />
+//                 <button
+//                   onClick={doSearch}
+//                   disabled={searchLoading || !searchQ.trim()}
+//                   className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition disabled:opacity-50 flex items-center gap-2"
+//                 >
+//                   {searchLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+//                   Search
+//                 </button>
+//               </div>
+
+//               <div className="flex flex-wrap gap-2 mb-6">
+//                 {searchSuggestions.map(q => (
+//                   <button
+//                     key={q}
+//                     onClick={() => setSearchQ(q)}
+//                     className="text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-500 hover:border-indigo-300 hover:text-indigo-600 transition"
+//                   >
+//                     {q}
+//                   </button>
+//                 ))}
+//               </div>
+
+//               {searchRes && (
+//                 <>
+//                   <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl mb-4">
+//                     <p className="text-sm text-indigo-800">
+//                       <strong>Interpreted as:</strong> {searchRes.interpretation}
+//                     </p>
+//                     <p className="text-xs text-indigo-600 mt-1">{searchRes.count} results found</p>
+//                   </div>
+
+//                   {searchRes.error ? (
+//                     <div className="bg-red-50 border border-red-200 p-4 rounded-xl">
+//                       <p className="text-sm text-red-700">{searchRes.error}</p>
+//                     </div>
+//                   ) : (
+//                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+//                       <table className="w-full text-left">
+//                         <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+//                           <tr>
+//                             <th className="px-4 py-3 font-semibold">Name</th>
+//                             <th className="px-4 py-3 font-semibold">Company</th>
+//                             <th className="px-4 py-3 font-semibold">Status</th>
+//                             <th className="px-4 py-3 font-semibold text-right">Value</th>
+//                           </tr>
+//                         </thead>
+//                         <tbody className="divide-y divide-slate-100">
+//                           {searchRes.results?.map((lead: any) => (
+//                             <tr key={lead.id} className="hover:bg-blue-50/30 transition">
+//                               <td className="px-4 py-3 font-semibold text-sm text-slate-800">{lead.name}</td>
+//                               <td className="px-4 py-3 text-sm text-slate-600">{lead.company}</td>
+//                               <td className="px-4 py-3">
+//                                 <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+//                                   {lead.status}
+//                                 </span>
+//                               </td>
+//                               <td className="px-4 py-3 text-sm font-medium text-slate-800 text-right">
+//                                 ${parseFloat(lead.value).toLocaleString()}
+//                               </td>
+//                             </tr>
+//                           ))}
+//                           {(!searchRes.results || searchRes.results.length === 0) && (
+//                             <tr>
+//                               <td colSpan={4} className="px-4 py-8 text-center text-slate-400 text-sm">
+//                                 No results found
+//                               </td>
+//                             </tr>
+//                           )}
+//                         </tbody>
+//                       </table>
+//                     </div>
+//                   )}
+//                 </>
+//               )}
+//             </div>
+//           </div>
+//         )}
+//       </div>
+//     </div>
+//   );
+// };
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import {
   BrainCircuit, Send, Sparkles, AlertTriangle, TrendingUp,
@@ -6,6 +475,61 @@ import {
 } from 'lucide-react';
 import { api } from '../Utils/api';
 import type { AIAlert, ChatResponse } from '../Utils/types';
+
+/* ═══════════════════════════════════════════════════════
+   ALL ORIGINAL FUNCTIONS ARE UNTOUCHED — UI only
+═══════════════════════════════════════════════════════ */
+
+const STYLES = `
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px) scale(0.99); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  }
+  @keyframes floatBlob {
+    0%,100% { transform: translateY(0px)   translateX(0px); }
+    50%     { transform: translateY(-10px) translateX(6px); }
+  }
+  @keyframes pulseRing {
+    0%   { transform: scale(1);   opacity: .6; }
+    100% { transform: scale(1.6); opacity: 0;  }
+  }
+  @keyframes slideInMsg {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0);   }
+  }
+  .anim-blob   { animation: floatBlob 7s ease-in-out infinite; }
+  .anim-fade-1 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.05s; }
+  .anim-fade-2 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.15s; }
+  .anim-fade-3 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.25s; }
+  .msg-in      { animation: slideInMsg .25s ease-out forwards; }
+  .pulse-ring::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(99,102,241,0.4);
+    animation: pulseRing 1.5s ease-out infinite;
+  }
+  .card-hover { transition: all .2s ease; }
+  .card-hover:hover { transform: translateY(-1px); box-shadow: 0 8px 24px -4px rgba(79,70,229,0.12); }
+  .tab-active { position: relative; }
+  .tab-active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #4f46e5, #7c3aed);
+    border-radius: 2px 2px 0 0;
+  }
+`;
+
+const PRIORITY_STYLES: Record<string, { bar: string; bg: string; badge: string; badgeText: string }> = {
+  critical: { bar: 'bg-red-500',    bg: 'bg-red-50/60   border-red-100',   badge: 'bg-red-100    text-red-700',    badgeText: 'text-red-700'    },
+  high:     { bar: 'bg-orange-500', bg: 'bg-orange-50/60 border-orange-100',badge: 'bg-orange-100 text-orange-700', badgeText: 'text-orange-700' },
+  medium:   { bar: 'bg-amber-400',  bg: 'bg-amber-50/60  border-amber-100', badge: 'bg-amber-100  text-amber-700',  badgeText: 'text-amber-700'  },
+  low:      { bar: 'bg-slate-300',  bg: 'bg-slate-50/60  border-slate-100', badge: 'bg-slate-100  text-slate-600',  badgeText: 'text-slate-600'  },
+};
 
 export const AICommandCenter: React.FC = () => {
   const [tab, setTab] = useState<'chat' | 'alerts' | 'digest' | 'search'>('chat');
@@ -39,8 +563,9 @@ export const AICommandCenter: React.FC = () => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const loadAlerts = () => api.aiGetAlerts(false).then(setAlerts).catch(() => {});
-  const loadUnread = () => api.aiUnreadCount().then(d => setUnread(d.unread || 0)).catch(() => {});
+  /* ── all original functions — untouched ── */
+  const loadAlerts  = () => api.aiGetAlerts(false).then(setAlerts).catch(() => {});
+  const loadUnread  = () => api.aiUnreadCount().then(d => setUnread(d.unread || 0)).catch(() => {});
   const loadHistory = () => api.aiChatHistory().then(d => { if (d.messages) setMessages(d.messages); }).catch(() => {});
 
   const sendChat = async () => {
@@ -88,13 +613,6 @@ export const AICommandCenter: React.FC = () => {
     loadUnread();
   };
 
-  const priorityColor: Record<string, string> = {
-    critical: 'border-l-red-500 bg-red-50',
-    high: 'border-l-orange-500 bg-orange-50',
-    medium: 'border-l-amber-400 bg-amber-50',
-    low: 'border-l-slate-300 bg-slate-50',
-  };
-
   const quickQuestions = [
     'Which leads should I focus on today?',
     'Show me at-risk deals',
@@ -109,47 +627,137 @@ export const AICommandCenter: React.FC = () => {
     'New leads this week',
   ];
 
-  return (
-    <div className="flex h-full overflow-hidden bg-slate-50">
-      <div className="flex-1 flex flex-col overflow-hidden">
+  const TAB_CONFIG = [
+    { id: 'chat'    as const, label: 'AI Assistant', icon: BrainCircuit,  badge: null },
+    { id: 'alerts'  as const, label: 'Alerts',       icon: Bell,          badge: unread || null },
+    { id: 'digest'  as const, label: 'Daily Digest', icon: Zap,           badge: null },
+    { id: 'search'  as const, label: 'AI Search',    icon: Search,        badge: null },
+  ];
 
-        {/* Tab Bar */}
-        <div className="bg-white border-b border-slate-200 px-6 pt-4 flex gap-6 shrink-0">
-          {([
-            { id: 'chat' as const, label: 'AI Assistant', icon: BrainCircuit },
-            { id: 'alerts' as const, label: `Alerts${unread ? ` (${unread})` : ''}`, icon: Bell },
-            { id: 'digest' as const, label: 'Daily Digest', icon: Zap },
-            { id: 'search' as const, label: 'AI Search', icon: Search },
-          ]).map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`pb-3 text-sm font-semibold border-b-2 flex items-center gap-2 transition ${
-                tab === t.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+  return (
+    <div className="flex flex-col h-full bg-[#f0f2f8] overflow-hidden font-sans">
+      <style>{STYLES}</style>
+
+      {/* decorative blobs */}
+      <div className="pointer-events-none fixed -top-10 -left-16 w-72 h-72 rounded-full bg-blue-300/20 blur-3xl anim-blob -z-10" />
+      <div className="pointer-events-none fixed top-40 -right-20 w-80 h-80 rounded-full bg-indigo-300/15 blur-3xl anim-blob -z-10" />
+
+      {/* ══════════════════════════════════════════════════
+          BANNER — same as AIProspector / AIAnalytics
+      ══════════════════════════════════════════════════ */}
+      <div
+        className="shrink-0 mx-4 mt-4 rounded-2xl overflow-hidden anim-fade-1"
+        style={{
+          background: 'linear-gradient(125deg, #3730a3 0%, #4f46e5 40%, #7c3aed 100%)',
+          boxShadow: '0 8px 32px -4px rgba(79,70,229,0.45)',
+        }}
+      >
+        <div
+          className="px-6 py-5 flex items-center gap-4 flex-wrap"
+          style={{ backgroundImage: 'radial-gradient(ellipse at 80% 50%, rgba(255,255,255,0.08) 0%, transparent 60%)' }}
+        >
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+            style={{ backgroundColor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.2)' }}
+          >
+            <BrainCircuit className="text-white" size={20} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-[20px] font-black text-white leading-tight tracking-tight">AI Command Center</h1>
+            <p className="text-[12px] text-indigo-200 mt-0.5 font-medium">
+              Chat with your CRM, get alerts, daily briefings, and natural-language search.
+            </p>
+          </div>
+          {/* stat pills */}
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            {unread > 0 && (
+              <div
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black text-white"
+                style={{ backgroundColor: 'rgba(239,68,68,0.35)', border: '1px solid rgba(255,255,255,0.18)' }}
+              >
+                <Bell size={11} />
+                <span className="text-white/70">Unread</span>
+                <span>{unread}</span>
+              </div>
+            )}
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black text-white"
+              style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)' }}
             >
-              <t.icon size={16} /> {t.label}
-            </button>
-          ))}
+              <Sparkles size={11} />
+              <span>AI-Powered</span>
+            </div>
+          </div>
         </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════
+          TAB BAR
+      ══════════════════════════════════════════════════ */}
+      <div className="mx-4 mt-4 bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden shrink-0 anim-fade-2">
+        <div className="h-0.5 w-full bg-gradient-to-r from-indigo-500 to-violet-500" />
+        <div className="flex px-2 pt-1 gap-1">
+          {TAB_CONFIG.map(t => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`relative flex items-center gap-2 px-4 py-3 mb-1 rounded-xl text-[12px] font-black transition-all ${
+                  active
+                    ? 'bg-indigo-50 text-indigo-700'
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <t.icon size={14} />
+                {t.label}
+                {t.badge !== null && (
+                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[9px] font-black shrink-0">
+                    {t.badge}
+                  </span>
+                )}
+                {active && (
+                  <span className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════
+          TAB CONTENT
+      ══════════════════════════════════════════════════ */}
+      <div className="flex-1 min-h-0 mx-4 mt-3 mb-4 anim-fade-3">
 
         {/* ── CHAT TAB ── */}
         {tab === 'chat' && (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+          <div className="flex flex-col h-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div className="h-0.5 w-full bg-gradient-to-r from-indigo-500 to-violet-500 shrink-0" />
+
+            {/* messages */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-3 custom-scrollbar">
               {messages.length === 0 && (
-                <div className="text-center py-20">
-                  <BrainCircuit size={48} className="text-indigo-200 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-slate-700 mb-2">AI CRM Assistant</h3>
-                  <p className="text-slate-500 mb-6 max-w-md mx-auto">
+                <div className="flex flex-col items-center justify-center h-full py-10 text-center">
+                  <div className="relative w-16 h-16 flex items-center justify-center mb-5">
+                    <span className="pulse-ring absolute inset-0 rounded-full" />
+                    <div
+                      className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg relative z-10"
+                      style={{ background: 'linear-gradient(125deg, #4f46e5 0%, #7c3aed 100%)' }}
+                    >
+                      <BrainCircuit size={28} className="text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-[16px] font-black text-slate-800 mb-1">AI CRM Assistant</h3>
+                  <p className="text-[12px] text-slate-400 font-medium mb-6 max-w-xs">
                     Ask me anything about your pipeline, leads, tasks, or deals.
                   </p>
-                  <div className="flex flex-wrap gap-2 justify-center max-w-lg mx-auto">
+                  <div className="flex flex-wrap gap-2 justify-center max-w-md">
                     {quickQuestions.map(q => (
                       <button
                         key={q}
                         onClick={() => setInput(q)}
-                        className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition shadow-sm"
+                        className="px-3 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-[11px] font-black text-indigo-600 hover:bg-indigo-100 transition-all active:scale-95"
                       >
                         {q}
                       </button>
@@ -159,46 +767,68 @@ export const AICommandCenter: React.FC = () => {
               )}
 
               {messages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[75%] p-4 rounded-2xl text-sm leading-relaxed ${
+                <div key={i} className={`flex msg-in ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {m.role === 'assistant' && (
+                    <div
+                      className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mr-2 mt-0.5"
+                      style={{ background: 'linear-gradient(125deg, #4f46e5 0%, #7c3aed 100%)' }}
+                    >
+                      <BrainCircuit size={13} className="text-white" />
+                    </div>
+                  )}
+                  <div className={`max-w-[72%] px-4 py-3 rounded-2xl text-[13px] leading-relaxed ${
                     m.role === 'user'
-                      ? 'bg-indigo-600 text-white rounded-br-md'
-                      : 'bg-white border border-slate-200 text-slate-700 rounded-bl-md shadow-sm'
-                  }`}>
+                      ? 'text-white rounded-br-sm'
+                      : 'bg-slate-50 border border-slate-200 text-slate-700 rounded-bl-sm shadow-sm'
+                  }`}
+                    style={m.role === 'user' ? { background: 'linear-gradient(125deg, #4f46e5 0%, #7c3aed 100%)' } : {}}
+                  >
                     <pre className="whitespace-pre-wrap font-sans">{m.content}</pre>
                   </div>
                 </div>
               ))}
 
               {chatLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-white border border-slate-200 p-4 rounded-2xl rounded-bl-md shadow-sm flex items-center gap-2 text-indigo-600">
-                    <Loader2 size={16} className="animate-spin" />
-                    <span className="text-sm font-medium">Analyzing CRM data...</span>
+                <div className="flex justify-start msg-in">
+                  <div
+                    className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 mr-2"
+                    style={{ background: 'linear-gradient(125deg, #4f46e5 0%, #7c3aed 100%)' }}
+                  >
+                    <BrainCircuit size={13} className="text-white" />
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin text-indigo-500" />
+                    <span className="text-[12px] font-black text-slate-500">Analyzing CRM data…</span>
                   </div>
                 </div>
               )}
               <div ref={endRef} />
             </div>
 
-            <div className="p-4 border-t border-slate-200 bg-white shrink-0 flex gap-3 items-center">
-              <button onClick={clearChat} className="p-2 text-slate-400 hover:text-red-500 transition" title="Clear chat">
-                <Trash2 size={18} />
+            {/* input bar */}
+            <div className="shrink-0 px-4 py-3 border-t border-slate-100 bg-white flex gap-2 items-center">
+              <button
+                onClick={clearChat}
+                className="p-2.5 rounded-xl text-slate-300 hover:text-red-400 hover:bg-red-50 transition-all"
+                title="Clear chat"
+              >
+                <Trash2 size={15} />
               </button>
               <input
                 type="text"
-                placeholder="Ask your CRM anything..."
+                placeholder="Ask your CRM anything…"
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && sendChat()}
-                className="flex-1 p-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition text-sm"
+                className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all text-[13px] font-medium text-slate-700 placeholder:text-slate-300"
               />
               <button
                 onClick={sendChat}
                 disabled={chatLoading || !input.trim()}
-                className="bg-indigo-600 text-white p-3 rounded-xl hover:bg-indigo-700 transition disabled:opacity-50 shadow-sm"
+                className="p-2.5 rounded-xl text-white transition-all active:scale-95 disabled:opacity-40 shadow-sm"
+                style={{ background: 'linear-gradient(125deg, #4f46e5 0%, #7c3aed 100%)' }}
               >
-                <Send size={18} />
+                <Send size={15} />
               </button>
             </div>
           </div>
@@ -206,249 +836,394 @@ export const AICommandCenter: React.FC = () => {
 
         {/* ── ALERTS TAB ── */}
         {tab === 'alerts' && (
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-slate-800">AI-Generated Alerts</h3>
-              <button onClick={markAllRead} className="text-sm font-medium text-indigo-600 hover:underline">
-                Mark all read
+          <div className="flex flex-col h-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div className="h-0.5 w-full bg-gradient-to-r from-red-400 to-orange-400 shrink-0" />
+
+            {/* header */}
+            <div className="shrink-0 px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-1 h-6 bg-red-500 rounded-full shrink-0" />
+                <div className="p-2 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 shadow-sm shrink-0">
+                  <Bell size={13} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[13px] font-black text-slate-800 leading-tight">AI-Generated Alerts</p>
+                  <p className="text-[10px] text-slate-400 font-medium">{alerts.length} alert{alerts.length !== 1 ? 's' : ''}</p>
+                </div>
+              </div>
+              <button
+                onClick={markAllRead}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-xl text-[11px] font-black hover:bg-indigo-100 transition-all"
+              >
+                <CheckCircle2 size={11} /> Mark all read
               </button>
             </div>
 
-            {alerts.length === 0 ? (
-              <div className="text-center py-20">
-                <CheckCircle2 size={48} className="text-emerald-200 mx-auto mb-4" />
-                <p className="text-lg font-semibold text-slate-700">All clear!</p>
-                <p className="text-slate-500 text-sm mt-1">No unread alerts.</p>
-              </div>
-            ) : (
-              alerts.map(alert => (
-                <div
-                  key={alert.id}
-                  className={`border-l-4 rounded-xl p-5 shadow-sm transition hover:shadow-md ${
-                    priorityColor[alert.priority] || priorityColor.medium
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-white px-2 py-0.5 rounded border">
-                          {alert.alert_type.replace(/_/g, ' ')}
-                        </span>
-                        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                          alert.priority === 'critical' ? 'bg-red-100 text-red-700' :
-                          alert.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                          'bg-slate-100 text-slate-600'
-                        }`}>
-                          {alert.priority}
-                        </span>
-                        <span className="text-[10px] text-slate-400">
-                          {new Date(alert.created_at).toLocaleString()}
-                        </span>
-                      </div>
-                      <h4 className="font-bold text-slate-800 text-sm mb-1">{alert.title}</h4>
-                      <p className="text-xs text-slate-600 mb-2">{alert.description}</p>
-                      {alert.suggested_action && (
-                        <p className="text-xs text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-lg inline-block border border-indigo-100">
-                          💡 {alert.suggested_action}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => markRead(alert.id)}
-                      className="text-slate-400 hover:text-emerald-600 transition p-1 shrink-0 ml-4"
-                      title="Mark as read"
-                    >
-                      <CheckCircle2 size={20} />
-                    </button>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2.5 custom-scrollbar">
+              {alerts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full py-10 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 border-2 border-dashed border-emerald-200 flex items-center justify-center mb-3">
+                    <CheckCircle2 size={22} className="text-emerald-400" />
                   </div>
+                  <p className="text-[13px] font-black text-slate-500">All clear!</p>
+                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">No unread alerts.</p>
                 </div>
-              ))
-            )}
+              ) : (
+                alerts.map((alert, idx) => {
+                  const ps = PRIORITY_STYLES[alert.priority] || PRIORITY_STYLES.medium;
+                  return (
+                    <div
+                      key={alert.id}
+                      className={`rounded-2xl border overflow-hidden card-hover ${ps.bg}`}
+                      style={{ animationDelay: `${idx * 40}ms` }}
+                    >
+                      {/* priority bar */}
+                      <div className={`h-0.5 w-full ${ps.bar}`} />
+                      <div className="px-4 py-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                              <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg bg-white border border-slate-200 text-slate-500">
+                                {alert.alert_type.replace(/_/g, ' ')}
+                              </span>
+                              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${ps.badge}`}>
+                                {alert.priority}
+                              </span>
+                              <span className="text-[9px] text-slate-400 font-medium">
+                                {new Date(alert.created_at).toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="text-[12px] font-black text-slate-800 mb-0.5">{alert.title}</p>
+                            <p className="text-[11px] text-slate-500 font-medium">{alert.description}</p>
+                            {alert.suggested_action && (
+                              <div className="mt-2 rounded-xl overflow-hidden">
+                                <div className="h-0.5 w-full bg-gradient-to-r from-indigo-400 to-violet-400" />
+                                <div className="bg-indigo-50 border border-indigo-100 border-t-0 px-3 py-1.5">
+                                  <p className="text-[11px] text-indigo-700 font-medium">
+                                    <span className="font-black">💡 </span>{alert.suggested_action}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => markRead(alert.id)}
+                            className="p-2 rounded-xl text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 transition-all shrink-0"
+                            title="Mark as read"
+                          >
+                            <CheckCircle2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         )}
 
         {/* ── DIGEST TAB ── */}
         {tab === 'digest' && (
-          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-            {!digest ? (
-              <div className="text-center py-20">
-                <Zap size={48} className="text-amber-200 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-slate-700 mb-2">AI Daily Digest</h3>
-                <p className="text-slate-500 mb-6">Your AI-powered morning briefing</p>
-                <button
-                  onClick={doDigest}
-                  disabled={digestLoading}
-                  className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-orange-500/25 transition flex items-center gap-2 mx-auto disabled:opacity-50"
-                >
-                  {digestLoading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                  Generate Today's Digest
-                </button>
-              </div>
-            ) : (
-              <div className="max-w-2xl mx-auto space-y-6">
-                {/* Hero */}
-                <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-8 rounded-2xl shadow-xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 blur-[80px] rounded-full pointer-events-none" />
-                  <div className="relative z-10">
-                    <p className="text-indigo-300 text-sm mb-2">{digest.greeting}</p>
-                    <h2 className="text-2xl font-bold mb-3">{digest.headline}</h2>
-                    <div className="flex items-center gap-2 mt-4">
-                      <span className="text-4xl font-black">{digest.day_score}</span>
-                      <span className="text-indigo-300 text-sm">/10 day score</span>
+          <div className="flex flex-col h-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div className="h-0.5 w-full bg-gradient-to-r from-amber-400 to-orange-500 shrink-0" />
+
+            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+              {!digest ? (
+                <div className="flex flex-col items-center justify-center h-full py-10 text-center">
+                  <div className="relative w-16 h-16 flex items-center justify-center mb-5">
+                    <span className="pulse-ring absolute inset-0 rounded-full" />
+                    <div
+                      className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg relative z-10"
+                      style={{ background: 'linear-gradient(125deg, #f59e0b 0%, #f97316 100%)' }}
+                    >
+                      <Zap size={26} className="text-white" />
                     </div>
                   </div>
+                  <h3 className="text-[16px] font-black text-slate-800 mb-1">AI Daily Digest</h3>
+                  <p className="text-[12px] text-slate-400 font-medium mb-6">Your AI-powered morning briefing</p>
+                  <button
+                    onClick={doDigest}
+                    disabled={digestLoading}
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl text-[13px] font-black text-white transition-all active:scale-95 disabled:opacity-50 shadow-lg"
+                    style={{ background: 'linear-gradient(125deg, #f59e0b 0%, #f97316 100%)', boxShadow: '0 8px 24px -4px rgba(245,158,11,0.45)' }}
+                  >
+                    {digestLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                    Generate Today's Digest
+                  </button>
                 </div>
+              ) : (
+                <div className="max-w-2xl mx-auto space-y-4">
 
-                {/* Priorities */}
-                {digest.top_priorities && digest.top_priorities.length > 0 && (
-                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                      <Target size={18} className="text-red-500" /> Top Priorities
-                    </h3>
-                    <div className="space-y-3">
-                      {digest.top_priorities.map((p: any, i: number) => (
-                        <div key={i} className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-                          <p className="font-bold text-sm text-slate-800 mb-1">{p.priority}</p>
-                          <p className="text-xs text-slate-500">{p.why}</p>
-                          <p className="text-xs text-indigo-600 mt-2 font-medium flex items-center gap-1">
-                            <ArrowRight size={12} /> {p.action}
-                          </p>
-                        </div>
-                      ))}
+                  {/* Hero card */}
+                  <div
+                    className="rounded-2xl p-6 text-white relative overflow-hidden"
+                    style={{ background: 'linear-gradient(125deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)' }}
+                  >
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 blur-[80px] rounded-full pointer-events-none" />
+                    <div className="relative z-10">
+                      <p className="text-indigo-300 text-[11px] font-black uppercase tracking-wider mb-1">{digest.greeting}</p>
+                      <h2 className="text-[18px] font-black mb-4 leading-tight">{digest.headline}</h2>
+                      <div className="flex items-end gap-2">
+                        <span className="text-[42px] font-black leading-none">{digest.day_score}</span>
+                        <span className="text-indigo-300 text-[12px] font-bold pb-1">/10 day score</span>
+                      </div>
                     </div>
                   </div>
-                )}
 
-                {/* Wins */}
-                {digest.wins && digest.wins.length > 0 && (
-                  <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-xl">
-                    <h3 className="font-bold text-emerald-800 mb-3 flex items-center gap-2">
-                      <CheckCircle2 size={18} /> Wins
-                    </h3>
-                    {digest.wins.map((w: string, i: number) => (
-                      <p key={i} className="text-sm text-emerald-700 flex items-start gap-2 mb-1">
-                        <CheckCircle2 size={14} className="mt-0.5 shrink-0" />{w}
-                      </p>
-                    ))}
-                  </div>
-                )}
+                  {/* Priorities */}
+                  {digest.top_priorities?.length > 0 && (
+                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden card-hover">
+                      <div className="h-0.5 w-full bg-gradient-to-r from-red-400 to-rose-500" />
+                      <div className="p-5">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-1 h-5 bg-red-500 rounded-full" />
+                          <div className="p-1.5 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 shadow-sm">
+                            <Target size={12} className="text-white" />
+                          </div>
+                          <p className="text-[13px] font-black text-slate-800">Top Priorities</p>
+                        </div>
+                        <div className="space-y-2">
+                          {digest.top_priorities.map((p: any, i: number) => (
+                            <div key={i} className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                              <p className="text-[12px] font-black text-slate-800 mb-0.5">{p.priority}</p>
+                              <p className="text-[11px] text-slate-400 font-medium">{p.why}</p>
+                              <div className="flex items-center gap-1.5 mt-1.5">
+                                <ArrowRight size={10} className="text-indigo-400" />
+                                <p className="text-[11px] text-indigo-600 font-black">{p.action}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                {/* Warnings */}
-                {digest.warnings && digest.warnings.length > 0 && (
-                  <div className="bg-red-50 border border-red-200 p-6 rounded-xl">
-                    <h3 className="font-bold text-red-800 mb-3 flex items-center gap-2">
-                      <AlertTriangle size={18} /> Warnings
-                    </h3>
-                    {digest.warnings.map((w: string, i: number) => (
-                      <p key={i} className="text-sm text-red-700 flex items-start gap-2 mb-1">
-                        <XCircle size={14} className="mt-0.5 shrink-0" />{w}
-                      </p>
-                    ))}
-                  </div>
-                )}
+                  {/* Wins + Warnings side by side */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {digest.wins?.length > 0 && (
+                      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden card-hover">
+                        <div className="h-0.5 w-full bg-gradient-to-r from-emerald-400 to-teal-400" />
+                        <div className="p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-1 h-5 bg-emerald-500 rounded-full" />
+                            <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 shadow-sm">
+                              <CheckCircle2 size={12} className="text-white" />
+                            </div>
+                            <p className="text-[13px] font-black text-slate-800">Wins</p>
+                          </div>
+                          <div className="space-y-1.5">
+                            {digest.wins.map((w: string, i: number) => (
+                              <div key={i} className="flex items-start gap-2 p-2 bg-emerald-50 rounded-xl border border-emerald-100">
+                                <CheckCircle2 size={12} className="text-emerald-500 mt-0.5 shrink-0" />
+                                <p className="text-[11px] text-emerald-800 font-medium">{w}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
-                {/* Pipeline Insight */}
-                {digest.pipeline_insight && (
-                  <div className="bg-blue-50 border border-blue-200 p-6 rounded-xl">
-                    <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2">
-                      <TrendingUp size={18} /> Pipeline
-                    </h3>
-                    <p className="text-sm text-blue-700">{digest.pipeline_insight}</p>
+                    {digest.warnings?.length > 0 && (
+                      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden card-hover">
+                        <div className="h-0.5 w-full bg-gradient-to-r from-red-400 to-rose-500" />
+                        <div className="p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-1 h-5 bg-red-500 rounded-full" />
+                            <div className="p-1.5 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 shadow-sm">
+                              <AlertTriangle size={12} className="text-white" />
+                            </div>
+                            <p className="text-[13px] font-black text-slate-800">Warnings</p>
+                          </div>
+                          <div className="space-y-1.5">
+                            {digest.warnings.map((w: string, i: number) => (
+                              <div key={i} className="flex items-start gap-2 p-2 bg-red-50 rounded-xl border border-red-100">
+                                <XCircle size={12} className="text-red-500 mt-0.5 shrink-0" />
+                                <p className="text-[11px] text-red-800 font-medium">{w}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
 
-                {/* Motivation */}
-                {digest.motivation && (
-                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 p-6 rounded-xl text-center">
-                    <p className="text-indigo-800 font-medium italic text-lg">"{digest.motivation}"</p>
-                  </div>
-                )}
-              </div>
-            )}
+                  {/* Pipeline Insight */}
+                  {digest.pipeline_insight && (
+                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden card-hover">
+                      <div className="h-0.5 w-full bg-gradient-to-r from-blue-400 to-indigo-500" />
+                      <div className="p-4 flex items-start gap-3">
+                        <div className="p-1.5 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 shadow-sm shrink-0">
+                          <TrendingUp size={12} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-[12px] font-black text-slate-700 mb-0.5">Pipeline Insight</p>
+                          <p className="text-[12px] text-slate-500 font-medium">{digest.pipeline_insight}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Motivation */}
+                  {digest.motivation && (
+                    <div
+                      className="rounded-2xl p-5 text-center"
+                      style={{ background: 'linear-gradient(125deg, #eef2ff 0%, #f5f3ff 100%)', border: '1px solid #e0e7ff' }}
+                    >
+                      <p className="text-[14px] font-black text-indigo-700 italic leading-relaxed">"{digest.motivation}"</p>
+                    </div>
+                  )}
+
+                  {/* Re-generate */}
+                  <button
+                    onClick={doDigest}
+                    disabled={digestLoading}
+                    className="w-full py-3 rounded-2xl text-[12px] font-black text-amber-700 border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Sparkles size={13} /> Regenerate Digest
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
         {/* ── SEARCH TAB ── */}
         {tab === 'search' && (
-          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-            <div className="max-w-3xl mx-auto">
-              <h3 className="text-lg font-bold text-slate-800 mb-2">Natural Language Search</h3>
-              <p className="text-sm text-slate-500 mb-4">Search your CRM in plain English</p>
+          <div className="flex flex-col h-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div className="h-0.5 w-full bg-gradient-to-r from-indigo-500 to-violet-500 shrink-0" />
 
-              <div className="flex gap-3 mb-3">
+            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+              {/* search header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-1 h-6 bg-indigo-500 rounded-full" />
+                <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-sm">
+                  <Search size={13} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[13px] font-black text-slate-800">Natural Language Search</p>
+                  <p className="text-[10px] text-slate-400 font-medium">Search your CRM in plain English</p>
+                </div>
+              </div>
+
+              {/* input */}
+              <div className="flex gap-2 mb-3">
                 <input
                   type="text"
                   placeholder='e.g. "hot leads in negotiation with value over 50k"'
                   value={searchQ}
                   onChange={e => setSearchQ(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && doSearch()}
-                  className="flex-1 p-3 border border-slate-200 rounded-xl outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition text-sm"
+                  className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all text-[13px] font-medium text-slate-700 placeholder:text-slate-300"
                 />
                 <button
                   onClick={doSearch}
                   disabled={searchLoading || !searchQ.trim()}
-                  className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition disabled:opacity-50 flex items-center gap-2"
+                  className="flex items-center gap-2 px-5 py-3 rounded-xl text-[13px] font-black text-white transition-all active:scale-95 disabled:opacity-40 shadow-sm shrink-0"
+                  style={{ background: 'linear-gradient(125deg, #4f46e5 0%, #7c3aed 100%)' }}
                 >
-                  {searchLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                  {searchLoading ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
                   Search
                 </button>
               </div>
 
-              <div className="flex flex-wrap gap-2 mb-6">
+              {/* suggestion chips */}
+              <div className="flex flex-wrap gap-2 mb-5">
                 {searchSuggestions.map(q => (
                   <button
                     key={q}
                     onClick={() => setSearchQ(q)}
-                    className="text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-500 hover:border-indigo-300 hover:text-indigo-600 transition"
+                    className="px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-xl text-[11px] font-black text-indigo-600 hover:bg-indigo-100 transition-all active:scale-95"
                   >
                     {q}
                   </button>
                 ))}
               </div>
 
-              {searchRes && (
-                <>
-                  <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-xl mb-4">
-                    <p className="text-sm text-indigo-800">
-                      <strong>Interpreted as:</strong> {searchRes.interpretation}
-                    </p>
-                    <p className="text-xs text-indigo-600 mt-1">{searchRes.count} results found</p>
+              {/* results */}
+              {searchLoading && (
+                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                  <div className="h-0.5 w-full bg-gradient-to-r from-indigo-500 to-violet-500" />
+                  <div className="p-10 flex flex-col items-center gap-3">
+                    <div className="relative w-10 h-10">
+                      <span className="pulse-ring absolute inset-0 rounded-full" />
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center relative z-10">
+                        <Search size={16} className="text-white" />
+                      </div>
+                    </div>
+                    <p className="text-[12px] font-black text-slate-500">Searching your CRM…</p>
+                  </div>
+                </div>
+              )}
+
+              {searchRes && !searchLoading && (
+                <div className="space-y-3">
+                  {/* interpretation card */}
+                  <div className="rounded-2xl overflow-hidden">
+                    <div className="h-0.5 w-full bg-gradient-to-r from-indigo-400 to-violet-400" />
+                    <div className="bg-indigo-50 border border-indigo-100 border-t-0 px-4 py-3 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-black text-indigo-600 uppercase tracking-wider mb-0.5">Interpreted As</p>
+                        <p className="text-[12px] text-indigo-800 font-medium">{searchRes.interpretation}</p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-xl bg-indigo-100 text-indigo-700 text-[11px] font-black border border-indigo-200 shrink-0">
+                        {searchRes.count} results
+                      </span>
+                    </div>
                   </div>
 
                   {searchRes.error ? (
-                    <div className="bg-red-50 border border-red-200 p-4 rounded-xl">
-                      <p className="text-sm text-red-700">{searchRes.error}</p>
+                    <div className="rounded-2xl overflow-hidden">
+                      <div className="h-0.5 w-full bg-red-400" />
+                      <div className="bg-red-50 border border-red-100 border-t-0 px-4 py-3">
+                        <p className="text-[12px] text-red-700 font-medium">{searchRes.error}</p>
+                      </div>
                     </div>
                   ) : (
-                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                      <div className="h-0.5 w-full bg-gradient-to-r from-slate-200 to-slate-100" />
                       <table className="w-full text-left">
-                        <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
-                          <tr>
-                            <th className="px-4 py-3 font-semibold">Name</th>
-                            <th className="px-4 py-3 font-semibold">Company</th>
-                            <th className="px-4 py-3 font-semibold">Status</th>
-                            <th className="px-4 py-3 font-semibold text-right">Value</th>
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-100">
+                            {['Name', 'Company', 'Status', 'Value'].map((h, i) => (
+                              <th key={h} className={`px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-wider ${i === 3 ? 'text-right' : ''}`}>{h}</th>
+                            ))}
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-50">
                           {searchRes.results?.map((lead: any) => (
-                            <tr key={lead.id} className="hover:bg-blue-50/30 transition">
-                              <td className="px-4 py-3 font-semibold text-sm text-slate-800">{lead.name}</td>
-                              <td className="px-4 py-3 text-sm text-slate-600">{lead.company}</td>
+                            <tr key={lead.id} className="hover:bg-indigo-50/30 transition-colors">
                               <td className="px-4 py-3">
-                                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="w-6 h-6 rounded-lg flex items-center justify-center text-white text-[10px] font-black shrink-0"
+                                    style={{ background: 'linear-gradient(125deg, #4f46e5, #7c3aed)' }}
+                                  >
+                                    {lead.name?.charAt(0)?.toUpperCase()}
+                                  </div>
+                                  <span className="text-[12px] font-black text-slate-800">{lead.name}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-[12px] text-slate-500 font-medium">{lead.company}</td>
+                              <td className="px-4 py-3">
+                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 border border-slate-200">
                                   {lead.status}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-sm font-medium text-slate-800 text-right">
+                              <td className="px-4 py-3 text-[12px] font-black text-slate-700 text-right">
                                 ${parseFloat(lead.value).toLocaleString()}
                               </td>
                             </tr>
                           ))}
                           {(!searchRes.results || searchRes.results.length === 0) && (
                             <tr>
-                              <td colSpan={4} className="px-4 py-8 text-center text-slate-400 text-sm">
-                                No results found
+                              <td colSpan={4} className="px-4 py-12 text-center">
+                                <div className="flex flex-col items-center gap-2">
+                                  <div className="w-10 h-10 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center">
+                                    <Search size={16} className="text-slate-300" />
+                                  </div>
+                                  <p className="text-[12px] font-black text-slate-400">No results found</p>
+                                </div>
                               </td>
                             </tr>
                           )}
@@ -456,7 +1231,7 @@ export const AICommandCenter: React.FC = () => {
                       </table>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </div>
           </div>
