@@ -183,18 +183,18 @@ export const Navbar: React.FC = () => {
   }, [liveAlerts]);
 
   return (
-    <header className="h-[68px] bg-[#001740] flex items-center justify-between px-4 shrink-0 z-20 shadow-[0_3px_8px_rgba(0,0,0,0.24)]">
+    <header className="h-[68px] bg-[#001740] flex items-center justify-between pr-4 pl-0 shrink-0 z-20 shadow-[0_3px_8px_rgba(0,0,0,0.24)]">
 
       {/* ── Brand ── */}
-      <div className="flex flex-col gap-0.5">
+      <div className="flex flex-col gap-0.5 items-start justify-center">
         <span
-          className="text-[26px] font-extrabold tracking-[2px] bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400 bg-clip-text text-transparent"
+          className="text-[26px] leading-none font-extrabold tracking-[2px] bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400 bg-clip-text text-transparent"
           style={{ backgroundSize: '220% 100%', animation: 'brandFlow 4.2s ease-in-out infinite alternate' }}
         >
           VAIJNANIK
         </span>
         <span className="text-[10px] font-bold text-blue-100 tracking-[2.5px] uppercase opacity-85">
-          Business Solutions
+          BUSINESS SOLUTIONS
         </span>
       </div>
 

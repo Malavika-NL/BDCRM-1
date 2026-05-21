@@ -625,7 +625,7 @@ export const LeadDetailDrawer = ({ lead, isOpen, onClose, onUpdate }: LeadDetail
             style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)' }}
           >
             <DollarSign size={14} className="text-indigo-200" />
-            <span className="text-[12px] font-black text-indigo-100">${parseFloat(lead.value).toLocaleString()}</span>
+            <span className="text-[12px] font-black text-indigo-100">₹{parseFloat(lead.value).toLocaleString('en-IN')}</span>
           </div>
 
           {/* Status badge */}
@@ -676,7 +676,7 @@ export const LeadDetailDrawer = ({ lead, isOpen, onClose, onUpdate }: LeadDetail
                   </div>
                   <div className="min-w-0">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Deal Value</p>
-                    <p className="text-[14px] font-black text-emerald-600">${parseFloat(lead.value).toLocaleString()}</p>
+                    <p className="text-[14px] font-black text-emerald-600">₹{parseFloat(lead.value).toLocaleString('en-IN')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-indigo-100 transition-all">

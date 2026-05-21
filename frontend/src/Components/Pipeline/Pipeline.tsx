@@ -2626,8 +2626,8 @@ const AnalyticsPanel = ({ leads, onClose }: { leads: Lead[]; onClose: () => void
           {[
             { label: 'Deals',    value: leads.length,                      icon: <Briefcase size={11} />, gradient: 'from-blue-500 to-blue-600',    bg: 'bg-blue-50',    border: 'border-blue-100',    text: 'text-blue-600',    glow: 'rgba(59,130,246,0.15)' },
             { label: 'Win Rate', value: `${winRate}%`,                     icon: <Target size={11} />,    gradient: 'from-emerald-500 to-teal-500', bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-600', glow: 'rgba(16,185,129,0.15)' },
-            { label: 'Pipeline', value: `$${(totalVal/1000).toFixed(0)}k`, icon: <DollarSign size={11} />,gradient: 'from-indigo-500 to-violet-500', bg: 'bg-indigo-50',  border: 'border-indigo-100',  text: 'text-indigo-600',  glow: 'rgba(79,70,229,0.15)' },
-            { label: 'Avg Deal', value: `$${(avgDeal/1000).toFixed(0)}k`,  icon: <TrendingUp size={11} />,gradient: 'from-amber-400 to-orange-500',  bg: 'bg-amber-50',   border: 'border-amber-100',   text: 'text-amber-600',   glow: 'rgba(245,158,11,0.15)' },
+            { label: 'Pipeline', value: `₹${(totalVal/1000).toFixed(0)}k`, icon: <DollarSign size={11} />,gradient: 'from-indigo-500 to-violet-500', bg: 'bg-indigo-50',  border: 'border-indigo-100',  text: 'text-indigo-600',  glow: 'rgba(79,70,229,0.15)' },
+            { label: 'Avg Deal', value: `₹${(avgDeal/1000).toFixed(0)}k`,  icon: <TrendingUp size={11} />,gradient: 'from-amber-400 to-orange-500',  bg: 'bg-amber-50',   border: 'border-amber-100',   text: 'text-amber-600',   glow: 'rgba(245,158,11,0.15)' },
           ].map(k => (
             <div key={k.label}
               className={`rounded-xl p-2.5 border ${k.bg} ${k.border} transition-all duration-200`}
@@ -2661,7 +2661,7 @@ const AnalyticsPanel = ({ leads, onClose }: { leads: Lead[]; onClose: () => void
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] text-slate-400 font-medium">{count}</span>
-                      <span className="text-[11px] font-black text-slate-600">${(val/1000).toFixed(0)}k</span>
+                      <span className="text-[11px] font-black text-slate-600">₹{(val/1000).toFixed(0)}k</span>
                     </div>
                   </div>
                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -2679,13 +2679,13 @@ const AnalyticsPanel = ({ leads, onClose }: { leads: Lead[]; onClose: () => void
           <div className="flex gap-2">
             <div className="flex-1 bg-emerald-50 rounded-xl p-2.5 border border-emerald-100" style={{ boxShadow: '0 2px 8px rgba(16,185,129,0.1)' }}>
               <p className="text-[10px] text-emerald-600 font-black">Won</p>
-              <p className="text-[14px] font-black text-emerald-700">${(wonVal/1000).toFixed(0)}k</p>
+              <p className="text-[14px] font-black text-emerald-700">₹{(wonVal/1000).toFixed(0)}k</p>
               <p className="text-[10px] text-emerald-500 font-medium">{wonLeads.length} deals</p>
             </div>
             <div className="flex-1 bg-red-50 rounded-xl p-2.5 border border-red-100" style={{ boxShadow: '0 2px 8px rgba(239,68,68,0.1)' }}>
               <p className="text-[10px] text-red-500 font-black">Lost</p>
               <p className="text-[14px] font-black text-red-600">
-                ${(leads.filter(l=>l.status==='lost').reduce((a,l)=>a+parseFloat(l.value),0)/1000).toFixed(0)}k
+                ₹{(leads.filter(l=>l.status==='lost').reduce((a,l)=>a+parseFloat(l.value),0)/1000).toFixed(0)}k
               </p>
               <p className="text-[10px] text-red-400 font-medium">{leads.filter(l=>l.status==='lost').length} deals</p>
             </div>
@@ -2711,7 +2711,7 @@ const AnalyticsPanel = ({ leads, onClose }: { leads: Lead[]; onClose: () => void
                     <p className="text-[11px] font-bold text-slate-800 truncate">{lead.name}</p>
                     <p className="text-[10px] text-slate-400 truncate font-medium">{lead.company}</p>
                   </div>
-                  <span className="text-[11px] font-black text-slate-700 shrink-0">${parseFloat(lead.value).toLocaleString()}</span>
+                  <span className="text-[11px] font-black text-slate-700 shrink-0">₹{parseFloat(lead.value).toLocaleString('en-IN')}</span>
                 </div>
               );
             })}
@@ -3015,7 +3015,7 @@ const LeadCard = ({ lead, onSelect, onChangeStatus, onDragStart }: {
           <StatusDropdown currentStatus={lead.status} leadId={lead.id} onChangeStatus={onChangeStatus} />
         </div>
         <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid #f1f5f9' }}>
-          <span className="text-[13px] font-black text-slate-800">${parseFloat(lead.value).toLocaleString()}</span>
+          <span className="text-[13px] font-black text-slate-800">₹{parseFloat(lead.value).toLocaleString('en-IN')}</span>
           <span className="text-[9px] text-slate-400 flex items-center gap-0.5 font-medium">
             <Calendar size={8} />{new Date(lead.created_at).toLocaleDateString()}
           </span>
@@ -3088,7 +3088,7 @@ const BoardView = ({ leads, onSelect, onChangeStatus }: {
                     </span>
                   </div>
                   {colTotal > 0 && (
-                    <p className="text-[9px] text-slate-400 font-bold mt-0.5">${colTotal.toLocaleString()}</p>
+                    <p className="text-[9px] text-slate-400 font-bold mt-0.5">₹{colTotal.toLocaleString('en-IN')}</p>
                   )}
                 </div>
               </div>
@@ -3183,7 +3183,7 @@ const ListView = ({ leads, onSelect, onChangeStatus }: {
               <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
                 <StatusDropdown currentStatus={lead.status} leadId={lead.id} onChangeStatus={onChangeStatus} />
               </td>
-              <td className="px-5 py-3.5 text-[13px] font-black text-slate-800">${parseFloat(lead.value).toLocaleString()}</td>
+              <td className="px-5 py-3.5 text-[13px] font-black text-slate-800">₹{parseFloat(lead.value).toLocaleString('en-IN')}</td>
               <td className="px-5 py-3.5 text-[11px] text-slate-400 font-medium">{new Date(lead.created_at).toLocaleDateString()}</td>
             </tr>
           );
@@ -3238,7 +3238,7 @@ const GridView = ({ leads, onSelect, onChangeStatus }: {
               <StatusDropdown currentStatus={lead.status} leadId={lead.id} onChangeStatus={onChangeStatus} />
             </div>
             <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid #f1f5f9' }}>
-              <p className="text-[13px] font-black text-slate-800">${parseFloat(lead.value).toLocaleString()}</p>
+              <p className="text-[13px] font-black text-slate-800">₹{parseFloat(lead.value).toLocaleString('en-IN')}</p>
               <p className="text-[9px] text-slate-400 font-medium">{new Date(lead.created_at).toLocaleDateString()}</p>
             </div>
           </div>
@@ -3482,7 +3482,7 @@ export const Pipeline = () => {
               {[
                 { label: 'Open',     value: openCount,                           bg: 'rgba(255,255,255,0.12)' },
                 { label: 'Win Rate', value: `${winRate}%`,                       bg: 'rgba(16,185,129,0.25)' },
-                { label: 'Pipeline', value: `$${(totalValue/1000).toFixed(0)}k`, bg: 'rgba(255,255,255,0.12)' },
+                { label: 'Pipeline', value: `₹${(totalValue/1000).toFixed(0)}k`, bg: 'rgba(255,255,255,0.12)' },
               ].map(k => (
                 <div key={k.label}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-black text-white"
@@ -3639,7 +3639,7 @@ export const Pipeline = () => {
               </button>
               {lostValue > 0 && (
                 <p className="mt-3 text-[11px] text-slate-400 font-medium">
-                  Lost Value: ${lostValue.toLocaleString()}
+                  Lost Value: ₹{lostValue.toLocaleString('en-IN')}
                 </p>
               )}
             </div>

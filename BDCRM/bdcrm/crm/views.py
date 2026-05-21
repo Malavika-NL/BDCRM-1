@@ -15,7 +15,6 @@ from django.conf import settings
 import requests # Make sure this is at the top of views.py
 from datetime import date
 import calendar
-import anthropic
 from datetime import timedelta
 from .ai_helper import ask_ai, ask_ai_json
 from .models import (
@@ -48,7 +47,6 @@ from .ai_engine import (
     AnomalyDetectionEngine, DailyDigestGenerator, _call_claude
 )
 from django.conf import settings
-client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 
 def _token_payload_for_user(user: User):
@@ -212,16 +210,10 @@ class LeadViewSet(viewsets.ModelViewSet):
             user_prompt += "\n\nIf 'new', write a cold email. If 'negotiation', write a closing push. Keep it under 100 words."
 
         try:
-            response = client.messages.create(
-                model="claude-haiku-4-5-20251001", # Using a standard stable model ID
-                max_tokens=500,
-                temperature=0.7,
-                system=system_prompt,
-                messages=[
-                    {"role": "user", "content": user_prompt},
-                ],
-            )
-            ai_message = response.content[0].text
+            result = ask_ai(user_prompt, system_prompt=system_prompt, max_tokens=500)
+            if not result.get("success"):
+                return Response({"error": result.get("error", "AI generation failed")}, status=500)
+            ai_message = result.get("text", "")
             return Response({"generated_text": ai_message})
 
         except Exception as e:
@@ -517,7 +509,6 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
 import json
 import re
-import anthropic
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -560,17 +551,10 @@ class CourseViewSet(viewsets.ModelViewSet):
         """
         
         try:
-            # Call Anthropic directly
-            client = anthropic.Anthropic() 
-            response = client.messages.create(
-                model="claude-haiku-4-5-20251001", 
-                max_tokens=2500,
-                temperature=0.7,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}],
-            )
-            
-            ai_text = response.content[0].text
+            result = ask_ai(user_prompt, system_prompt=system_prompt, max_tokens=2500)
+            if not result.get("success"):
+                return Response({"error": result.get("error", "AI playbook generation failed")}, status=500)
+            ai_text = result.get("text", "")
             
             # Clean up JSON formatting so Python doesn't crash
             ai_text = re.sub(r'^```json\s*', '', ai_text)

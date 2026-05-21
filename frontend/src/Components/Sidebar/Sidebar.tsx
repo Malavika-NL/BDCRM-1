@@ -377,11 +377,12 @@ export const Sidebar: React.FC = () => {
         ${collapsed ? 'justify-center px-0' : 'px-5'}
       `}>
         {!collapsed && (
-          <div className="flex flex-col gap-0.5 overflow-hidden">
-            <div className="text-[20px] font-extrabold tracking-tight text-slate-900 whitespace-nowrap">
-              <span className="text-blue-800">BD</span> CRM
+          <div className="flex flex-col gap-0.5 overflow-hidden w-full items-center">
+            <div className="text-[36px] leading-none font-black tracking-[2px] text-slate-900 whitespace-nowrap text-center">
+              <span className="text-blue-800">BD</span>
+              <span className="text-pink-600">CRM</span>
             </div>
-            <div className="text-[9px] font-bold text-slate-400 tracking-[1.8px] uppercase">
+            <div className="text-[9px] font-bold text-slate-400 tracking-[1.8px] uppercase text-center">
               AI-Powered CRM
             </div>
           </div>

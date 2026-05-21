@@ -2332,7 +2332,7 @@ export const Dashboard = () => {
 
         {/* ── ROW 1: 4 Stat Cards ── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 f2">
-          <StatCard title="Total Revenue"  value={stats.total_value}  change={12.5} icon={DollarSign} gradient="linear-gradient(135deg,#4f46e5,#7c3aed)" delay={0} prefix="$" sub="total pipeline value" />
+          <StatCard title="Total Revenue"  value={stats.total_value}  change={12.5} icon={DollarSign} gradient="linear-gradient(135deg,#4f46e5,#7c3aed)" delay={0} prefix="₹" sub="total pipeline value" />
           <StatCard title="Total Leads"    value={stats.total_leads}  change={8}    icon={Users}      gradient="linear-gradient(135deg,#0ea5e9,#0284c7)" delay={1} sub="in your CRM" />
           <StatCard title="Win Rate"       value={stats.win_rate}     change={3.2}  icon={TrendingUp} gradient="linear-gradient(135deg,#10b981,#0d9488)" delay={2} suffix="%" sub="conversion rate" />
           <StatCard title="Pending Leads"  value={newCount}           change={-2}   icon={Clock}      gradient="linear-gradient(135deg,#f59e0b,#f97316)" delay={3} sub="awaiting contact" />

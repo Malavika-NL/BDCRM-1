@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Sum, Count, Avg, Q
 from django.conf import settings
-import anthropic
+from .ai_helper import ask_ai_json
 
 from .models import (
     Lead, Activity, Task, AIInteractionLog,
@@ -15,23 +15,11 @@ from .models import (
 def _call_claude(prompt, system_prompt="You are an expert CRM AI.",
                   max_tokens=1500, temperature=0.3):
     try:
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=max_tokens,
-            temperature=temperature,
-            system=system_prompt,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        text = response.content[0].text.strip()
-        cleaned = text
-        if cleaned.startswith("```json"): cleaned = cleaned[7:]
-        elif cleaned.startswith("```"): cleaned = cleaned[3:]
-        if cleaned.endswith("```"): cleaned = cleaned[:-3]
-        try:
-            return {"success": True, "data": json.loads(cleaned.strip()), "raw": text}
-        except json.JSONDecodeError:
-            return {"success": True, "data": None, "raw": text}
+        result = ask_ai_json(prompt=prompt, system_prompt=system_prompt)
+        if result.get("success"):
+            payload = result.get("data")
+            return {"success": True, "data": payload, "raw": json.dumps(payload, default=str)}
+        return {"success": False, "error": result.get("error", "AI call failed"), "data": None, "raw": ""}
     except Exception as e:
         return {"success": False, "error": str(e), "data": None, "raw": ""}
 
@@ -358,10 +346,14 @@ Return ONLY JSON:
 
         result = _call_claude(message, system_prompt=system, max_tokens=1500, temperature=0.5)
         if result['success'] and result['data']:
-            session.add_message('assistant', result['data'].get('response', ''))
+            assistant_text = (result['data'].get('response') or '').strip()
+            if not assistant_text:
+                assistant_text = "AI returned an empty response. Please try again."
+                result['data']['response'] = assistant_text
+            session.add_message('assistant', assistant_text)
             return result['data']
 
-        fallback = result.get('raw', 'Error occurred.')
+        fallback = (result.get('raw') or result.get('error') or 'AI is temporarily unavailable. Please check API configuration and retry.')
         session.add_message('assistant', fallback)
         return {'response': fallback, 'action_type': 'error'}
 

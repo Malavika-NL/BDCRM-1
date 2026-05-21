@@ -1387,7 +1387,11 @@ export const AICommandCenter: React.FC = () => {
     setChatLoading(true);
     try {
       const res: ChatResponse = await api.aiChat(msg);
-      setMessages(prev => [...prev, { role:'assistant', content:res.response }]);
+      const assistantText =
+        (res?.response && String(res.response).trim()) ||
+        (res as any)?.error ||
+        'AI returned no response. Please check backend AI config.';
+      setMessages(prev => [...prev, { role:'assistant', content:assistantText }]);
     } catch {
       setMessages(prev => [...prev, { role:'assistant', content:'Sorry, something went wrong.' }]);
     }
@@ -1401,7 +1405,7 @@ export const AICommandCenter: React.FC = () => {
   const markAllRead = async () => { await api.aiMarkAllRead(); loadAlerts(); loadUnread(); };
 
   const quickQuestions  = ['Which leads should I focus on today?','Show me at-risk deals','Pipeline health check','Any overdue follow-ups?'];
-  const searchSuggestions = ['Show all hot leads','Deals over $100k','Leads from LinkedIn','New leads this week'];
+  const searchSuggestions = ['Show all hot leads','Deals over ₹1 Cr','Leads from LinkedIn','New leads this week'];
 
   const TAB_CONFIG = [
     { id:'chat'   as const, label:'AI Assistant', icon:BrainCircuit, badge:null,        accent:'#4f46e5' },
@@ -1980,7 +1984,7 @@ export const AICommandCenter: React.FC = () => {
                                 </span>
                               </td>
                               <td className="px-5 py-3.5 text-[13px] font-black text-slate-700 text-right">
-                                ${parseFloat(lead.value).toLocaleString()}
+                                ₹{parseFloat(lead.value).toLocaleString('en-IN')}
                               </td>
                             </tr>
                           ))}

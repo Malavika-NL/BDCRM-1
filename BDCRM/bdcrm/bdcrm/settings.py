@@ -19,6 +19,22 @@ import anthropic
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def _load_dotenv(dotenv_path: Path) -> None:
+    if not dotenv_path.exists():
+        return
+    for raw in dotenv_path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("'").strip('"')
+        os.environ.setdefault(key, value)
+
+
+_load_dotenv(BASE_DIR / ".env")
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
@@ -119,8 +135,10 @@ USE_I18N = True
 
 USE_TZ = True
 
-import os
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -136,8 +154,7 @@ REST_FRAMEWORK = {
 
 STATIC_URL = 'static/'
 # settings.py
-GREEN_API_ID = '7103541726'  # This is from your screenshot
-GREEN_API_TOKEN = '34ce6a2a81bd4e3d8efa611aab71f290e273fb4d8646403cb7'
-APOLLO_API_KEY = "IYsYOmhQ9jn7MA7fsS2v8Q"
-GOOGLE_API_KEY = "AIzaSyATvmyk6WNzbakT1Rqe3_C4RJmUb7-Nqiw"
-GOOGLE_CSE_ID = "d4b5ae2bd73264261"
+GREEN_API_ID = os.getenv("GREEN_API_ID", "")
+GREEN_API_TOKEN = os.getenv("GREEN_API_TOKEN", "")
+APOLLO_API_KEY = os.getenv("APOLLO_API_KEY", "")
+GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID", "")

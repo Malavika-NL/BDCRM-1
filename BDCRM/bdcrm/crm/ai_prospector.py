@@ -3,6 +3,7 @@ import re
 import anthropic
 import warnings
 from django.conf import settings
+from .ai_helper import ask_ai_json
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -16,19 +17,11 @@ except ImportError:
 
 def _call_claude(prompt, system_prompt="Recruiter AI.", max_tokens=1500):
     try:
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=max_tokens,
-            temperature=0.3,
-            system=system_prompt,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        text = response.content[0].text.strip()
-        if text.startswith("```json"): text = text[7:]
-        elif text.startswith("```"): text = text[3:]
-        if text.endswith("```"): text = text[:-3]
-        return json.loads(text.strip())
+        result = ask_ai_json(prompt=prompt, system_prompt=system_prompt)
+        if result.get("success"):
+            return result.get("data")
+        print(f"AI Error: {result.get('error')}")
+        return None
     except Exception as e:
         print(f"AI Error: {e}")
         return None
