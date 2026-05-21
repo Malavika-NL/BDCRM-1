@@ -29,6 +29,7 @@ import CampaignWorkspaceList from './Components/Target/CampaignWorkspaceList';
 import BDMTargetCreate from './Components/Target/BDMTargetCreate';
 import BDMTargetsList from './Components/Target/BDMTargetList';
 import { ActivityPlannerPage } from './Components/Planner/ActivityPlannerPage';
+import { NotificationsPage } from './Components/Notifications/NotificationsPage';
 
 function App() {
   const RequireAuth = ({ children }: { children: React.ReactNode }) => {
@@ -97,6 +98,7 @@ function App() {
             <Route path="/bdm-targets" element={<BDMTargetsList />} />
             <Route path="/bdm-targets/new" element={<BDMTargetCreate />} />
             <Route path="/create-user" element={<UserCreationPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
 
 
 

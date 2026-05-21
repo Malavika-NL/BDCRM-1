@@ -1998,6 +1998,7 @@
 
 
 import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   DollarSign, Users, TrendingUp, Clock, Phone, Mail, Calendar,
   FileText, ArrowUp, ArrowDown, ChevronRight, Plus, Sparkles,
@@ -2143,6 +2144,7 @@ const ActivityItem = ({ activity, index }: { activity:ActivityItemType; index:nu
 
 /* ═══════════════ MAIN DASHBOARD ═══════════════ */
 export const Dashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats]         = useState<DashboardStats | null>(null);
   const [loading, setLoading]     = useState(true);
   const [bdmTargets, setBdmTargets] = useState<any[]>([]);
@@ -2313,8 +2315,10 @@ export const Dashboard = () => {
             <p className="text-[13px] text-indigo-200 mt-1 font-medium">Track pipeline health, conversions, and daily momentum</p>
           </div>
           <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-            <button className="btn-add flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-black transition-all"
+            <button
+              className="btn-add flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-black transition-all"
               style={{ backgroundColor:'#ffffff', color:'#4f46e5', boxShadow:'0 4px 14px rgba(255,255,255,0.2)' }}
+              onClick={() => navigate('/pipeline/new')}
               onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor='#eef2ff'}
               onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.backgroundColor='#ffffff'}>
               <Plus size={14} /> Add Lead

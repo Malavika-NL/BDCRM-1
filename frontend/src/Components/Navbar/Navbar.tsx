@@ -122,6 +122,7 @@ import { useNavigate } from 'react-router-dom';
 // Import Bell icon
 import { X, LogOut, Bell } from 'lucide-react';
 import { authStore } from '../Utils/auth';
+import { api } from '../Utils/api';
 
 const getAbbreviation = (name: string) =>
   name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -129,10 +130,17 @@ const getAbbreviation = (name: string) =>
 export const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [liveAlerts, setLiveAlerts] = useState<any[]>([]);
+  const seenAlertIdsRef = useRef<Set<number>>(new Set());
   const popupRef = useRef<HTMLDivElement>(null);
   const currentUser = authStore.getUser();
 
-  const userName = currentUser?.name || currentUser?.username || currentUser?.email || 'User';
+  const userName =
+    `${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() ||
+    currentUser?.username ||
+    currentUser?.email ||
+    'User';
   const userEmail = currentUser?.email || '';
   const abbreviation = getAbbreviation(userName);
 
@@ -145,6 +153,34 @@ export const Navbar: React.FC = () => {
     if (isOpen) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
+
+  useEffect(() => {
+    const loadAlerts = async () => {
+      const [countRes, unreadAlerts] = await Promise.all([
+        api.aiUnreadCount(),
+        api.aiGetAlerts(false),
+      ]);
+      setUnreadCount(countRes?.unread || 0);
+
+      const newOnes = (unreadAlerts || []).filter((a: any) => !seenAlertIdsRef.current.has(a.id));
+      newOnes.forEach((a: any) => seenAlertIdsRef.current.add(a.id));
+      if (newOnes.length > 0) {
+        setLiveAlerts((prev) => [...newOnes.slice(0, 4), ...prev].slice(0, 5));
+      }
+    };
+
+    loadAlerts();
+    const interval = setInterval(loadAlerts, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (liveAlerts.length === 0) return;
+    const timer = setTimeout(() => {
+      setLiveAlerts((prev) => prev.slice(0, -1));
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [liveAlerts]);
 
   return (
     <header className="h-[68px] bg-[#001740] flex items-center justify-between px-4 shrink-0 z-20 shadow-[0_3px_8px_rgba(0,0,0,0.24)]">
@@ -175,10 +211,15 @@ export const Navbar: React.FC = () => {
         {/* Notification Button */}
         <button
           onClick={() => navigate('/notifications')}
-          className="w-10 h-10 rounded-full flex items-center justify-center text-blue-200 hover:text-white hover:bg-white/10 transition-colors"
+          className="relative w-10 h-10 rounded-full flex items-center justify-center text-blue-200 hover:text-white hover:bg-white/10 transition-colors"
           aria-label="View notifications"
         >
           <Bell size={20} />
+          {unreadCount > 0 && (
+            <span className="absolute mt-[-20px] ml-[18px] min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
         </button>
 
         {/* Avatar & Popup */}
@@ -244,6 +285,21 @@ export const Navbar: React.FC = () => {
           )}
         </div>
       </div>
+
+      {liveAlerts.length > 0 && (
+        <div className="fixed right-4 top-[82px] z-[90] space-y-2 w-[320px]">
+          {liveAlerts.map((alert) => (
+            <button
+              key={alert.id}
+              onClick={() => navigate('/notifications')}
+              className="w-full text-left rounded-xl bg-white border border-indigo-200 shadow-lg p-3 hover:bg-indigo-50 transition-colors"
+            >
+              <p className="text-[12px] font-black text-slate-900 truncate">{alert.title}</p>
+              <p className="text-[11px] text-slate-600 mt-0.5 line-clamp-2">{alert.description}</p>
+            </button>
+          ))}
+        </div>
+      )}
     </header>
   );
 };

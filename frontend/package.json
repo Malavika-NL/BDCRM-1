@@ -16,6 +16,7 @@
     "d3-scale": "^4.0.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.577.0",
+    "or": "^0.2.0",
     "prop-types": "^15.8.1",
     "react": "^19.2.0",
     "react-19-simple-maps": "^3.0.0",
