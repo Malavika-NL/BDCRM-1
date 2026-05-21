@@ -46,6 +46,7 @@ urlpatterns = [
     path('api/auth/login/', views.LoginView.as_view(), name='auth_login'),
     path('api/auth/create-user/', views.CreateUserView.as_view(), name='auth_create_user'),
     path('api/auth/me/', views.me, name='auth_me'),
+    path('api/auth/users/', views.list_users, name='auth_list_users'), 
     path('api/auth/bootstrap-admin/', views.bootstrap_admin_profile, name='auth_bootstrap_admin'),
     path('api/', include(router.urls)),
 ]

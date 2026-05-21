@@ -139,6 +139,20 @@ def bootstrap_admin_profile(request):
     if request.user.is_superuser or request.user.is_staff:
         UserProfile.objects.get_or_create(user=request.user, defaults={"role": "admin"})
     return Response({"ok": True})
+
+
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def list_users(request):
+    request_role = getattr(getattr(request.user, "profile", None), "role", None)
+    is_admin = request.user.is_superuser or request.user.is_staff or request_role == "admin"
+    if not is_admin:
+        return Response({"detail": "Only admin can view users."}, status=status.HTTP_403_FORBIDDEN)
+    users = User.objects.all().order_by('-date_joined')
+    return Response(UserMeSerializer(users, many=True).data)
+
+
+    
 class LeadViewSet(viewsets.ModelViewSet):
     queryset = Lead.objects.all().order_by("-created_at")
     serializer_class = LeadSerializer

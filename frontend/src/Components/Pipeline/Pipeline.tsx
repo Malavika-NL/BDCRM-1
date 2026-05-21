@@ -1627,7 +1627,913 @@
 // export default Pipeline;
 
 
-import React, { useEffect, useState, useRef } from 'react';
+// import React, { useEffect, useState, useRef } from 'react';
+// import { useNavigate } from 'react-router-dom';
+// import {
+//   Plus, Search, Building2, Columns3, List, LayoutGrid,
+//   RefreshCw, Briefcase, ChevronDown, Check,
+//   Zap, Phone, MessageSquare, CheckCircle2, XCircle,
+//   BarChart3, X, TrendingUp, DollarSign, Target,
+//   Clock, ArrowUpRight, SlidersHorizontal,
+//   Activity, Calendar, Tag, Filter
+// } from 'lucide-react';
+// import { STATUS_LABELS, type Lead, STATUS_ORDER, type LeadStatus } from '../Utils/types';
+// import { api } from '../Utils/api';
+// import { LeadDetailDrawer } from '../LeadDetailDrawer/LeadDetailDrawer';
+
+// /* ─── STATUS CONFIG ──────────────────────────────────── */
+// const STATUS_CONFIG: Record<string, {
+//   color: string; bg: string; text: string;
+//   icon: React.ReactNode; gradient: string; hex: string;
+// }> = {
+//   new:         { color: 'bg-blue-500',    bg: 'bg-blue-50',    text: 'text-blue-700',    icon: <Zap size={11} />,           gradient: 'from-blue-500 to-blue-600',      hex: '#3b82f6' },
+//   contacted:   { color: 'bg-indigo-500',  bg: 'bg-indigo-50',  text: 'text-indigo-700',  icon: <Phone size={11} />,         gradient: 'from-indigo-500 to-indigo-600',  hex: '#6366f1' },
+//   negotiation: { color: 'bg-amber-500',   bg: 'bg-amber-50',   text: 'text-amber-700',   icon: <MessageSquare size={11} />, gradient: 'from-amber-500 to-amber-600',    hex: '#f59e0b' },
+//   won:         { color: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-700', icon: <CheckCircle2 size={11} />,  gradient: 'from-emerald-500 to-emerald-600',hex: '#10b981' },
+//   lost:        { color: 'bg-slate-400',   bg: 'bg-slate-100',  text: 'text-slate-600',   icon: <XCircle size={11} />,       gradient: 'from-slate-400 to-slate-500',    hex: '#94a3b8' },
+// };
+// const getCfg = (s: string) => STATUS_CONFIG[s] || STATUS_CONFIG.new;
+
+// /* ─── ACTIVITY HELPERS ───────────────────────────────── */
+// type ActivityEntry = { id: number; leadId: number; action: string; from?: string; to?: string; ts: number };
+
+// const timeAgo = (ts: number) => {
+//   const s = Math.floor((Date.now() - ts) / 1000);
+//   if (s < 60) return 'just now';
+//   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+//   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+//   return `${Math.floor(s / 86400)}d ago`;
+// };
+
+// const formatBackendActivity = (a: any): ActivityEntry => {
+//   let action = a.summary || a.activity_type;
+//   let from, to;
+//   if (a.summary && a.summary.includes('Stage updated:')) {
+//     const parts = a.summary.replace('Stage updated: ', '').split(' → ');
+//     if (parts.length === 2) {
+//       from = Object.keys(STATUS_LABELS).find(k => STATUS_LABELS[k as LeadStatus] === parts[0]);
+//       to   = Object.keys(STATUS_LABELS).find(k => STATUS_LABELS[k as LeadStatus] === parts[1]);
+//       if (from && to) action = 'status_change';
+//     }
+//   }
+//   return { id: a.id, leadId: a.lead, action, from, to, ts: new Date(a.created_at).getTime() };
+// };
+
+// /* ─── ANALYTICS PANEL ────────────────────────────────── */
+// const AnalyticsPanel = ({ leads, onClose }: { leads: Lead[]; onClose: () => void }) => {
+//   const total    = leads.length || 1;
+//   const totalVal = leads.reduce((a, l) => a + parseFloat(l.value), 0);
+//   const wonLeads = leads.filter(l => l.status === 'won');
+//   const wonVal   = wonLeads.reduce((a, l) => a + parseFloat(l.value), 0);
+//   const winRate  = Math.round((wonLeads.length / total) * 100);
+//   const avgDeal  = totalVal / total;
+
+//   return (
+//     <div className="w-64 bg-white border-l border-slate-200/80 flex flex-col shrink-0 overflow-hidden shadow-sm">
+//       {/* Panel header — ConfigCard style */}
+//       <div className="h-1 w-full bg-gradient-to-r from-indigo-500 to-violet-500 shrink-0" />
+//       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
+//         <div className="flex items-center gap-2.5">
+//           <div className="p-1.5 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow-sm shrink-0">
+//             <BarChart3 size={12} className="text-white" />
+//           </div>
+//           <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider">Analytics</span>
+//         </div>
+//         <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
+//           <X size={13} />
+//         </button>
+//       </div>
+
+//       <div className="p-3 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
+//         <div className="grid grid-cols-2 gap-2">
+//           {[
+//             { label: 'Deals',    value: leads.length,                      icon: <Briefcase size={11} />, gradient: 'from-blue-500 to-blue-600',    bg: 'bg-blue-50',    border: 'border-blue-100',    text: 'text-blue-600' },
+//             { label: 'Win Rate', value: `${winRate}%`,                     icon: <Target size={11} />,    gradient: 'from-emerald-500 to-teal-500', bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-600' },
+//             { label: 'Pipeline', value: `$${(totalVal/1000).toFixed(0)}k`, icon: <DollarSign size={11} />,gradient: 'from-indigo-500 to-violet-500', bg: 'bg-indigo-50',  border: 'border-indigo-100',  text: 'text-indigo-600' },
+//             { label: 'Avg Deal', value: `$${(avgDeal/1000).toFixed(0)}k`,  icon: <TrendingUp size={11} />,gradient: 'from-amber-400 to-orange-500',  bg: 'bg-amber-50',   border: 'border-amber-100',   text: 'text-amber-600' },
+//           ].map(k => (
+//             <div key={k.label} className={`rounded-xl p-2.5 border ${k.bg} ${k.border} hover:shadow-sm transition-all`}>
+//               <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${k.gradient} flex items-center justify-center mb-1.5 shadow-sm`}>
+//                 <span className="text-white">{k.icon}</span>
+//               </div>
+//               <p className="text-[10px] text-slate-500 font-medium">{k.label}</p>
+//               <p className="text-[14px] font-black text-slate-800">{k.value}</p>
+//             </div>
+//           ))}
+//         </div>
+
+//         {/* Stage breakdown */}
+//         <div>
+//           <div className="flex items-center gap-2 mb-2">
+//             <div className="w-1 h-3 bg-indigo-500 rounded-full" />
+//             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Stage Breakdown</p>
+//           </div>
+//           <div className="space-y-2">
+//             {STATUS_ORDER.map(status => {
+//               const count = leads.filter(l => l.status === status).length;
+//               const val   = leads.filter(l => l.status === status).reduce((a, l) => a + parseFloat(l.value), 0);
+//               const pct   = Math.round((count / total) * 100);
+//               const cfg   = getCfg(status);
+//               return (
+//                 <div key={status}>
+//                   <div className="flex items-center justify-between mb-0.5">
+//                     <div className="flex items-center gap-1.5">
+//                       <span className={`${cfg.color} w-1.5 h-1.5 rounded-full inline-block`} />
+//                       <span className="text-[11px] font-semibold text-slate-700">{STATUS_LABELS[status]}</span>
+//                     </div>
+//                     <div className="flex items-center gap-1.5">
+//                       <span className="text-[10px] text-slate-400">{count}</span>
+//                       <span className="text-[11px] font-black text-slate-600">${(val/1000).toFixed(0)}k</span>
+//                     </div>
+//                   </div>
+//                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+//                     <div className={`h-full bg-gradient-to-r ${cfg.gradient} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
+//                   </div>
+//                 </div>
+//               );
+//             })}
+//           </div>
+//         </div>
+
+//         {/* Won vs Lost */}
+//         <div>
+//           <div className="flex items-center gap-2 mb-2">
+//             <div className="w-1 h-3 bg-emerald-500 rounded-full" />
+//             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Won vs Lost</p>
+//           </div>
+//           <div className="flex gap-2">
+//             <div className="flex-1 bg-emerald-50 rounded-xl p-2.5 border border-emerald-100">
+//               <p className="text-[10px] text-emerald-600 font-black">Won</p>
+//               <p className="text-[13px] font-black text-emerald-700">${(wonVal/1000).toFixed(0)}k</p>
+//               <p className="text-[10px] text-emerald-500">{wonLeads.length} deals</p>
+//             </div>
+//             <div className="flex-1 bg-red-50 rounded-xl p-2.5 border border-red-100">
+//               <p className="text-[10px] text-red-500 font-black">Lost</p>
+//               <p className="text-[13px] font-black text-red-600">
+//                 ${(leads.filter(l=>l.status==='lost').reduce((a,l)=>a+parseFloat(l.value),0)/1000).toFixed(0)}k
+//               </p>
+//               <p className="text-[10px] text-red-400">{leads.filter(l=>l.status==='lost').length} deals</p>
+//             </div>
+//           </div>
+//         </div>
+
+//         {/* Top Deals */}
+//         <div>
+//           <div className="flex items-center gap-2 mb-2">
+//             <div className="w-1 h-3 bg-amber-400 rounded-full" />
+//             <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Top Deals</p>
+//           </div>
+//           <div className="space-y-1.5">
+//             {[...leads].sort((a,b)=>parseFloat(b.value)-parseFloat(a.value)).slice(0,4).map((lead, i) => {
+//               const cfg = getCfg(lead.status);
+//               return (
+//                 <div key={lead.id} className="flex items-center gap-2 py-1.5 px-2 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all">
+//                   <span className={`w-5 h-5 rounded-lg bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-[9px] font-black text-white shrink-0 shadow-sm`}>
+//                     {i + 1}
+//                   </span>
+//                   <div className="flex-1 min-w-0">
+//                     <p className="text-[11px] font-semibold text-slate-800 truncate">{lead.name}</p>
+//                     <p className="text-[10px] text-slate-400 truncate">{lead.company}</p>
+//                   </div>
+//                   <span className="text-[11px] font-black text-slate-700 shrink-0">${parseFloat(lead.value).toLocaleString()}</span>
+//                 </div>
+//               );
+//             })}
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// /* ─── ACTIVITY FEED ──────────────────────────────────── */
+// const ActivityFeed = ({ activities, leads, onClose }: {
+//   activities: ActivityEntry[]; leads: Lead[]; onClose: () => void;
+// }) => {
+//   const getName = (id: number) => leads.find(l => l.id === id)?.name ?? 'Unknown';
+//   return (
+//     <div className="w-56 bg-white border-l border-slate-200/80 flex flex-col shrink-0 overflow-hidden shadow-sm">
+//       <div className="h-1 w-full bg-gradient-to-r from-violet-500 to-purple-500 shrink-0" />
+//       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
+//         <div className="flex items-center gap-2.5">
+//           <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 shadow-sm shrink-0">
+//             <Activity size={12} className="text-white" />
+//           </div>
+//           <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider">Activity</span>
+//           {activities.length > 0 && (
+//             <span className="text-[10px] bg-indigo-100 text-indigo-700 font-black px-1.5 py-0.5 rounded-full">{activities.length}</span>
+//           )}
+//         </div>
+//         <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
+//           <X size={13} />
+//         </button>
+//       </div>
+//       <div className="flex-1 p-3 overflow-y-auto custom-scrollbar">
+//         {activities.length === 0 ? (
+//           <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-slate-100 rounded-xl mt-2">
+//             <Activity size={20} className="text-slate-200 mb-2" />
+//             <p className="text-[11px] font-black text-slate-400">No activity yet</p>
+//             <p className="text-[10px] text-slate-300 mt-0.5 font-medium">Changes appear here</p>
+//           </div>
+//         ) : (
+//           <div className="relative">
+//             <div className="absolute left-2.5 top-0 bottom-0 w-px bg-indigo-100" />
+//             <div className="space-y-3">
+//               {activities.map(a => {
+//                 const fromCfg = a.from ? getCfg(a.from) : null;
+//                 const toCfg   = a.to   ? getCfg(a.to)   : null;
+//                 return (
+//                   <div key={a.id} className="flex gap-2 relative">
+//                     <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 border-2 border-white flex items-center justify-center shrink-0 z-10 shadow-sm">
+//                       <ArrowUpRight size={8} className="text-white" />
+//                     </div>
+//                     <div className="flex-1 min-w-0 pt-0.5">
+//                       <p className="text-[11px] font-black text-slate-800 truncate">{getName(a.leadId)}</p>
+//                       {a.action === 'status_change' && fromCfg && toCfg ? (
+//                         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+//                           <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-lg ${fromCfg.bg} ${fromCfg.text}`}>{STATUS_LABELS[a.from as LeadStatus]}</span>
+//                           <span className="text-[9px] text-slate-400">→</span>
+//                           <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-lg ${toCfg.bg} ${toCfg.text}`}>{STATUS_LABELS[a.to as LeadStatus]}</span>
+//                         </div>
+//                       ) : (
+//                         <p className="text-[10px] text-slate-500 mt-0.5 truncate">{a.action}</p>
+//                       )}
+//                       <p className="text-[9px] text-slate-300 mt-0.5 flex items-center gap-1 font-medium">
+//                         <Clock size={7} />{timeAgo(a.ts)}
+//                       </p>
+//                     </div>
+//                   </div>
+//                 );
+//               })}
+//             </div>
+//           </div>
+//         )}
+//       </div>
+//     </div>
+//   );
+// };
+
+// /* ─── STATUS DROPDOWN ────────────────────────────────── */
+// const StatusDropdown = ({ currentStatus, leadId, onChangeStatus }: {
+//   currentStatus: LeadStatus; leadId: number;
+//   onChangeStatus: (id: number, s: LeadStatus) => void;
+// }) => {
+//   const [isOpen, setIsOpen] = useState(false);
+//   const config = getCfg(currentStatus);
+//   return (
+//     <div className="relative">
+//       <button
+//         onClick={e => { e.stopPropagation(); setIsOpen(o => !o); }}
+//         className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black ${config.bg} ${config.text} hover:opacity-80 transition-all border border-transparent hover:border-current/20`}
+//       >
+//         {config.icon}
+//         {STATUS_LABELS[currentStatus]}
+//         <ChevronDown size={10} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+//       </button>
+//       {isOpen && (
+//         <>
+//           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+//           <div className="absolute top-full left-0 mt-1 w-44 bg-white rounded-2xl shadow-lg border border-slate-200/80 py-1.5 z-50 overflow-hidden">
+//             <div className="h-1 w-full bg-gradient-to-r from-indigo-500 to-violet-500" />
+//             <div className="px-3 py-2 border-b border-slate-100">
+//               <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Move to stage</p>
+//             </div>
+//             {STATUS_ORDER.map(status => {
+//               const sc = getCfg(status);
+//               const isActive = status === currentStatus;
+//               return (
+//                 <button key={status}
+//                   onClick={e => { e.stopPropagation(); onChangeStatus(leadId, status); setIsOpen(false); }}
+//                   disabled={isActive}
+//                   className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+//                 >
+//                   <div className={`w-5 h-5 rounded-lg bg-gradient-to-br ${sc.gradient} flex items-center justify-center shrink-0 shadow-sm`}>
+//                     <span className="text-white">{sc.icon}</span>
+//                   </div>
+//                   <span className="text-[11px] font-semibold text-slate-700">{STATUS_LABELS[status]}</span>
+//                   {isActive && <Check size={10} className="ml-auto text-emerald-500" />}
+//                 </button>
+//               );
+//             })}
+//           </div>
+//         </>
+//       )}
+//     </div>
+//   );
+// };
+
+// /* ─── FILTER BAR ─────────────────────────────────────── */
+// type Filters = { status: LeadStatus | ''; minValue: string; maxValue: string; sortBy: string };
+// const FilterBar = ({ filters, onChange, onReset, leads }: {
+//   filters: Filters; onChange: (f: Partial<Filters>) => void;
+//   onReset: () => void; leads: Lead[];
+// }) => {
+//   const active = filters.status || filters.minValue || filters.maxValue || filters.sortBy !== 'newest';
+//   const selectCls = "text-[11px] border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400/20 focus:border-indigo-400 font-medium transition-all";
+//   return (
+//     <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-slate-100 flex-wrap shrink-0 shadow-sm">
+//       <div className="flex items-center gap-1.5 mr-1">
+//         <div className="p-1 rounded-lg bg-indigo-50">
+//           <Filter size={10} className="text-indigo-500" />
+//         </div>
+//         <span className="text-[10px] font-black text-indigo-600 uppercase tracking-wider">Filters</span>
+//       </div>
+//       <select value={filters.status} onChange={e => onChange({ status: e.target.value as LeadStatus | '' })} className={selectCls}>
+//         <option value="">All Stages</option>
+//         {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+//       </select>
+//       <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
+//         <DollarSign size={9} className="text-slate-400" />
+//         <input type="number" placeholder="Min" value={filters.minValue} onChange={e => onChange({ minValue: e.target.value })}
+//           className="w-14 text-[11px] outline-none text-slate-700 bg-transparent font-medium" />
+//       </div>
+//       <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
+//         <DollarSign size={9} className="text-slate-400" />
+//         <input type="number" placeholder="Max" value={filters.maxValue} onChange={e => onChange({ maxValue: e.target.value })}
+//           className="w-14 text-[11px] outline-none text-slate-700 bg-transparent font-medium" />
+//       </div>
+//       <select value={filters.sortBy} onChange={e => onChange({ sortBy: e.target.value })} className={selectCls}>
+//         <option value="newest">Newest first</option>
+//         <option value="oldest">Oldest first</option>
+//         <option value="value_high">Value: High → Low</option>
+//         <option value="value_low">Value: Low → High</option>
+//         <option value="name">Name A–Z</option>
+//       </select>
+//       <span className="text-[10px] font-black px-2 py-0.5 rounded-lg border bg-indigo-50 text-indigo-600 border-indigo-100 ml-1">
+//         {leads.length} result{leads.length !== 1 ? 's' : ''}
+//       </span>
+//       {active && (
+//         <button onClick={onReset} className="ml-auto flex items-center gap-1 text-[10px] text-indigo-600 hover:text-indigo-800 font-black hover:bg-indigo-50 px-2 py-1 rounded-lg transition-colors">
+//           <X size={10} /> Reset
+//         </button>
+//       )}
+//     </div>
+//   );
+// };
+
+// /* ─── LEAD CARD ──────────────────────────────────────── */
+// const LeadCard = ({ lead, onSelect, onChangeStatus, onDragStart }: {
+//   lead: Lead; onSelect: () => void;
+//   onChangeStatus: (id: number, s: LeadStatus) => void;
+//   onDragStart?: (e: React.DragEvent, lead: Lead) => void;
+// }) => {
+//   const cfg      = getCfg(lead.status);
+//   const initials = lead.name.split(' ').map(n => n[0]).join('').slice(0, 2);
+//   return (
+//     <div
+//       draggable
+//       onDragStart={e => onDragStart?.(e, lead)}
+//       onClick={onSelect}
+//       className="bg-white rounded-2xl border border-slate-200/80 p-3 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-slate-300 transition-all select-none group overflow-hidden"
+//     >
+//       {/* top accent bar */}
+//       <div className={`h-0.5 w-full rounded-full bg-gradient-to-r ${cfg.gradient} mb-2.5 opacity-60 group-hover:opacity-100 transition-opacity`} />
+//       <div className="flex items-start gap-2 mb-2.5">
+//         <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white text-[10px] font-black shrink-0 shadow-sm`}>
+//           {initials}
+//         </div>
+//         <div className="min-w-0 flex-1">
+//           <h4 className="font-black text-slate-800 text-[12px] truncate leading-tight">{lead.name}</h4>
+//           <p className="text-[10px] text-slate-400 truncate flex items-center gap-0.5 mt-0.5 font-medium">
+//             <Building2 size={8} />{lead.company}
+//           </p>
+//         </div>
+//       </div>
+//       <div className="mb-2.5" onClick={e => e.stopPropagation()}>
+//         <StatusDropdown currentStatus={lead.status} leadId={lead.id} onChangeStatus={onChangeStatus} />
+//       </div>
+//       <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+//         <span className="text-[13px] font-black text-slate-800">${parseFloat(lead.value).toLocaleString()}</span>
+//         <span className="text-[9px] text-slate-400 flex items-center gap-0.5 font-medium">
+//           <Calendar size={8} />{new Date(lead.created_at).toLocaleDateString()}
+//         </span>
+//       </div>
+//     </div>
+//   );
+// };
+
+// /* ─── BOARD VIEW ─────────────────────────────────────── */
+// const BoardView = ({ leads, onSelect, onChangeStatus }: {
+//   leads: Lead[]; onSelect: (l: Lead) => void;
+//   onChangeStatus: (id: number, s: LeadStatus) => void;
+// }) => {
+//   const [dragOver, setDragOver] = useState<string | null>(null);
+//   const dragLead = useRef<Lead | null>(null);
+
+//   const handleDragStart = (e: React.DragEvent, lead: Lead) => {
+//     dragLead.current = lead;
+//     e.dataTransfer.effectAllowed = 'move';
+//   };
+//   const handleDrop = (e: React.DragEvent, status: LeadStatus) => {
+//     e.preventDefault();
+//     if (dragLead.current && dragLead.current.status !== status) {
+//       onChangeStatus(dragLead.current.id, status);
+//     }
+//     dragLead.current = null;
+//     setDragOver(null);
+//   };
+
+//   return (
+//     <div
+//       className="h-full p-3 gap-2.5"
+//       style={{ display: 'grid', gridTemplateColumns: `repeat(${STATUS_ORDER.length}, minmax(0, 1fr))` }}
+//     >
+//       {STATUS_ORDER.map(status => {
+//         const statusLeads = leads.filter(l => l.status === status);
+//         const cfg         = getCfg(status);
+//         const isOver      = dragOver === status;
+//         const colTotal    = statusLeads.reduce((a, l) => a + parseFloat(l.value), 0);
+
+//         return (
+//           <div key={status}
+//             onDragOver={e => { e.preventDefault(); setDragOver(status); }}
+//             onDragLeave={() => setDragOver(null)}
+//             onDrop={e => handleDrop(e, status as LeadStatus)}
+//             className={`flex flex-col rounded-2xl h-full min-h-0 transition-all duration-150 border overflow-hidden ${
+//               isOver
+//                 ? 'ring-2 ring-indigo-400 ring-offset-1 bg-indigo-50/60 border-indigo-200'
+//                 : 'bg-slate-100/60 border-slate-200/60'
+//             }`}
+//           >
+//             {/* Column top accent */}
+//             <div className={`h-1 w-full bg-gradient-to-r ${cfg.gradient} shrink-0`} />
+
+//             {/* Column header */}
+//             <div className="px-3 py-2.5 border-b border-slate-200/60 shrink-0">
+//               <div className="flex items-center gap-2">
+//                 <div className={`w-7 h-7 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white shadow-sm shrink-0`}>
+//                   {cfg.icon}
+//                 </div>
+//                 <div className="flex-1 min-w-0">
+//                   <div className="flex items-center gap-1.5">
+//                     <h3 className="font-black text-slate-700 text-[11px] truncate">{STATUS_LABELS[status]}</h3>
+//                     <span className="text-[9px] bg-white text-slate-500 font-black px-1.5 py-0.5 rounded-full border border-slate-200 shadow-sm shrink-0">
+//                       {statusLeads.length}
+//                     </span>
+//                   </div>
+//                   {colTotal > 0 && (
+//                     <p className="text-[9px] text-slate-400 font-medium">${colTotal.toLocaleString()}</p>
+//                   )}
+//                 </div>
+//               </div>
+//             </div>
+
+//             {isOver && (
+//               <div className="mx-2 mt-1.5 border-2 border-dashed border-indigo-300 rounded-xl p-1.5 text-center text-[10px] text-indigo-500 font-black bg-indigo-50/50 shrink-0">
+//                 Drop here
+//               </div>
+//             )}
+
+//             <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-0 custom-scrollbar">
+//               {statusLeads.map(lead => (
+//                 <LeadCard key={lead.id} lead={lead}
+//                   onSelect={() => onSelect(lead)}
+//                   onChangeStatus={onChangeStatus}
+//                   onDragStart={handleDragStart}
+//                 />
+//               ))}
+//               {statusLeads.length === 0 && !isOver && (
+//                 <div className="flex flex-col items-center justify-center py-8 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl bg-white/40">
+//                   <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${cfg.gradient} opacity-20 flex items-center justify-center mb-1.5`}>
+//                     {cfg.icon}
+//                   </div>
+//                   <p className="text-[11px] font-black text-slate-400">No deals</p>
+//                 </div>
+//               )}
+//             </div>
+//           </div>
+//         );
+//       })}
+//     </div>
+//   );
+// };
+
+// /* ─── LIST VIEW ──────────────────────────────────────── */
+// const ListView = ({ leads, onSelect, onChangeStatus }: {
+//   leads: Lead[]; onSelect: (l: Lead) => void;
+//   onChangeStatus: (id: number, s: LeadStatus) => void;
+// }) => (
+//   <div className="h-full overflow-auto custom-scrollbar">
+//     <table className="w-full">
+//       <thead className="bg-white sticky top-0 border-b border-slate-100 z-10 shadow-sm">
+//         <tr>
+//           {['Deal', 'Company', 'Status', 'Value', 'Created'].map(h => (
+//             <th key={h} className="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">{h}</th>
+//           ))}
+//         </tr>
+//       </thead>
+//       <tbody className="divide-y divide-slate-100 bg-white">
+//         {leads.map(lead => {
+//           const cfg      = getCfg(lead.status);
+//           const initials = lead.name.split(' ').map(n => n[0]).join('').slice(0, 2);
+//           return (
+//             <tr key={lead.id} onClick={() => onSelect(lead)} className="hover:bg-indigo-50/30 cursor-pointer transition-colors group">
+//               <td className="px-4 py-2.5">
+//                 <div className="flex items-center gap-2.5">
+//                   <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white text-[10px] font-black shadow-sm`}>{initials}</div>
+//                   <span className="text-[12px] font-black text-slate-800">{lead.name}</span>
+//                 </div>
+//               </td>
+//               <td className="px-4 py-2.5 text-[11px] text-slate-500 font-medium">{lead.company}</td>
+//               <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>
+//                 <StatusDropdown currentStatus={lead.status} leadId={lead.id} onChangeStatus={onChangeStatus} />
+//               </td>
+//               <td className="px-4 py-2.5 text-[12px] font-black text-slate-800">${parseFloat(lead.value).toLocaleString()}</td>
+//               <td className="px-4 py-2.5 text-[10px] text-slate-400 font-medium">{new Date(lead.created_at).toLocaleDateString()}</td>
+//             </tr>
+//           );
+//         })}
+//       </tbody>
+//     </table>
+//   </div>
+// );
+
+// /* ─── GRID VIEW ──────────────────────────────────────── */
+// const GridView = ({ leads, onSelect, onChangeStatus }: {
+//   leads: Lead[]; onSelect: (l: Lead) => void;
+//   onChangeStatus: (id: number, s: LeadStatus) => void;
+// }) => (
+//   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 p-3 overflow-y-auto h-full content-start custom-scrollbar">
+//     {leads.map(lead => {
+//       const cfg      = getCfg(lead.status);
+//       const initials = lead.name.split(' ').map(n => n[0]).join('').slice(0, 2);
+//       return (
+//         <div key={lead.id} onClick={() => onSelect(lead)}
+//           className="bg-white rounded-2xl border border-slate-200/80 cursor-pointer hover:shadow-md hover:border-slate-300 transition-all group overflow-hidden">
+//           <div className={`h-1 w-full bg-gradient-to-r ${cfg.gradient}`} />
+//           <div className="p-3">
+//             <div className="flex items-start gap-2 mb-2.5">
+//               <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white font-black text-[11px] shadow-sm shrink-0`}>
+//                 {initials}
+//               </div>
+//               <div className="min-w-0 flex-1">
+//                 <h3 className="font-black text-slate-800 text-[12px] truncate">{lead.name}</h3>
+//                 <p className="text-[10px] text-slate-400 truncate font-medium">{lead.company}</p>
+//               </div>
+//             </div>
+//             <div className="mb-2.5" onClick={e => e.stopPropagation()}>
+//               <StatusDropdown currentStatus={lead.status} leadId={lead.id} onChangeStatus={onChangeStatus} />
+//             </div>
+//             <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+//               <p className="text-[13px] font-black text-slate-800">${parseFloat(lead.value).toLocaleString()}</p>
+//               <p className="text-[9px] text-slate-400 font-medium">{new Date(lead.created_at).toLocaleDateString()}</p>
+//             </div>
+//           </div>
+//         </div>
+//       );
+//     })}
+//   </div>
+// );
+
+// /* ─── MAIN PIPELINE ──────────────────────────────────── */
+// const DEFAULT_FILTERS: Filters = { status: '', minValue: '', maxValue: '', sortBy: 'newest' };
+
+// export const Pipeline = () => {
+//   const navigate = useNavigate();
+//   const [leads, setLeads]                   = useState<Lead[]>([]);
+//   const [search, setSearch]                 = useState('');
+//   const [selectedLead, setSelectedLead]     = useState<Lead | null>(null);
+//   const [view, setView]                     = useState<'board' | 'list' | 'grid'>('board');
+//   const [isRefreshing, setIsRefreshing]     = useState(false);
+//   const [showFilters, setShowFilters]       = useState(false);
+//   const [showAnalytics, setShowAnalytics]   = useState(false);
+//   const [showActivity, setShowActivity]     = useState(false);
+//   const [filters, setFilters]               = useState<Filters>(DEFAULT_FILTERS);
+//   const [activities, setActivities]         = useState<ActivityEntry[]>([]);
+//   const [quickStage, setQuickStage]         = useState<LeadStatus | ''>('');
+
+//   /* ── fetch ── */
+//   const fetchAllData = async () => {
+//     setIsRefreshing(true);
+//     try {
+//       const [leadsData, actsData] = await Promise.all([
+//         api.getLeads(search),
+//         api.getActivities()
+//       ]);
+//       setLeads(leadsData);
+//       setActivities(actsData.map(formatBackendActivity));
+//     } catch(e) {
+//       console.error("Failed to fetch pipeline data:", e);
+//     }
+//     setIsRefreshing(false);
+//   };
+
+//   useEffect(() => {
+//     const t = setTimeout(fetchAllData, 300);
+//     return () => clearTimeout(t);
+//   }, [search]);
+
+//   useEffect(() => {
+//     const savedView = localStorage.getItem('pipeline_view_mode') as 'board' | 'list' | 'grid' | null;
+//     if (savedView && ['board', 'list', 'grid'].includes(savedView)) setView(savedView);
+//   }, []);
+
+//   useEffect(() => {
+//     localStorage.setItem('pipeline_view_mode', view);
+//   }, [view]);
+
+//   /* ── status change ── */
+//   const handleChangeStatus = async (leadId: number, newStatus: LeadStatus) => {
+//     try {
+//       const lead      = leads.find(l => l.id === leadId);
+//       const oldStatus = lead?.status;
+//       if (!oldStatus || oldStatus === newStatus) return;
+//       setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
+//       await api.updateLeadStatus(leadId, newStatus);
+//       await api.createActivity({
+//         lead: leadId,
+//         activity_type: 'note',
+//         summary: `Stage updated: ${STATUS_LABELS[oldStatus as LeadStatus]} → ${STATUS_LABELS[newStatus]}`,
+//         description: `Pipeline stage moved from ${STATUS_LABELS[oldStatus as LeadStatus]} to ${STATUS_LABELS[newStatus]}.`
+//       });
+//       const updatedActsData = await api.getActivities();
+//       setActivities(updatedActsData.map(formatBackendActivity));
+//     } catch (e) {
+//       console.error('Failed to update status:', e);
+//       fetchAllData();
+//     }
+//   };
+
+//   const updateFilters = (patch: Partial<Filters>) => setFilters(f => ({ ...f, ...patch }));
+
+//   /* ── filtering / sorting ── */
+//   const filtered = leads
+//     .filter(l => {
+//       const q = search.toLowerCase();
+//       if (q && !l.name.toLowerCase().includes(q) && !l.company.toLowerCase().includes(q)) return false;
+//       if (filters.status && l.status !== filters.status) return false;
+//       if (quickStage && l.status !== quickStage) return false;
+//       const val = parseFloat(l.value);
+//       if (filters.minValue && val < parseFloat(filters.minValue)) return false;
+//       if (filters.maxValue && val > parseFloat(filters.maxValue)) return false;
+//       return true;
+//     })
+//     .sort((a, b) => {
+//       if (filters.sortBy === 'oldest')     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+//       if (filters.sortBy === 'value_high') return parseFloat(b.value) - parseFloat(a.value);
+//       if (filters.sortBy === 'value_low')  return parseFloat(a.value) - parseFloat(b.value);
+//       if (filters.sortBy === 'name')       return a.name.localeCompare(b.name);
+//       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+//     });
+
+//   /* ── derived stats ── */
+//   const hasActiveFilters = filters.status || filters.minValue || filters.maxValue || filters.sortBy !== 'newest';
+//   const totalValue = leads.reduce((acc, l) => acc + parseFloat(l.value), 0);
+//   const wonCount   = leads.filter(l => l.status === 'won').length;
+//   const openCount  = leads.filter(l => l.status !== 'won' && l.status !== 'lost').length;
+//   const lostValue  = leads.filter(l => l.status === 'lost').reduce((acc, l) => acc + parseFloat(l.value), 0);
+//   const winRate    = leads.length ? Math.round((wonCount / leads.length) * 100) : 0;
+
+//   return (
+//     <div className="flex flex-col h-full bg-[#f0f2f8] overflow-hidden">
+
+//       <style>{`
+//         @keyframes fadeUp {
+//           from { opacity: 0; transform: translateY(14px) scale(0.99); }
+//           to   { opacity: 1; transform: translateY(0) scale(1); }
+//         }
+//         @keyframes floatBlob {
+//           0%,100% { transform: translateY(0px) translateX(0px); }
+//           50%     { transform: translateY(-10px) translateX(6px); }
+//         }
+//         .anim-blob   { animation: floatBlob 7s ease-in-out infinite; }
+//         .anim-fade-1 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.05s; }
+//         .anim-fade-2 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.15s; }
+//         .anim-fade-3 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.25s; }
+//       `}</style>
+
+//       {/* decorative blobs */}
+//       <div className="pointer-events-none fixed -top-10 -left-16 w-72 h-72 rounded-full bg-blue-300/20 blur-3xl anim-blob -z-10" />
+//       <div className="pointer-events-none fixed top-40 -right-20 w-80 h-80 rounded-full bg-indigo-300/15 blur-3xl anim-blob -z-10" />
+
+//       {/* ══════════════════════════════════════════════════
+//           BANNER — WorkflowMonitor style
+//       ══════════════════════════════════════════════════ */}
+//       <div
+//         className="shrink-0 mx-4 mt-4 rounded-2xl overflow-hidden anim-fade-1"
+//         style={{
+//           background: 'linear-gradient(125deg, #3730a3 0%, #4f46e5 40%, #7c3aed 100%)',
+//           boxShadow: '0 8px 32px -4px rgba(79,70,229,0.45)',
+//         }}
+//       >
+//         <div
+//           className="px-6 py-5 flex items-center gap-4 flex-wrap"
+//           style={{
+//             backgroundImage:
+//               'radial-gradient(ellipse at 80% 50%, rgba(255,255,255,0.08) 0%, transparent 60%)',
+//           }}
+//         >
+//           {/* icon block */}
+//           <div
+//             className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+//             style={{
+//               backgroundColor: 'rgba(255,255,255,0.15)',
+//               backdropFilter: 'blur(4px)',
+//               border: '1px solid rgba(255,255,255,0.2)',
+//             }}
+//           >
+//             <Briefcase className="text-white" size={20} />
+//           </div>
+
+//           {/* text */}
+//           <div className="flex-1 min-w-0">
+//             <h1 className="text-[20px] font-black text-white leading-tight tracking-tight">
+//               Pipeline Command Center
+//             </h1>
+//             <p className="text-[12px] text-indigo-200 mt-0.5 font-medium">
+//               {filtered.length} of {leads.length} deals · Drag cards between stages
+//             </p>
+//           </div>
+
+//           {/* KPI chips */}
+//           <div className="hidden lg:flex items-center gap-2">
+//             {[
+//               { label: 'Open',     value: openCount,                           gradient: 'rgba(255,255,255,0.12)' },
+//               { label: 'Won',      value: `${winRate}%`,                       gradient: 'rgba(16,185,129,0.25)' },
+//               { label: 'Pipeline', value: `$${(totalValue/1000).toFixed(0)}k`, gradient: 'rgba(255,255,255,0.12)' },
+//             ].map(k => (
+//               <div key={k.label}
+//                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black text-white"
+//                 style={{ backgroundColor: k.gradient, border: '1px solid rgba(255,255,255,0.18)' }}>
+//                 <span className="text-white/60">{k.label}</span>
+//                 <span>{k.value}</span>
+//               </div>
+//             ))}
+//           </div>
+
+//           {/* Action buttons */}
+//           <div className="flex items-center gap-2 shrink-0">
+//             <button onClick={fetchAllData}
+//               className={`p-2.5 rounded-xl text-white/70 hover:text-white transition-colors ${isRefreshing ? 'animate-spin' : ''}`}
+//               style={{ backgroundColor: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.18)' }}>
+//               <RefreshCw size={14} />
+//             </button>
+//             <button onClick={() => { setShowAnalytics(v => !v); setShowActivity(false); }}
+//               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-black transition-all ${
+//                 showAnalytics ? 'bg-white text-indigo-700 shadow-sm' : 'text-white hover:text-white'
+//               }`}
+//               style={!showAnalytics ? { backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)' } : {}}>
+//               <BarChart3 size={13} /> Analytics
+//             </button>
+//             <button onClick={() => { setShowActivity(v => !v); setShowAnalytics(false); }}
+//               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-black transition-all relative ${
+//                 showActivity ? 'bg-white text-indigo-700 shadow-sm' : 'text-white'
+//               }`}
+//               style={!showActivity ? { backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)' } : {}}>
+//               <Activity size={13} /> Activity
+//               {activities.length > 0 && !showActivity && (
+//                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-sm">
+//                   {activities.length > 9 ? '9+' : activities.length}
+//                 </span>
+//               )}
+//             </button>
+//             <button onClick={() => navigate('/pipeline/new')}
+//               className="flex items-center gap-1.5 bg-white text-indigo-700 hover:bg-indigo-50 px-3 py-2 rounded-xl text-[12px] font-black transition-all shadow-sm active:scale-95">
+//               <Plus size={13} /> Add Deal
+//             </button>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* ══════════════════════════════════════════════════
+//           TOOLBAR
+//       ══════════════════════════════════════════════════ */}
+//       <div className="mx-4 mt-3 anim-fade-2">
+//         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+//           <div className="h-1 w-full bg-gradient-to-r from-slate-200 to-slate-100" />
+//           <div className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+//             <div className="flex items-center gap-2 flex-wrap">
+//               {/* Search */}
+//               <div className="relative">
+//                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
+//                 <input
+//                   type="text" placeholder="Search deals…"
+//                   className="w-44 pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-medium outline-none focus:ring-2 focus:ring-indigo-400/20 focus:border-indigo-400 focus:bg-white transition-all"
+//                   value={search} onChange={e => setSearch(e.target.value)}
+//                 />
+//               </div>
+
+//               {/* Filter toggle */}
+//               <button onClick={() => setShowFilters(v => !v)}
+//                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black border transition-all ${
+//                   showFilters || hasActiveFilters
+//                     ? 'bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm'
+//                     : 'text-slate-600 border-slate-200 hover:bg-slate-50'
+//                 }`}>
+//                 <SlidersHorizontal size={11} /> Filter
+//                 {hasActiveFilters && <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
+//               </button>
+
+//               {/* Quick-stage pills */}
+//               <div className="flex items-center gap-1 flex-wrap">
+//                 <button onClick={() => setQuickStage('')}
+//                   className={`text-[10px] px-2.5 py-1.5 rounded-xl border font-black transition-all ${
+//                     quickStage === ''
+//                       ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white border-transparent shadow-sm'
+//                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+//                   }`}>
+//                   All
+//                 </button>
+//                 {STATUS_ORDER.map(status => {
+//                   const cfg   = getCfg(status);
+//                   const count = leads.filter(l => l.status === status).length;
+//                   return (
+//                     <button key={status}
+//                       onClick={() => setQuickStage(prev => prev === status ? '' : status)}
+//                       className={`text-[10px] px-2.5 py-1.5 rounded-xl border flex items-center gap-1 font-black transition-all ${
+//                         quickStage === status
+//                           ? `${cfg.bg} ${cfg.text} border-transparent shadow-sm`
+//                           : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+//                       }`}>
+//                       <Tag size={9} />
+//                       {STATUS_LABELS[status]} ({count})
+//                     </button>
+//                   );
+//                 })}
+//               </div>
+//             </div>
+
+//             {/* View toggle */}
+//             <div className="flex items-center bg-slate-100 rounded-xl p-1 shrink-0">
+//               {(['board', 'list', 'grid'] as const).map((v, i) => {
+//                 const icons  = [<Columns3 size={13} />, <List size={13} />, <LayoutGrid size={13} />];
+//                 const labels = ['Board', 'List', 'Grid'];
+//                 return (
+//                   <button key={v} onClick={() => setView(v)} title={labels[i]}
+//                     className={`p-2 rounded-lg transition-all ${
+//                       view === v
+//                         ? 'bg-white shadow-sm text-indigo-600'
+//                         : 'text-slate-400 hover:text-slate-600'
+//                     }`}>
+//                     {icons[i]}
+//                   </button>
+//                 );
+//               })}
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* ── FILTER BAR ── */}
+//       {showFilters && (
+//         <div className="mx-4 mt-2">
+//           <FilterBar filters={filters} onChange={updateFilters} onReset={() => setFilters(DEFAULT_FILTERS)} leads={filtered} />
+//         </div>
+//       )}
+
+//       {/* ── MAIN CONTENT + SIDE PANELS ── */}
+//       <div className="flex flex-1 overflow-hidden min-h-0 mt-3 mx-4 mb-4 gap-3 anim-fade-3">
+//         <div className="flex-1 overflow-hidden min-w-0 rounded-2xl">
+//           {filtered.length === 0 ? (
+//             <div className="flex flex-col items-center justify-center h-full bg-white rounded-2xl border border-slate-200/80 shadow-sm">
+//               <div className="w-14 h-14 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center mb-3 shadow-sm">
+//                 <Briefcase size={22} className="text-slate-300" />
+//               </div>
+//               <p className="text-[13px] font-black text-slate-500">No deals found</p>
+//               <p className="text-[11px] text-slate-400 mt-1 font-medium">Try adjusting your search or filters</p>
+//               <button onClick={() => { setFilters(DEFAULT_FILTERS); setSearch(''); setQuickStage(''); }}
+//                 className="mt-3 text-[11px] text-indigo-600 hover:text-indigo-800 font-black bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition-colors">
+//                 Clear filters
+//               </button>
+//               {lostValue > 0 && (
+//                 <p className="mt-2 text-[10px] text-slate-400 font-medium">Lost Value: ${lostValue.toLocaleString()}</p>
+//               )}
+//             </div>
+//           ) : view === 'board' ? (
+//             <BoardView leads={filtered} onSelect={setSelectedLead} onChangeStatus={handleChangeStatus} />
+//           ) : view === 'list' ? (
+//             <div className="h-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+//               <div className="h-1 w-full bg-gradient-to-r from-indigo-500 to-violet-500" />
+//               <ListView leads={filtered} onSelect={setSelectedLead} onChangeStatus={handleChangeStatus} />
+//             </div>
+//           ) : (
+//             <GridView leads={filtered} onSelect={setSelectedLead} onChangeStatus={handleChangeStatus} />
+//           )}
+//         </div>
+
+//         {showAnalytics && <AnalyticsPanel leads={leads} onClose={() => setShowAnalytics(false)} />}
+//         {showActivity  && <ActivityFeed  activities={activities} leads={leads} onClose={() => setShowActivity(false)} />}
+//       </div>
+
+//       {/* ── DRAWER ── */}
+//       <LeadDetailDrawer
+//         lead={selectedLead}
+//         isOpen={!!selectedLead}
+//         onClose={() => setSelectedLead(null)}
+//         onUpdate={fetchAllData}
+//       />
+//     </div>
+//   );
+// };
+
+// export default Pipeline;
+
+
+
+
+
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Building2, Columns3, List, LayoutGrid,
@@ -1689,46 +2595,58 @@ const AnalyticsPanel = ({ leads, onClose }: { leads: Lead[]; onClose: () => void
   const avgDeal  = totalVal / total;
 
   return (
-    <div className="w-64 bg-white border-l border-slate-200/80 flex flex-col shrink-0 overflow-hidden shadow-sm">
-      {/* Panel header — ConfigCard style */}
-      <div className="h-1 w-full bg-gradient-to-r from-indigo-500 to-violet-500 shrink-0" />
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
+    <div className="w-64 bg-white flex flex-col shrink-0 overflow-hidden"
+      style={{
+        borderRadius: '18px',
+        border: '1.5px solid #e0e7ff',
+        boxShadow: '0 4px 24px rgba(79,70,229,0.10), 0 1px 4px rgba(15,23,42,0.04)',
+      }}>
+      {/* top accent bar */}
+      <div className="h-[3px] w-full shrink-0" style={{ background: 'linear-gradient(90deg,#4f46e5,#7c3aed)' }} />
+
+      {/* Panel header */}
+      <div className="flex items-center justify-between px-4 py-3.5 shrink-0"
+        style={{ borderBottom: '1.5px solid #eef2ff', background: 'linear-gradient(90deg,#fafbff,#f5f3ff)' }}>
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow-sm shrink-0">
-            <BarChart3 size={12} className="text-white" />
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', boxShadow: '0 4px 12px rgba(79,70,229,0.35)' }}>
+            <BarChart3 size={14} className="text-white" />
           </div>
-          <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider">Analytics</span>
+          <span className="text-[13px] font-black text-slate-700 uppercase tracking-wider">Analytics</span>
         </div>
-        <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
+        <button onClick={onClose}
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200 active:scale-90">
           <X size={13} />
         </button>
       </div>
 
-      <div className="p-3 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
+      <div className="p-3 space-y-4 overflow-y-auto flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {/* KPI grid */}
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: 'Deals',    value: leads.length,                      icon: <Briefcase size={11} />, gradient: 'from-blue-500 to-blue-600',    bg: 'bg-blue-50',    border: 'border-blue-100',    text: 'text-blue-600' },
-            { label: 'Win Rate', value: `${winRate}%`,                     icon: <Target size={11} />,    gradient: 'from-emerald-500 to-teal-500', bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-600' },
-            { label: 'Pipeline', value: `$${(totalVal/1000).toFixed(0)}k`, icon: <DollarSign size={11} />,gradient: 'from-indigo-500 to-violet-500', bg: 'bg-indigo-50',  border: 'border-indigo-100',  text: 'text-indigo-600' },
-            { label: 'Avg Deal', value: `$${(avgDeal/1000).toFixed(0)}k`,  icon: <TrendingUp size={11} />,gradient: 'from-amber-400 to-orange-500',  bg: 'bg-amber-50',   border: 'border-amber-100',   text: 'text-amber-600' },
+            { label: 'Deals',    value: leads.length,                      icon: <Briefcase size={11} />, gradient: 'from-blue-500 to-blue-600',    bg: 'bg-blue-50',    border: 'border-blue-100',    text: 'text-blue-600',    glow: 'rgba(59,130,246,0.15)' },
+            { label: 'Win Rate', value: `${winRate}%`,                     icon: <Target size={11} />,    gradient: 'from-emerald-500 to-teal-500', bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-600', glow: 'rgba(16,185,129,0.15)' },
+            { label: 'Pipeline', value: `$${(totalVal/1000).toFixed(0)}k`, icon: <DollarSign size={11} />,gradient: 'from-indigo-500 to-violet-500', bg: 'bg-indigo-50',  border: 'border-indigo-100',  text: 'text-indigo-600',  glow: 'rgba(79,70,229,0.15)' },
+            { label: 'Avg Deal', value: `$${(avgDeal/1000).toFixed(0)}k`,  icon: <TrendingUp size={11} />,gradient: 'from-amber-400 to-orange-500',  bg: 'bg-amber-50',   border: 'border-amber-100',   text: 'text-amber-600',   glow: 'rgba(245,158,11,0.15)' },
           ].map(k => (
-            <div key={k.label} className={`rounded-xl p-2.5 border ${k.bg} ${k.border} hover:shadow-sm transition-all`}>
+            <div key={k.label}
+              className={`rounded-xl p-2.5 border ${k.bg} ${k.border} transition-all duration-200`}
+              style={{ boxShadow: `0 2px 8px ${k.glow}` }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLDivElement).style.boxShadow = `0 6px 16px ${k.glow}`; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ''; (e.currentTarget as HTMLDivElement).style.boxShadow = `0 2px 8px ${k.glow}`; }}>
               <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${k.gradient} flex items-center justify-center mb-1.5 shadow-sm`}>
                 <span className="text-white">{k.icon}</span>
               </div>
-              <p className="text-[10px] text-slate-500 font-medium">{k.label}</p>
-              <p className="text-[14px] font-black text-slate-800">{k.value}</p>
+              <p className="text-[10px] text-slate-500 font-bold">{k.label}</p>
+              <p className="text-[15px] font-black text-slate-800">{k.value}</p>
             </div>
           ))}
         </div>
 
         {/* Stage breakdown */}
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-1 h-3 bg-indigo-500 rounded-full" />
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Stage Breakdown</p>
-          </div>
-          <div className="space-y-2">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Stage Breakdown</p>
+          <div className="space-y-2.5">
             {STATUS_ORDER.map(status => {
               const count = leads.filter(l => l.status === status).length;
               const val   = leads.filter(l => l.status === status).reduce((a, l) => a + parseFloat(l.value), 0);
@@ -1736,18 +2654,18 @@ const AnalyticsPanel = ({ leads, onClose }: { leads: Lead[]; onClose: () => void
               const cfg   = getCfg(status);
               return (
                 <div key={status}>
-                  <div className="flex items-center justify-between mb-0.5">
+                  <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-1.5">
-                      <span className={`${cfg.color} w-1.5 h-1.5 rounded-full inline-block`} />
-                      <span className="text-[11px] font-semibold text-slate-700">{STATUS_LABELS[status]}</span>
+                      <span className={`${cfg.color} w-2 h-2 rounded-full inline-block`} />
+                      <span className="text-[11px] font-bold text-slate-700">{STATUS_LABELS[status]}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-slate-400">{count}</span>
+                      <span className="text-[10px] text-slate-400 font-medium">{count}</span>
                       <span className="text-[11px] font-black text-slate-600">${(val/1000).toFixed(0)}k</span>
                     </div>
                   </div>
                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full bg-gradient-to-r ${cfg.gradient} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
+                    <div className={`h-full bg-gradient-to-r ${cfg.gradient} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
@@ -1757,43 +2675,41 @@ const AnalyticsPanel = ({ leads, onClose }: { leads: Lead[]; onClose: () => void
 
         {/* Won vs Lost */}
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-1 h-3 bg-emerald-500 rounded-full" />
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Won vs Lost</p>
-          </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Won vs Lost</p>
           <div className="flex gap-2">
-            <div className="flex-1 bg-emerald-50 rounded-xl p-2.5 border border-emerald-100">
+            <div className="flex-1 bg-emerald-50 rounded-xl p-2.5 border border-emerald-100" style={{ boxShadow: '0 2px 8px rgba(16,185,129,0.1)' }}>
               <p className="text-[10px] text-emerald-600 font-black">Won</p>
-              <p className="text-[13px] font-black text-emerald-700">${(wonVal/1000).toFixed(0)}k</p>
-              <p className="text-[10px] text-emerald-500">{wonLeads.length} deals</p>
+              <p className="text-[14px] font-black text-emerald-700">${(wonVal/1000).toFixed(0)}k</p>
+              <p className="text-[10px] text-emerald-500 font-medium">{wonLeads.length} deals</p>
             </div>
-            <div className="flex-1 bg-red-50 rounded-xl p-2.5 border border-red-100">
+            <div className="flex-1 bg-red-50 rounded-xl p-2.5 border border-red-100" style={{ boxShadow: '0 2px 8px rgba(239,68,68,0.1)' }}>
               <p className="text-[10px] text-red-500 font-black">Lost</p>
-              <p className="text-[13px] font-black text-red-600">
+              <p className="text-[14px] font-black text-red-600">
                 ${(leads.filter(l=>l.status==='lost').reduce((a,l)=>a+parseFloat(l.value),0)/1000).toFixed(0)}k
               </p>
-              <p className="text-[10px] text-red-400">{leads.filter(l=>l.status==='lost').length} deals</p>
+              <p className="text-[10px] text-red-400 font-medium">{leads.filter(l=>l.status==='lost').length} deals</p>
             </div>
           </div>
         </div>
 
         {/* Top Deals */}
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-1 h-3 bg-amber-400 rounded-full" />
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Top Deals</p>
-          </div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Top Deals</p>
           <div className="space-y-1.5">
             {[...leads].sort((a,b)=>parseFloat(b.value)-parseFloat(a.value)).slice(0,4).map((lead, i) => {
               const cfg = getCfg(lead.status);
               return (
-                <div key={lead.id} className="flex items-center gap-2 py-1.5 px-2 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all">
+                <div key={lead.id}
+                  className="flex items-center gap-2 py-1.5 px-2.5 rounded-xl border border-transparent transition-all duration-200 cursor-default"
+                  style={{ background: '#f8fafc' }}
+                  onMouseEnter={e => { const el = e.currentTarget; el.style.background = '#ffffff'; el.style.borderColor = '#e0e7ff'; el.style.transform = 'translateX(2px)'; el.style.boxShadow = '0 2px 10px rgba(79,70,229,0.08)'; }}
+                  onMouseLeave={e => { const el = e.currentTarget; el.style.background = '#f8fafc'; el.style.borderColor = 'transparent'; el.style.transform = ''; el.style.boxShadow = 'none'; }}>
                   <span className={`w-5 h-5 rounded-lg bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-[9px] font-black text-white shrink-0 shadow-sm`}>
                     {i + 1}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-semibold text-slate-800 truncate">{lead.name}</p>
-                    <p className="text-[10px] text-slate-400 truncate">{lead.company}</p>
+                    <p className="text-[11px] font-bold text-slate-800 truncate">{lead.name}</p>
+                    <p className="text-[10px] text-slate-400 truncate font-medium">{lead.company}</p>
                   </div>
                   <span className="text-[11px] font-black text-slate-700 shrink-0">${parseFloat(lead.value).toLocaleString()}</span>
                 </div>
@@ -1812,39 +2728,58 @@ const ActivityFeed = ({ activities, leads, onClose }: {
 }) => {
   const getName = (id: number) => leads.find(l => l.id === id)?.name ?? 'Unknown';
   return (
-    <div className="w-56 bg-white border-l border-slate-200/80 flex flex-col shrink-0 overflow-hidden shadow-sm">
-      <div className="h-1 w-full bg-gradient-to-r from-violet-500 to-purple-500 shrink-0" />
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
+    <div className="w-56 bg-white flex flex-col shrink-0 overflow-hidden"
+      style={{
+        borderRadius: '18px',
+        border: '1.5px solid #ede9fe',
+        boxShadow: '0 4px 24px rgba(124,58,237,0.10), 0 1px 4px rgba(15,23,42,0.04)',
+      }}>
+      {/* top accent bar */}
+      <div className="h-[3px] w-full shrink-0" style={{ background: 'linear-gradient(90deg,#7c3aed,#9333ea)' }} />
+
+      <div className="flex items-center justify-between px-4 py-3.5 shrink-0"
+        style={{ borderBottom: '1.5px solid #f5f3ff', background: 'linear-gradient(90deg,#fafbff,#fdf4ff)' }}>
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 shadow-sm shrink-0">
-            <Activity size={12} className="text-white" />
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: 'linear-gradient(135deg,#7c3aed,#9333ea)', boxShadow: '0 4px 12px rgba(124,58,237,0.35)' }}>
+            <Activity size={14} className="text-white" />
           </div>
-          <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider">Activity</span>
+          <span className="text-[13px] font-black text-slate-700 uppercase tracking-wider">Activity</span>
           {activities.length > 0 && (
-            <span className="text-[10px] bg-indigo-100 text-indigo-700 font-black px-1.5 py-0.5 rounded-full">{activities.length}</span>
+            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full"
+              style={{ background: '#ede9fe', color: '#7c3aed', border: '1px solid #c4b5fd' }}>
+              {activities.length}
+            </span>
           )}
         </div>
-        <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors">
+        <button onClick={onClose}
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-200 active:scale-90">
           <X size={13} />
         </button>
       </div>
-      <div className="flex-1 p-3 overflow-y-auto custom-scrollbar">
+
+      <div className="flex-1 p-3 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {activities.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed border-slate-100 rounded-xl mt-2">
-            <Activity size={20} className="text-slate-200 mb-2" />
+          <div className="flex flex-col items-center justify-center py-8 text-center rounded-2xl mt-2"
+            style={{ border: '2px dashed #ede9fe', background: '#fdf4ff33' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2"
+              style={{ background: '#faf5ff' }}>
+              <Activity size={16} className="text-violet-300" />
+            </div>
             <p className="text-[11px] font-black text-slate-400">No activity yet</p>
             <p className="text-[10px] text-slate-300 mt-0.5 font-medium">Changes appear here</p>
           </div>
         ) : (
           <div className="relative">
-            <div className="absolute left-2.5 top-0 bottom-0 w-px bg-indigo-100" />
+            <div className="absolute left-2.5 top-0 bottom-0 w-px" style={{ background: '#ede9fe' }} />
             <div className="space-y-3">
               {activities.map(a => {
                 const fromCfg = a.from ? getCfg(a.from) : null;
                 const toCfg   = a.to   ? getCfg(a.to)   : null;
                 return (
                   <div key={a.id} className="flex gap-2 relative">
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 border-2 border-white flex items-center justify-center shrink-0 z-10 shadow-sm">
+                    <div className="w-5 h-5 rounded-full border-2 border-white flex items-center justify-center shrink-0 z-10 shadow-sm"
+                      style={{ background: 'linear-gradient(135deg,#7c3aed,#9333ea)' }}>
                       <ArrowUpRight size={8} className="text-white" />
                     </div>
                     <div className="flex-1 min-w-0 pt-0.5">
@@ -1856,7 +2791,7 @@ const ActivityFeed = ({ activities, leads, onClose }: {
                           <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-lg ${toCfg.bg} ${toCfg.text}`}>{STATUS_LABELS[a.to as LeadStatus]}</span>
                         </div>
                       ) : (
-                        <p className="text-[10px] text-slate-500 mt-0.5 truncate">{a.action}</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5 truncate font-medium">{a.action}</p>
                       )}
                       <p className="text-[9px] text-slate-300 mt-0.5 flex items-center gap-1 font-medium">
                         <Clock size={7} />{timeAgo(a.ts)}
@@ -1879,45 +2814,94 @@ const StatusDropdown = ({ currentStatus, leadId, onChangeStatus }: {
   onChangeStatus: (id: number, s: LeadStatus) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
   const config = getCfg(currentStatus);
+
+  const openMenu = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    // Try opening below; if not enough space, open above
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const menuHeight = 240; // approximate
+    const top = spaceBelow >= menuHeight
+      ? rect.bottom + 6
+      : rect.top - menuHeight - 6;
+    setMenuPos({ top, left: rect.left });
+    setIsOpen(o => !o);
+  }, []);
+
+  // Close on scroll or resize
+  useEffect(() => {
+    if (!isOpen) return;
+    const close = () => setIsOpen(false);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [isOpen]);
+
+  const menu = isOpen && menuPos ? createPortal(
+    <>
+      {/* backdrop */}
+      <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setIsOpen(false)} />
+      {/* dropdown */}
+      <div
+        className="fixed bg-white overflow-hidden"
+        style={{
+          zIndex: 9999,
+          top: menuPos.top,
+          left: menuPos.left,
+          width: 192,
+          borderRadius: '16px',
+          border: '1.5px solid #e0e7ff',
+          boxShadow: '0 8px 32px rgba(79,70,229,0.18), 0 2px 8px rgba(0,0,0,0.08)',
+        }}
+      >
+        <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg,#4f46e5,#7c3aed)' }} />
+        <div className="px-3 py-2.5" style={{ borderBottom: '1px solid #eef2ff' }}>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Move to stage</p>
+        </div>
+        {STATUS_ORDER.map(status => {
+          const sc = getCfg(status);
+          const isActive = status === currentStatus;
+          return (
+            <button key={status}
+              onClick={e => { e.stopPropagation(); onChangeStatus(leadId, status); setIsOpen(false); }}
+              disabled={isActive}
+              className="w-full flex items-center gap-2.5 px-3 py-2 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
+              style={{ background: 'transparent' }}
+              onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}>
+              <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${sc.gradient} flex items-center justify-center shrink-0 shadow-sm`}>
+                <span className="text-white">{sc.icon}</span>
+              </div>
+              <span className="text-[12px] font-bold text-slate-700">{STATUS_LABELS[status]}</span>
+              {isActive && <Check size={11} className="ml-auto text-emerald-500" />}
+            </button>
+          );
+        })}
+      </div>
+    </>,
+    document.body
+  ) : null;
+
   return (
-    <div className="relative">
+    <div className="relative inline-block">
       <button
-        onClick={e => { e.stopPropagation(); setIsOpen(o => !o); }}
-        className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black ${config.bg} ${config.text} hover:opacity-80 transition-all border border-transparent hover:border-current/20`}
+        ref={btnRef}
+        onClick={openMenu}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[10px] font-black ${config.bg} ${config.text} hover:opacity-90 transition-all duration-200 hover:shadow-sm`}
+        style={{ border: '1.5px solid currentColor' }}
       >
         {config.icon}
         {STATUS_LABELS[currentStatus]}
-        <ChevronDown size={10} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown size={10} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 w-44 bg-white rounded-2xl shadow-lg border border-slate-200/80 py-1.5 z-50 overflow-hidden">
-            <div className="h-1 w-full bg-gradient-to-r from-indigo-500 to-violet-500" />
-            <div className="px-3 py-2 border-b border-slate-100">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Move to stage</p>
-            </div>
-            {STATUS_ORDER.map(status => {
-              const sc = getCfg(status);
-              const isActive = status === currentStatus;
-              return (
-                <button key={status}
-                  onClick={e => { e.stopPropagation(); onChangeStatus(leadId, status); setIsOpen(false); }}
-                  disabled={isActive}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  <div className={`w-5 h-5 rounded-lg bg-gradient-to-br ${sc.gradient} flex items-center justify-center shrink-0 shadow-sm`}>
-                    <span className="text-white">{sc.icon}</span>
-                  </div>
-                  <span className="text-[11px] font-semibold text-slate-700">{STATUS_LABELS[status]}</span>
-                  {isActive && <Check size={10} className="ml-auto text-emerald-500" />}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
+      {menu}
     </div>
   );
 };
@@ -1929,28 +2913,32 @@ const FilterBar = ({ filters, onChange, onReset, leads }: {
   onReset: () => void; leads: Lead[];
 }) => {
   const active = filters.status || filters.minValue || filters.maxValue || filters.sortBy !== 'newest';
-  const selectCls = "text-[11px] border border-slate-200 rounded-xl px-2.5 py-1.5 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400/20 focus:border-indigo-400 font-medium transition-all";
+  const selectCls = "text-[12px] border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-indigo-400/20 focus:border-indigo-400 font-semibold transition-all duration-200";
   return (
-    <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-slate-100 flex-wrap shrink-0 shadow-sm">
-      <div className="flex items-center gap-1.5 mr-1">
-        <div className="p-1 rounded-lg bg-indigo-50">
-          <Filter size={10} className="text-indigo-500" />
+    <div className="flex items-center gap-2.5 px-5 py-3 bg-white flex-wrap shrink-0"
+      style={{ borderTop: '1px solid #eef2ff', borderBottom: '1px solid #eef2ff' }}>
+      <div className="flex items-center gap-2 mr-1">
+        <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+          style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', boxShadow: '0 3px 10px rgba(79,70,229,0.3)' }}>
+          <Filter size={12} className="text-white" />
         </div>
-        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-wider">Filters</span>
+        <span className="text-[11px] font-black text-indigo-600 uppercase tracking-wider">Filters</span>
       </div>
       <select value={filters.status} onChange={e => onChange({ status: e.target.value as LeadStatus | '' })} className={selectCls}>
         <option value="">All Stages</option>
         {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
       </select>
-      <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
-        <DollarSign size={9} className="text-slate-400" />
+      <div className="flex items-center gap-1 rounded-xl px-3 py-2"
+        style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0' }}>
+        <DollarSign size={10} className="text-slate-400" />
         <input type="number" placeholder="Min" value={filters.minValue} onChange={e => onChange({ minValue: e.target.value })}
-          className="w-14 text-[11px] outline-none text-slate-700 bg-transparent font-medium" />
+          className="w-14 text-[12px] outline-none text-slate-700 bg-transparent font-semibold" />
       </div>
-      <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
-        <DollarSign size={9} className="text-slate-400" />
+      <div className="flex items-center gap-1 rounded-xl px-3 py-2"
+        style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0' }}>
+        <DollarSign size={10} className="text-slate-400" />
         <input type="number" placeholder="Max" value={filters.maxValue} onChange={e => onChange({ maxValue: e.target.value })}
-          className="w-14 text-[11px] outline-none text-slate-700 bg-transparent font-medium" />
+          className="w-14 text-[12px] outline-none text-slate-700 bg-transparent font-semibold" />
       </div>
       <select value={filters.sortBy} onChange={e => onChange({ sortBy: e.target.value })} className={selectCls}>
         <option value="newest">Newest first</option>
@@ -1959,12 +2947,17 @@ const FilterBar = ({ filters, onChange, onReset, leads }: {
         <option value="value_low">Value: Low → High</option>
         <option value="name">Name A–Z</option>
       </select>
-      <span className="text-[10px] font-black px-2 py-0.5 rounded-lg border bg-indigo-50 text-indigo-600 border-indigo-100 ml-1">
+      <span className="text-[11px] font-black px-3 py-1.5 rounded-xl ml-1"
+        style={{ background: '#eef2ff', color: '#4f46e5', border: '1.5px solid #c7d2fe' }}>
         {leads.length} result{leads.length !== 1 ? 's' : ''}
       </span>
       {active && (
-        <button onClick={onReset} className="ml-auto flex items-center gap-1 text-[10px] text-indigo-600 hover:text-indigo-800 font-black hover:bg-indigo-50 px-2 py-1 rounded-lg transition-colors">
-          <X size={10} /> Reset
+        <button onClick={onReset}
+          className="ml-auto flex items-center gap-1.5 text-[11px] font-black px-3 py-1.5 rounded-xl transition-all duration-200"
+          style={{ color: '#4f46e5', background: '#eef2ff', border: '1.5px solid #c7d2fe' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#e0e7ff'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#eef2ff'; }}>
+          <X size={11} /> Reset Filters
         </button>
       )}
     </div>
@@ -1984,29 +2977,49 @@ const LeadCard = ({ lead, onSelect, onChangeStatus, onDragStart }: {
       draggable
       onDragStart={e => onDragStart?.(e, lead)}
       onClick={onSelect}
-      className="bg-white rounded-2xl border border-slate-200/80 p-3 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-slate-300 transition-all select-none group overflow-hidden"
+      className="bg-white cursor-grab active:cursor-grabbing select-none group overflow-hidden"
+      style={{
+        borderRadius: '14px',
+        border: '1.5px solid #e2e8f0',
+        transition: 'all 0.22s cubic-bezier(0.34,1.1,0.64,1)',
+        boxShadow: '0 2px 8px rgba(15,23,42,0.05)',
+      }}
+      onMouseEnter={e => {
+        const el = e.currentTarget;
+        el.style.transform = 'translateY(-3px) scale(1.01)';
+        el.style.boxShadow = '0 8px 24px rgba(79,70,229,0.14), 0 2px 8px rgba(0,0,0,0.06)';
+        el.style.borderColor = '#a5b4fc';
+      }}
+      onMouseLeave={e => {
+        const el = e.currentTarget;
+        el.style.transform = '';
+        el.style.boxShadow = '0 2px 8px rgba(15,23,42,0.05)';
+        el.style.borderColor = '#e2e8f0';
+      }}
     >
       {/* top accent bar */}
-      <div className={`h-0.5 w-full rounded-full bg-gradient-to-r ${cfg.gradient} mb-2.5 opacity-60 group-hover:opacity-100 transition-opacity`} />
-      <div className="flex items-start gap-2 mb-2.5">
-        <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white text-[10px] font-black shrink-0 shadow-sm`}>
-          {initials}
+      <div className={`h-[3px] w-full bg-gradient-to-r ${cfg.gradient}`} />
+      <div className="p-3">
+        <div className="flex items-start gap-2 mb-2.5">
+          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white text-[10px] font-black shrink-0 shadow-sm`}>
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4 className="font-black text-slate-800 text-[12px] truncate leading-tight">{lead.name}</h4>
+            <p className="text-[10px] text-slate-400 truncate flex items-center gap-0.5 mt-0.5 font-medium">
+              <Building2 size={8} />{lead.company}
+            </p>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <h4 className="font-black text-slate-800 text-[12px] truncate leading-tight">{lead.name}</h4>
-          <p className="text-[10px] text-slate-400 truncate flex items-center gap-0.5 mt-0.5 font-medium">
-            <Building2 size={8} />{lead.company}
-          </p>
+        <div className="mb-2.5" onClick={e => e.stopPropagation()}>
+          <StatusDropdown currentStatus={lead.status} leadId={lead.id} onChangeStatus={onChangeStatus} />
         </div>
-      </div>
-      <div className="mb-2.5" onClick={e => e.stopPropagation()}>
-        <StatusDropdown currentStatus={lead.status} leadId={lead.id} onChangeStatus={onChangeStatus} />
-      </div>
-      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-        <span className="text-[13px] font-black text-slate-800">${parseFloat(lead.value).toLocaleString()}</span>
-        <span className="text-[9px] text-slate-400 flex items-center gap-0.5 font-medium">
-          <Calendar size={8} />{new Date(lead.created_at).toLocaleDateString()}
-        </span>
+        <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid #f1f5f9' }}>
+          <span className="text-[13px] font-black text-slate-800">${parseFloat(lead.value).toLocaleString()}</span>
+          <span className="text-[9px] text-slate-400 flex items-center gap-0.5 font-medium">
+            <Calendar size={8} />{new Date(lead.created_at).toLocaleDateString()}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -2049,42 +3062,46 @@ const BoardView = ({ leads, onSelect, onChangeStatus }: {
             onDragOver={e => { e.preventDefault(); setDragOver(status); }}
             onDragLeave={() => setDragOver(null)}
             onDrop={e => handleDrop(e, status as LeadStatus)}
-            className={`flex flex-col rounded-2xl h-full min-h-0 transition-all duration-150 border overflow-hidden ${
-              isOver
-                ? 'ring-2 ring-indigo-400 ring-offset-1 bg-indigo-50/60 border-indigo-200'
-                : 'bg-slate-100/60 border-slate-200/60'
-            }`}
+            className="flex flex-col h-full min-h-0 overflow-hidden transition-all duration-200"
+            style={{
+              borderRadius: '18px',
+              border: isOver ? '2px solid #818cf8' : '1.5px solid #e2e8f0',
+              background: isOver ? 'rgba(238,242,255,0.7)' : 'rgba(248,250,252,0.8)',
+              boxShadow: isOver ? '0 0 0 4px rgba(99,102,241,0.12)' : 'none',
+            }}
           >
             {/* Column top accent */}
-            <div className={`h-1 w-full bg-gradient-to-r ${cfg.gradient} shrink-0`} />
+            <div className={`h-[3px] w-full bg-gradient-to-r ${cfg.gradient} shrink-0`} />
 
             {/* Column header */}
-            <div className="px-3 py-2.5 border-b border-slate-200/60 shrink-0">
+            <div className="px-3 py-3 shrink-0" style={{ borderBottom: '1px solid #f1f5f9' }}>
               <div className="flex items-center gap-2">
-                <div className={`w-7 h-7 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white shadow-sm shrink-0`}>
+                <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white shadow-sm shrink-0`}>
                   {cfg.icon}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <h3 className="font-black text-slate-700 text-[11px] truncate">{STATUS_LABELS[status]}</h3>
-                    <span className="text-[9px] bg-white text-slate-500 font-black px-1.5 py-0.5 rounded-full border border-slate-200 shadow-sm shrink-0">
+                    <h3 className="font-black text-slate-700 text-[12px] truncate">{STATUS_LABELS[status]}</h3>
+                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full shrink-0"
+                      style={{ background: '#ffffff', color: '#64748b', border: '1.5px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                       {statusLeads.length}
                     </span>
                   </div>
                   {colTotal > 0 && (
-                    <p className="text-[9px] text-slate-400 font-medium">${colTotal.toLocaleString()}</p>
+                    <p className="text-[9px] text-slate-400 font-bold mt-0.5">${colTotal.toLocaleString()}</p>
                   )}
                 </div>
               </div>
             </div>
 
             {isOver && (
-              <div className="mx-2 mt-1.5 border-2 border-dashed border-indigo-300 rounded-xl p-1.5 text-center text-[10px] text-indigo-500 font-black bg-indigo-50/50 shrink-0">
+              <div className="mx-2 mt-1.5 rounded-xl p-2 text-center text-[10px] font-black shrink-0"
+                style={{ border: '2px dashed #818cf8', background: 'rgba(238,242,255,0.7)', color: '#4f46e5' }}>
                 Drop here
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-0 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {statusLeads.map(lead => (
                 <LeadCard key={lead.id} lead={lead}
                   onSelect={() => onSelect(lead)}
@@ -2093,7 +3110,8 @@ const BoardView = ({ leads, onSelect, onChangeStatus }: {
                 />
               ))}
               {statusLeads.length === 0 && !isOver && (
-                <div className="flex flex-col items-center justify-center py-8 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl bg-white/40">
+                <div className="flex flex-col items-center justify-center py-8 text-slate-400 rounded-xl"
+                  style={{ border: '2px dashed #e2e8f0', background: 'rgba(255,255,255,0.5)' }}>
                   <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${cfg.gradient} opacity-20 flex items-center justify-center mb-1.5`}>
                     {cfg.icon}
                   </div>
@@ -2113,33 +3131,60 @@ const ListView = ({ leads, onSelect, onChangeStatus }: {
   leads: Lead[]; onSelect: (l: Lead) => void;
   onChangeStatus: (id: number, s: LeadStatus) => void;
 }) => (
-  <div className="h-full overflow-auto custom-scrollbar">
+  <div className="h-full overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
     <table className="w-full">
-      <thead className="bg-white sticky top-0 border-b border-slate-100 z-10 shadow-sm">
+      <thead className="sticky top-0 z-10"
+        style={{ background: 'linear-gradient(90deg,#1e1b4b 0%,#312e81 30%,#4f46e5 65%,#7c3aed 100%)' }}>
         <tr>
-          {['Deal', 'Company', 'Status', 'Value', 'Created'].map(h => (
-            <th key={h} className="px-4 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider">{h}</th>
+          {[
+            { label: 'Deal',    color: 'text-blue-200'   },
+            { label: 'Company', color: 'text-violet-200' },
+            { label: 'Status',  color: 'text-cyan-200'   },
+            { label: 'Value',   color: 'text-emerald-200'},
+            { label: 'Created', color: 'text-pink-200'   },
+          ].map(h => (
+            <th key={h.label}
+              className={`px-5 py-4 text-left text-[11px] font-black ${h.color} uppercase tracking-widest`}>
+              {h.label}
+            </th>
           ))}
         </tr>
       </thead>
-      <tbody className="divide-y divide-slate-100 bg-white">
-        {leads.map(lead => {
+      <tbody style={{ background: '#ffffff' }}>
+        {leads.map((lead, i) => {
           const cfg      = getCfg(lead.status);
           const initials = lead.name.split(' ').map(n => n[0]).join('').slice(0, 2);
+          const ACCENTS  = ['border-l-blue-400','border-l-violet-400','border-l-emerald-400','border-l-pink-400','border-l-amber-400','border-l-cyan-400','border-l-fuchsia-400','border-l-green-400'];
           return (
-            <tr key={lead.id} onClick={() => onSelect(lead)} className="hover:bg-indigo-50/30 cursor-pointer transition-colors group">
-              <td className="px-4 py-2.5">
+            <tr key={lead.id}
+              onClick={() => onSelect(lead)}
+              className={`cursor-pointer border-l-[3px] ${ACCENTS[i % ACCENTS.length]}`}
+              style={{
+                borderBottom: '1px solid #f1f5f9',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={e => {
+                const el = e.currentTarget;
+                el.style.background = 'linear-gradient(90deg,#eef2ff,#f5f3ff)';
+                el.style.transform = 'translateX(3px)';
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget;
+                el.style.background = '';
+                el.style.transform = '';
+              }}>
+              <td className="px-5 py-3.5">
                 <div className="flex items-center gap-2.5">
-                  <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white text-[10px] font-black shadow-sm`}>{initials}</div>
-                  <span className="text-[12px] font-black text-slate-800">{lead.name}</span>
+                  <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white text-[10px] font-black shadow-sm`}>{initials}</div>
+                  <span className="text-[13px] font-black text-slate-800">{lead.name}</span>
                 </div>
               </td>
-              <td className="px-4 py-2.5 text-[11px] text-slate-500 font-medium">{lead.company}</td>
-              <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>
+              <td className="px-5 py-3.5 text-[12px] text-slate-500 font-medium">{lead.company}</td>
+              <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
                 <StatusDropdown currentStatus={lead.status} leadId={lead.id} onChangeStatus={onChangeStatus} />
               </td>
-              <td className="px-4 py-2.5 text-[12px] font-black text-slate-800">${parseFloat(lead.value).toLocaleString()}</td>
-              <td className="px-4 py-2.5 text-[10px] text-slate-400 font-medium">{new Date(lead.created_at).toLocaleDateString()}</td>
+              <td className="px-5 py-3.5 text-[13px] font-black text-slate-800">${parseFloat(lead.value).toLocaleString()}</td>
+              <td className="px-5 py-3.5 text-[11px] text-slate-400 font-medium">{new Date(lead.created_at).toLocaleDateString()}</td>
             </tr>
           );
         })}
@@ -2153,14 +3198,32 @@ const GridView = ({ leads, onSelect, onChangeStatus }: {
   leads: Lead[]; onSelect: (l: Lead) => void;
   onChangeStatus: (id: number, s: LeadStatus) => void;
 }) => (
-  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 p-3 overflow-y-auto h-full content-start custom-scrollbar">
+  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 p-3 overflow-y-auto h-full content-start [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
     {leads.map(lead => {
       const cfg      = getCfg(lead.status);
       const initials = lead.name.split(' ').map(n => n[0]).join('').slice(0, 2);
       return (
         <div key={lead.id} onClick={() => onSelect(lead)}
-          className="bg-white rounded-2xl border border-slate-200/80 cursor-pointer hover:shadow-md hover:border-slate-300 transition-all group overflow-hidden">
-          <div className={`h-1 w-full bg-gradient-to-r ${cfg.gradient}`} />
+          className="bg-white cursor-pointer overflow-hidden"
+          style={{
+            borderRadius: '16px',
+            border: '1.5px solid #e2e8f0',
+            boxShadow: '0 2px 8px rgba(15,23,42,0.05)',
+            transition: 'all 0.22s cubic-bezier(0.34,1.1,0.64,1)',
+          }}
+          onMouseEnter={e => {
+            const el = e.currentTarget;
+            el.style.transform = 'translateY(-4px) scale(1.02)';
+            el.style.boxShadow = '0 12px 28px rgba(79,70,229,0.14), 0 2px 8px rgba(0,0,0,0.06)';
+            el.style.borderColor = '#a5b4fc';
+          }}
+          onMouseLeave={e => {
+            const el = e.currentTarget;
+            el.style.transform = '';
+            el.style.boxShadow = '0 2px 8px rgba(15,23,42,0.05)';
+            el.style.borderColor = '#e2e8f0';
+          }}>
+          <div className={`h-[3px] w-full bg-gradient-to-r ${cfg.gradient}`} />
           <div className="p-3">
             <div className="flex items-start gap-2 mb-2.5">
               <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center text-white font-black text-[11px] shadow-sm shrink-0`}>
@@ -2174,7 +3237,7 @@ const GridView = ({ leads, onSelect, onChangeStatus }: {
             <div className="mb-2.5" onClick={e => e.stopPropagation()}>
               <StatusDropdown currentStatus={lead.status} leadId={lead.id} onChangeStatus={onChangeStatus} />
             </div>
-            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid #f1f5f9' }}>
               <p className="text-[13px] font-black text-slate-800">${parseFloat(lead.value).toLocaleString()}</p>
               <p className="text-[9px] text-slate-400 font-medium">{new Date(lead.created_at).toLocaleDateString()}</p>
             </div>
@@ -2285,112 +3348,178 @@ export const Pipeline = () => {
   const winRate    = leads.length ? Math.round((wonCount / leads.length) * 100) : 0;
 
   return (
-    <div className="flex flex-col h-full bg-[#f0f2f8] overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden"
+      style={{ background: 'linear-gradient(145deg,#f8faff 0%,#f0f4ff 50%,#f5f3ff 100%)' }}>
 
       <style>{`
         @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(14px) scale(0.99); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes shimmer {
+          0%   { background-position: -200% center; }
+          100% { background-position:  200% center; }
         }
         @keyframes floatBlob {
           0%,100% { transform: translateY(0px) translateX(0px); }
           50%     { transform: translateY(-10px) translateX(6px); }
         }
         .anim-blob   { animation: floatBlob 7s ease-in-out infinite; }
-        .anim-fade-1 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.05s; }
-        .anim-fade-2 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.15s; }
-        .anim-fade-3 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.25s; }
+        .f1 { opacity:0; animation: fadeUp .45s cubic-bezier(0.34,1.1,0.64,1) forwards .05s }
+        .f2 { opacity:0; animation: fadeUp .45s cubic-bezier(0.34,1.1,0.64,1) forwards .15s }
+        .f3 { opacity:0; animation: fadeUp .45s cubic-bezier(0.34,1.1,0.64,1) forwards .25s }
+
+        .shimmer-overlay {
+          position: absolute; inset: 0; pointer-events: none;
+          background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.07) 50%, transparent 60%);
+          background-size: 200% 100%;
+          animation: shimmer 4s ease-in-out infinite;
+        }
+
+        /* Banner action buttons */
+        .btn-banner-ghost {
+          transition: all 0.2s cubic-bezier(0.34,1.2,0.64,1);
+          background-color: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.18);
+        }
+        .btn-banner-ghost:hover {
+          background-color: rgba(255,255,255,0.20);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+        }
+        .btn-banner-ghost:active { transform: scale(0.96); }
+
+        .btn-banner-active {
+          background: #ffffff;
+          color: #4338ca;
+          transition: all 0.2s cubic-bezier(0.34,1.2,0.64,1);
+        }
+        .btn-banner-active:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+        .btn-banner-active:active { transform: scale(0.96); }
+
+        .btn-add-deal {
+          transition: all 0.22s cubic-bezier(0.34,1.2,0.64,1);
+          background: #ffffff;
+          color: #4338ca;
+          box-shadow: 0 4px 14px rgba(255,255,255,0.2);
+        }
+        .btn-add-deal:hover {
+          transform: translateY(-2px) scale(1.03);
+          box-shadow: 0 8px 24px rgba(255,255,255,0.35);
+          background: #f0f4ff;
+        }
+        .btn-add-deal:active { transform: scale(0.97); }
+
+        /* Toolbar */
+        .search-wrap { transition: all 0.25s ease; }
+        .search-wrap:focus-within {
+          transform: translateY(-1px);
+          filter: drop-shadow(0 0 8px rgba(99,102,241,0.18));
+        }
+
+        .btn-filter-active {
+          background: #eef2ff;
+          color: #4f46e5;
+          border: 1.5px solid #c7d2fe;
+          transition: all 0.2s ease;
+        }
+        .btn-filter-inactive {
+          color: #475569;
+          border: 1.5px solid #e2e8f0;
+          background: white;
+          transition: all 0.2s ease;
+        }
+        .btn-filter-inactive:hover { background: #f8fafc; border-color: #c7d2fe; transform: translateY(-1px); }
+
+        /* View toggle buttons */
+        .view-btn-active { background: white; color: #4f46e5; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .view-btn-inactive { color: #94a3b8; transition: color 0.15s ease; }
+        .view-btn-inactive:hover { color: #475569; }
+
+        /* Quick stage pills */
+        .stage-pill { transition: all 0.2s cubic-bezier(0.34,1.2,0.64,1); }
+        .stage-pill:hover { transform: translateY(-1px); }
+        .stage-pill:active { transform: scale(0.95); }
+
+        /* Refresh spin */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinning { animation: spin 0.7s linear infinite; }
       `}</style>
 
       {/* decorative blobs */}
       <div className="pointer-events-none fixed -top-10 -left-16 w-72 h-72 rounded-full bg-blue-300/20 blur-3xl anim-blob -z-10" />
-      <div className="pointer-events-none fixed top-40 -right-20 w-80 h-80 rounded-full bg-indigo-300/15 blur-3xl anim-blob -z-10" />
+      <div className="pointer-events-none fixed top-40 -right-20 w-80 h-80 rounded-full bg-indigo-300/15 blur-3xl anim-blob -z-10" style={{ animationDelay: '3s' }} />
 
       {/* ══════════════════════════════════════════════════
-          BANNER — WorkflowMonitor style
+          BANNER
       ══════════════════════════════════════════════════ */}
-      <div
-        className="shrink-0 mx-4 mt-4 rounded-2xl overflow-hidden anim-fade-1"
-        style={{
-          background: 'linear-gradient(125deg, #3730a3 0%, #4f46e5 40%, #7c3aed 100%)',
-          boxShadow: '0 8px 32px -4px rgba(79,70,229,0.45)',
-        }}
-      >
-        <div
-          className="px-6 py-5 flex items-center gap-4 flex-wrap"
+      <div className="shrink-0 px-6 pt-5 f1">
+        <div className="rounded-2xl overflow-hidden relative"
           style={{
-            backgroundImage:
-              'radial-gradient(ellipse at 80% 50%, rgba(255,255,255,0.08) 0%, transparent 60%)',
-          }}
-        >
-          {/* icon block */}
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.15)',
-              backdropFilter: 'blur(4px)',
-              border: '1px solid rgba(255,255,255,0.2)',
-            }}
-          >
-            <Briefcase className="text-white" size={20} />
-          </div>
+            background: 'linear-gradient(125deg,#1e1b4b 0%,#312e81 25%,#4f46e5 60%,#7c3aed 100%)',
+            boxShadow: '0 12px 40px -4px rgba(79,70,229,0.5), 0 2px 8px rgba(0,0,0,0.12)',
+          }}>
+          <div className="shimmer-overlay" />
+          <div className="px-7 py-6 flex items-center gap-5 flex-wrap relative z-10"
+            style={{ backgroundImage: 'radial-gradient(ellipse at 80% 50%,rgba(255,255,255,0.09) 0%,transparent 60%)' }}>
 
-          {/* text */}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-[20px] font-black text-white leading-tight tracking-tight">
-              Pipeline Command Center
-            </h1>
-            <p className="text-[12px] text-indigo-200 mt-0.5 font-medium">
-              {filtered.length} of {leads.length} deals · Drag cards between stages
-            </p>
-          </div>
+            {/* icon block */}
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+              style={{ backgroundColor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', border: '1.5px solid rgba(255,255,255,0.25)' }}>
+              <Briefcase className="text-white" size={24} />
+            </div>
 
-          {/* KPI chips */}
-          <div className="hidden lg:flex items-center gap-2">
-            {[
-              { label: 'Open',     value: openCount,                           gradient: 'rgba(255,255,255,0.12)' },
-              { label: 'Won',      value: `${winRate}%`,                       gradient: 'rgba(16,185,129,0.25)' },
-              { label: 'Pipeline', value: `$${(totalValue/1000).toFixed(0)}k`, gradient: 'rgba(255,255,255,0.12)' },
-            ].map(k => (
-              <div key={k.label}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black text-white"
-                style={{ backgroundColor: k.gradient, border: '1px solid rgba(255,255,255,0.18)' }}>
-                <span className="text-white/60">{k.label}</span>
-                <span>{k.value}</span>
-              </div>
-            ))}
-          </div>
+            {/* text */}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-[26px] font-black text-white leading-tight tracking-tight">Pipeline Command Center</h1>
+              <p className="text-[13px] text-indigo-200 mt-1 font-medium">
+                {filtered.length} of {leads.length} deals · Drag cards between stages
+              </p>
+            </div>
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-2 shrink-0">
-            <button onClick={fetchAllData}
-              className={`p-2.5 rounded-xl text-white/70 hover:text-white transition-colors ${isRefreshing ? 'animate-spin' : ''}`}
-              style={{ backgroundColor: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.18)' }}>
-              <RefreshCw size={14} />
-            </button>
-            <button onClick={() => { setShowAnalytics(v => !v); setShowActivity(false); }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-black transition-all ${
-                showAnalytics ? 'bg-white text-indigo-700 shadow-sm' : 'text-white hover:text-white'
-              }`}
-              style={!showAnalytics ? { backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)' } : {}}>
-              <BarChart3 size={13} /> Analytics
-            </button>
-            <button onClick={() => { setShowActivity(v => !v); setShowAnalytics(false); }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-black transition-all relative ${
-                showActivity ? 'bg-white text-indigo-700 shadow-sm' : 'text-white'
-              }`}
-              style={!showActivity ? { backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)' } : {}}>
-              <Activity size={13} /> Activity
-              {activities.length > 0 && !showActivity && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center shadow-sm">
-                  {activities.length > 9 ? '9+' : activities.length}
-                </span>
-              )}
-            </button>
-            <button onClick={() => navigate('/pipeline/new')}
-              className="flex items-center gap-1.5 bg-white text-indigo-700 hover:bg-indigo-50 px-3 py-2 rounded-xl text-[12px] font-black transition-all shadow-sm active:scale-95">
-              <Plus size={13} /> Add Deal
-            </button>
+            {/* KPI chips */}
+            <div className="hidden lg:flex items-center gap-2">
+              {[
+                { label: 'Open',     value: openCount,                           bg: 'rgba(255,255,255,0.12)' },
+                { label: 'Win Rate', value: `${winRate}%`,                       bg: 'rgba(16,185,129,0.25)' },
+                { label: 'Pipeline', value: `$${(totalValue/1000).toFixed(0)}k`, bg: 'rgba(255,255,255,0.12)' },
+              ].map(k => (
+                <div key={k.label}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-black text-white"
+                  style={{ backgroundColor: k.bg, border: '1px solid rgba(255,255,255,0.18)' }}>
+                  <span className="text-white/60 font-medium">{k.label}</span>
+                  <span>{k.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={fetchAllData}
+                className={`w-10 h-10 flex items-center justify-center rounded-xl text-white/70 hover:text-white btn-banner-ghost ${isRefreshing ? 'spinning' : ''}`}>
+                <RefreshCw size={15} />
+              </button>
+
+              <button onClick={() => { setShowAnalytics(v => !v); setShowActivity(false); }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-black transition-all ${showAnalytics ? 'btn-banner-active' : 'btn-banner-ghost text-white'}`}>
+                <BarChart3 size={14} /> Analytics
+              </button>
+
+              <button onClick={() => { setShowActivity(v => !v); setShowAnalytics(false); }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-black transition-all relative ${showActivity ? 'btn-banner-active' : 'btn-banner-ghost text-white'}`}>
+                <Activity size={14} /> Activity
+                {activities.length > 0 && !showActivity && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-sm">
+                    {activities.length > 9 ? '9+' : activities.length}
+                  </span>
+                )}
+              </button>
+
+              <button onClick={() => navigate('/pipeline/new')}
+                className="btn-add-deal flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-black">
+                <Plus size={15} /> Add Deal
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -2398,40 +3527,47 @@ export const Pipeline = () => {
       {/* ══════════════════════════════════════════════════
           TOOLBAR
       ══════════════════════════════════════════════════ */}
-      <div className="mx-4 mt-3 anim-fade-2">
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-          <div className="h-1 w-full bg-gradient-to-r from-slate-200 to-slate-100" />
-          <div className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2 flex-wrap">
+      <div className="shrink-0 px-6 pt-4 f2">
+        <div className="bg-white overflow-hidden"
+          style={{
+            borderRadius: '18px',
+            border: '1.5px solid #e2e8f0',
+            boxShadow: '0 4px 16px rgba(15,23,42,0.06), 0 1px 4px rgba(15,23,42,0.04)',
+          }}>
+          <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg,#e2e8f0,#c7d2fe,#e2e8f0)' }} />
+          <div className="px-5 py-3.5 flex items-center justify-between gap-3 flex-wrap"
+            style={{ background: 'linear-gradient(90deg,#ffffff,#fafbff)' }}>
+
+            <div className="flex items-center gap-2.5 flex-wrap">
               {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
+              <div className="search-wrap relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={13} />
                 <input
                   type="text" placeholder="Search deals…"
-                  className="w-44 pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[12px] font-medium outline-none focus:ring-2 focus:ring-indigo-400/20 focus:border-indigo-400 focus:bg-white transition-all"
+                  className="w-48 pl-10 pr-4 py-2.5 bg-slate-50 rounded-xl text-[13px] font-medium outline-none transition-all duration-200"
+                  style={{ border: '1.5px solid #e2e8f0' }}
                   value={search} onChange={e => setSearch(e.target.value)}
+                  onFocus={e => { e.currentTarget.style.borderColor = '#818cf8'; e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.boxShadow = '0 0 0 4px rgba(99,102,241,0.12)'; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.boxShadow = 'none'; }}
                 />
               </div>
 
               {/* Filter toggle */}
               <button onClick={() => setShowFilters(v => !v)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black border transition-all ${
-                  showFilters || hasActiveFilters
-                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm'
-                    : 'text-slate-600 border-slate-200 hover:bg-slate-50'
-                }`}>
-                <SlidersHorizontal size={11} /> Filter
-                {hasActiveFilters && <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-black transition-all duration-200 ${showFilters || hasActiveFilters ? 'btn-filter-active' : 'btn-filter-inactive'}`}>
+                <SlidersHorizontal size={12} /> Filters
+                {hasActiveFilters && <span className="w-2 h-2 bg-indigo-500 rounded-full" />}
               </button>
 
               {/* Quick-stage pills */}
-              <div className="flex items-center gap-1 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <button onClick={() => setQuickStage('')}
-                  className={`text-[10px] px-2.5 py-1.5 rounded-xl border font-black transition-all ${
+                  className={`stage-pill text-[11px] px-3 py-1.5 rounded-xl font-black transition-all ${
                     quickStage === ''
-                      ? 'bg-gradient-to-r from-indigo-500 to-violet-600 text-white border-transparent shadow-sm'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  }`}>
+                      ? 'text-white shadow-sm'
+                      : 'bg-white text-slate-600 border border-slate-200'
+                  }`}
+                  style={quickStage === '' ? { background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', boxShadow: '0 4px 12px rgba(79,70,229,0.3)' } : {}}>
                   All
                 </button>
                 {STATUS_ORDER.map(status => {
@@ -2440,11 +3576,12 @@ export const Pipeline = () => {
                   return (
                     <button key={status}
                       onClick={() => setQuickStage(prev => prev === status ? '' : status)}
-                      className={`text-[10px] px-2.5 py-1.5 rounded-xl border flex items-center gap-1 font-black transition-all ${
+                      className={`stage-pill text-[11px] px-3 py-1.5 rounded-xl flex items-center gap-1.5 font-black transition-all ${
                         quickStage === status
-                          ? `${cfg.bg} ${cfg.text} border-transparent shadow-sm`
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}>
+                          ? `${cfg.bg} ${cfg.text} shadow-sm`
+                          : 'bg-white border border-slate-200 text-slate-600'
+                      }`}
+                      style={quickStage === status ? { border: '1.5px solid currentColor' } : {}}>
                       <Tag size={9} />
                       {STATUS_LABELS[status]} ({count})
                     </button>
@@ -2454,17 +3591,14 @@ export const Pipeline = () => {
             </div>
 
             {/* View toggle */}
-            <div className="flex items-center bg-slate-100 rounded-xl p-1 shrink-0">
+            <div className="flex items-center rounded-xl p-1 shrink-0"
+              style={{ background: '#f1f5f9', border: '1.5px solid #e2e8f0' }}>
               {(['board', 'list', 'grid'] as const).map((v, i) => {
-                const icons  = [<Columns3 size={13} />, <List size={13} />, <LayoutGrid size={13} />];
+                const icons  = [<Columns3 size={14} />, <List size={14} />, <LayoutGrid size={14} />];
                 const labels = ['Board', 'List', 'Grid'];
                 return (
                   <button key={v} onClick={() => setView(v)} title={labels[i]}
-                    className={`p-2 rounded-lg transition-all ${
-                      view === v
-                        ? 'bg-white shadow-sm text-indigo-600'
-                        : 'text-slate-400 hover:text-slate-600'
-                    }`}>
+                    className={`p-2.5 rounded-lg transition-all duration-200 ${view === v ? 'view-btn-active' : 'view-btn-inactive'}`}>
                     {icons[i]}
                   </button>
                 );
@@ -2476,38 +3610,52 @@ export const Pipeline = () => {
 
       {/* ── FILTER BAR ── */}
       {showFilters && (
-        <div className="mx-4 mt-2">
-          <FilterBar filters={filters} onChange={updateFilters} onReset={() => setFilters(DEFAULT_FILTERS)} leads={filtered} />
+        <div className="px-6 pt-2 shrink-0">
+          <div className="bg-white overflow-hidden"
+            style={{ borderRadius: '16px', border: '1.5px solid #e0e7ff', boxShadow: '0 4px 12px rgba(79,70,229,0.08)' }}>
+            <FilterBar filters={filters} onChange={updateFilters} onReset={() => setFilters(DEFAULT_FILTERS)} leads={filtered} />
+          </div>
         </div>
       )}
 
       {/* ── MAIN CONTENT + SIDE PANELS ── */}
-      <div className="flex flex-1 overflow-hidden min-h-0 mt-3 mx-4 mb-4 gap-3 anim-fade-3">
+      <div className="flex flex-1 overflow-hidden min-h-0 px-6 pb-6 pt-4 gap-4 f3">
         <div className="flex-1 overflow-hidden min-w-0 rounded-2xl">
           {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full bg-white rounded-2xl border border-slate-200/80 shadow-sm">
-              <div className="w-14 h-14 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center mb-3 shadow-sm">
-                <Briefcase size={22} className="text-slate-300" />
+            <div className="flex flex-col items-center justify-center h-full bg-white"
+              style={{ borderRadius: '18px', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 24px rgba(15,23,42,0.07)' }}>
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+                style={{ background: 'linear-gradient(135deg,#f1f5f9,#e2e8f0)', boxShadow: '0 4px 12px rgba(15,23,42,0.06)' }}>
+                <Briefcase size={24} className="text-slate-300" />
               </div>
-              <p className="text-[13px] font-black text-slate-500">No deals found</p>
-              <p className="text-[11px] text-slate-400 mt-1 font-medium">Try adjusting your search or filters</p>
+              <p className="text-[15px] font-black text-slate-500">No deals found</p>
+              <p className="text-[12px] text-slate-400 mt-1 font-medium">Try adjusting your search or filters</p>
               <button onClick={() => { setFilters(DEFAULT_FILTERS); setSearch(''); setQuickStage(''); }}
-                className="mt-3 text-[11px] text-indigo-600 hover:text-indigo-800 font-black bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl transition-colors">
-                Clear filters
+                className="mt-4 text-[12px] font-black px-5 py-2.5 rounded-xl transition-all duration-200"
+                style={{ background: '#eef2ff', color: '#4f46e5', border: '1.5px solid #c7d2fe' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#e0e7ff'; (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#eef2ff'; (e.currentTarget as HTMLButtonElement).style.transform = ''; }}>
+                Clear all filters
               </button>
               {lostValue > 0 && (
-                <p className="mt-2 text-[10px] text-slate-400 font-medium">Lost Value: ${lostValue.toLocaleString()}</p>
+                <p className="mt-3 text-[11px] text-slate-400 font-medium">
+                  Lost Value: ${lostValue.toLocaleString()}
+                </p>
               )}
             </div>
           ) : view === 'board' ? (
             <BoardView leads={filtered} onSelect={setSelectedLead} onChangeStatus={handleChangeStatus} />
           ) : view === 'list' ? (
-            <div className="h-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-              <div className="h-1 w-full bg-gradient-to-r from-indigo-500 to-violet-500" />
+            <div className="h-full bg-white overflow-hidden"
+              style={{ borderRadius: '18px', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 24px rgba(15,23,42,0.07)' }}>
               <ListView leads={filtered} onSelect={setSelectedLead} onChangeStatus={handleChangeStatus} />
             </div>
           ) : (
-            <GridView leads={filtered} onSelect={setSelectedLead} onChangeStatus={handleChangeStatus} />
+            <div className="h-full bg-white overflow-hidden"
+              style={{ borderRadius: '18px', border: '1.5px solid #e2e8f0', boxShadow: '0 4px 24px rgba(15,23,42,0.07)' }}>
+              <div className="h-[3px] w-full" style={{ background: 'linear-gradient(90deg,#4f46e5,#7c3aed)' }} />
+              <GridView leads={filtered} onSelect={setSelectedLead} onChangeStatus={handleChangeStatus} />
+            </div>
           )}
         </div>
 

@@ -937,6 +937,716 @@
 // export default AddDealPage;
 
 
+// import React, { useEffect, useMemo, useState } from 'react';
+// import { useNavigate } from 'react-router-dom';
+// import {
+//   ArrowLeft,
+//   MapPin,
+//   Factory,
+//   Package,
+//   Loader2,
+//   DollarSign,
+//   CheckCircle2,
+//   Target,
+//   Clock3,
+//   Gauge,
+//   ShieldCheck,
+//   CircleDashed,
+//   ClipboardCheck,
+//   Building2,
+//   UserRound,
+//   Briefcase,
+//   AlertTriangle,
+//   Users,
+//   ChevronDown,
+// } from 'lucide-react';
+// import { api } from '../Utils/api';
+// import type { LeadStatus } from '../Utils/types';
+
+// const statusFlow: { id: LeadStatus; label: string }[] = [
+//   { id: 'new',         label: 'New'         },
+//   { id: 'contacted',   label: 'Contacted'   },
+//   { id: 'negotiation', label: 'Negotiation' },
+//   { id: 'won',         label: 'Won'         },
+//   { id: 'lost',        label: 'Lost'        },
+// ];
+
+// // ─── shared field classes — BDMTargetCreate style ────────────────────────────
+// const labelCls  = 'block text-xs font-black text-slate-500 uppercase tracking-widest mb-2';
+// const inputCls  = 'w-full px-4 py-3.5 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-300 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none transition-all';
+// const selectCls = 'w-full px-4 py-3.5 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-xl appearance-none focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none transition-all pr-9';
+
+// // ─── SectionHead — exact BDMTargetCreate pattern ─────────────────────────────
+// const SectionHead = ({
+//   icon: Icon,
+//   title,
+//   subtitle,
+//   accentColor = 'bg-indigo-500',
+// }: {
+//   icon: React.ComponentType<{ size?: number; className?: string }>;
+//   title: string;
+//   subtitle: string;
+//   accentColor?: string;
+// }) => (
+//   <div className="flex items-start gap-3 pb-4 border-b border-slate-100">
+//     <div className={`w-1 self-stretch rounded-full ${accentColor} shrink-0`} />
+//     <div className="flex items-center gap-2.5">
+//       <Icon className="text-slate-400 shrink-0" size={16} />
+//       <div>
+//         <h3 className="text-[14px] font-black text-slate-800">{title}</h3>
+//         <p className="text-[11px] text-slate-400 mt-0.5">{subtitle}</p>
+//       </div>
+//     </div>
+//   </div>
+// );
+
+// // ─── SectionCard — white card with top accent bar ─────────────────────────────
+// const SectionCard = ({
+//   children,
+//   topGradient = 'from-indigo-500 to-violet-500',
+// }: {
+//   children: React.ReactNode;
+//   topGradient?: string;
+// }) => (
+//   <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+//     <div className={`h-1 w-full bg-gradient-to-r ${topGradient} rounded-t-2xl`} />
+//     <div className="p-5 md:p-6">{children}</div>
+//   </div>
+// );
+
+// // ─── SelectField — with chevron ───────────────────────────────────────────────
+// const SelectField = ({ className = '', ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => (
+//   <div className="relative">
+//     <select className={`${selectCls} ${className}`} {...props} />
+//     <ChevronDown size={13} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+//   </div>
+// );
+
+// // ─── Sidebar card ─────────────────────────────────────────────────────────────
+// const SideCard = ({
+//   children,
+//   topGradient = 'from-indigo-500 to-violet-500',
+//   className = '',
+// }: {
+//   children: React.ReactNode;
+//   topGradient?: string;
+//   className?: string;
+// }) => (
+//   <div className={`bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden ${className}`}>
+//     <div className={`h-1 w-full bg-gradient-to-r ${topGradient}`} />
+//     <div className="p-5">{children}</div>
+//   </div>
+// );
+
+// // ─── Sidebar section head ─────────────────────────────────────────────────────
+// const SideHead = ({
+//   icon,
+//   label,
+//   accentColor = 'bg-indigo-500',
+// }: {
+//   icon: React.ReactNode;
+//   label: string;
+//   accentColor?: string;
+// }) => (
+//   <div className="flex items-start gap-3 pb-3 mb-4 border-b border-slate-100">
+//     <div className={`w-1 self-stretch rounded-full ${accentColor} shrink-0`} />
+//     <div className="flex items-center gap-2">
+//       <span className="text-slate-400">{icon}</span>
+//       <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
+//     </div>
+//   </div>
+// );
+
+// // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+// export const AddDealPage = () => {
+//   const navigate = useNavigate();
+//   const [verticals,     setVerticals]     = useState<any[]>([]);
+//   const [regions,       setRegions]       = useState<any[]>([]);
+//   const [products,      setProducts]      = useState<any[]>([]);
+//   const [loadingConfig, setLoadingConfig] = useState(true);
+//   const [saving,        setSaving]        = useState(false);
+//   const [error,         setError]         = useState('');
+
+//   const [formData, setFormData] = useState({
+//     name:             '',
+//     company:          '',
+//     email:            '',
+//     phone:            '',
+//     value:            '',
+//     status:           'new' as LeadStatus,
+//     source:           'cold_outreach',
+//     vertical:         '',
+//     region_rel:       '',
+//     product_interest: '',
+//   });
+
+//   const [notes,              setNotes]              = useState('');
+//   const [nextAction,         setNextAction]         = useState('Schedule discovery call');
+//   const [probability,        setProbability]        = useState(40);
+//   const [priority,           setPriority]           = useState<'low' | 'medium' | 'high'>('medium');
+//   const [timeline,           setTimeline]           = useState('This month');
+//   const [decisionMaker,      setDecisionMaker]      = useState('');
+//   const [decisionRole,       setDecisionRole]       = useState('');
+//   const [decisionDate,       setDecisionDate]       = useState('');
+//   const [dealNeed,           setDealNeed]           = useState('');
+//   const [budgetConfirmed,    setBudgetConfirmed]    = useState(false);
+//   const [authorityConfirmed, setAuthorityConfirmed] = useState(false);
+//   const [timelineConfirmed,  setTimelineConfirmed]  = useState(false);
+//   const [competitor,         setCompetitor]         = useState('');
+//   const [riskLevel,          setRiskLevel]          = useState<'low' | 'medium' | 'high'>('medium');
+//   const [riskNotes,          setRiskNotes]          = useState('');
+//   const [actionOne,          setActionOne]          = useState('Discovery call');
+//   const [actionTwo,          setActionTwo]          = useState('Share proposal');
+//   const [actionThree,        setActionThree]        = useState('Commercial discussion');
+
+//   useEffect(() => {
+//     setLoadingConfig(true);
+//     Promise.all([
+//       api.getVerticals().catch(() => []),
+//       api.getRegions().catch(() => []),
+//       api.getProductLines().catch(() => []),
+//     ]).then(([vData, rData, pData]) => {
+//       setVerticals(vData);
+//       setRegions(rData);
+//       setProducts(pData);
+//       setFormData(prev => ({
+//         ...prev,
+//         vertical:         vData[0]?.id || '',
+//         region_rel:       rData[0]?.id || '',
+//         product_interest: pData[0]?.id || '',
+//       }));
+//       setLoadingConfig(false);
+//     });
+//   }, []);
+
+//   const completion = useMemo(() => {
+//     const checks = [
+//       !!formData.name, !!formData.company, !!formData.email, !!formData.value,
+//       !!formData.vertical, !!formData.region_rel, !!formData.product_interest,
+//       !!nextAction, !!timeline, !!decisionMaker, !!decisionRole, !!dealNeed,
+//     ];
+//     return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+//   }, [formData, nextAction, timeline, decisionMaker, decisionRole, dealNeed]);
+
+//   const valueNumber   = Number(formData.value || 0);
+//   const expectedValue = Math.round(valueNumber * (probability / 100));
+
+//   const handleSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     setSaving(true);
+//     setError('');
+//     try {
+//       await api.createLead(formData);
+//       navigate('/pipeline');
+//     } catch {
+//       setError('Failed to create deal. Please check fields and try again.');
+//     } finally {
+//       setSaving(false);
+//     }
+//   };
+
+//   const riskColor = riskLevel === 'high'
+//     ? 'text-red-600 bg-red-50 border-red-200'
+//     : riskLevel === 'medium'
+//     ? 'text-amber-600 bg-amber-50 border-amber-200'
+//     : 'text-emerald-600 bg-emerald-50 border-emerald-200';
+
+//   return (
+//     <div className="flex flex-col h-full bg-[#f0f2f8] overflow-hidden">
+
+//       <style>{`
+//         @keyframes fadeUp {
+//           from { opacity:0; transform:translateY(14px) scale(0.99); }
+//           to   { opacity:1; transform:translateY(0) scale(1); }
+//         }
+//         @keyframes floatBlob {
+//           0%,100% { transform: translateY(0px) translateX(0px); }
+//           50%     { transform: translateY(-10px) translateX(6px); }
+//         }
+//         .anim-blob   { animation: floatBlob 7s ease-in-out infinite; }
+//         .anim-fade-1 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.05s; }
+//         .anim-fade-2 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.15s; }
+//         .anim-fade-3 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.25s; }
+//       `}</style>
+
+//       {/* ══════════════════════════════════════════════════
+//           BANNER — identical structure to BDMTargetCreate
+//       ══════════════════════════════════════════════════ */}
+//       <div
+//         className="shrink-0 mx-4 mt-4 rounded-2xl overflow-hidden anim-fade-1"
+//         style={{
+//           background: 'linear-gradient(125deg, #3730a3 0%, #4f46e5 40%, #7c3aed 100%)',
+//           boxShadow:  '0 8px 32px -4px rgba(79,70,229,0.45)',
+//         }}
+//       >
+//         <div
+//           className="px-6 py-5 flex items-center gap-4 flex-wrap"
+//           style={{ backgroundImage: 'radial-gradient(ellipse at 80% 50%, rgba(255,255,255,0.08) 0%, transparent 60%)' }}
+//         >
+//           {/* back button */}
+//           <button
+//             onClick={() => navigate('/pipeline')}
+//             className="flex items-center gap-1.5 text-indigo-200 hover:text-white text-xs font-semibold
+//               bg-white/10 hover:bg-white/20 px-3 py-2 rounded-xl transition-all shrink-0"
+//           >
+//             <ArrowLeft size={14} /> Back to Pipeline
+//           </button>
+
+//           {/* icon block */}
+//           <div
+//             className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+//             style={{ backgroundColor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.2)' }}
+//           >
+//             <Briefcase className="text-white" size={20} />
+//           </div>
+
+//           {/* text */}
+//           <div className="flex-1 min-w-0">
+//             <h1 className="text-[20px] font-black text-white leading-tight tracking-tight">Deal Builder</h1>
+//             <p className="text-[12px] text-indigo-200 mt-0.5 font-medium">
+//               Qualify, structure and launch a new deal into pipeline.
+//             </p>
+//           </div>
+
+//           {/* completion pill */}
+//           <div
+//             className="hidden sm:flex items-center gap-3 px-4 py-2.5 rounded-xl shrink-0"
+//             style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.18)' }}
+//           >
+//             <div className="flex flex-col gap-1">
+//               <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Completion</span>
+//               <div className="w-28 h-1.5 bg-white/20 rounded-full overflow-hidden">
+//                 <div
+//                   className="h-full bg-white rounded-full transition-all duration-500"
+//                   style={{ width: `${completion}%` }}
+//                 />
+//               </div>
+//             </div>
+//             <span className="text-[16px] font-black text-white">{completion}%</span>
+//           </div>
+
+//           {/* KPI pills */}
+//           <div className="hidden lg:flex items-center gap-2 shrink-0">
+//             {[
+//               { label: 'Value',    value: `$${valueNumber ? valueNumber.toLocaleString() : '0'}` },
+//               { label: 'Win %',    value: `${probability}%` },
+//               { label: 'Priority', value: priority },
+//             ].map(k => (
+//               <div
+//                 key={k.label}
+//                 className="text-center px-3 py-2 rounded-xl"
+//                 style={{ backgroundColor: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.15)' }}
+//               >
+//                 <p className="text-[9px] text-indigo-300 font-black uppercase tracking-widest">{k.label}</p>
+//                 <p className="text-[13px] font-black text-white capitalize">{k.value}</p>
+//               </div>
+//             ))}
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* ── SCROLLABLE BODY ── */}
+//       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+
+//         {/* decorative blobs */}
+//         <div className="pointer-events-none fixed -top-10 -left-16 w-72 h-72 rounded-full bg-blue-300/20 blur-3xl anim-blob -z-10" />
+//         <div className="pointer-events-none fixed top-40 -right-20 w-80 h-80 rounded-full bg-indigo-300/15 blur-3xl anim-blob -z-10" />
+
+//         {loadingConfig ? (
+//           <div className="flex flex-col items-center justify-center py-24 gap-3">
+//             <div className="w-8 h-8 border-[3px] border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
+//             <p className="text-[13px] font-medium text-slate-400">Loading form details…</p>
+//           </div>
+//         ) : (
+//           <form onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-[1fr_290px] gap-4 items-start mt-1">
+
+//             {/* ══ LEFT COLUMN ══ */}
+//             <div className="space-y-4 min-w-0">
+
+//               {/* error */}
+//               {error && (
+//                 <div className="bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3.5 rounded-2xl flex items-center gap-2.5 font-medium">
+//                   <AlertTriangle size={14} className="shrink-0" /> {error}
+//                 </div>
+//               )}
+
+//               {/* ── 1. Core Details ── */}
+//               <SectionCard topGradient="from-indigo-500 to-violet-500" >
+//                 <SectionHead
+//                   icon={UserRound}
+//                   title="1. Core Details"
+//                   subtitle="Primary contact and company information."
+//                   accentColor="bg-indigo-500"
+//                 />
+//                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Contact Name <span className="text-rose-400">*</span></label>
+//                     <div className="relative">
+//                       <UserRound size={14} className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" />
+//                       <input required type="text" className={inputCls + ' pl-11'} placeholder="John Smith"
+//                         value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+//                     </div>
+//                   </div>
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Company <span className="text-rose-400">*</span></label>
+//                     <div className="relative">
+//                       <Building2 size={14} className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" />
+//                       <input required type="text" className={inputCls + ' pl-11'} placeholder="Acme Corp"
+//                         value={formData.company} onChange={e => setFormData({ ...formData, company: e.target.value })} />
+//                     </div>
+//                   </div>
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Email <span className="text-rose-400">*</span></label>
+//                     <input required type="email" className={inputCls} placeholder="john@acme.com"
+//                       value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+//                   </div>
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Phone</label>
+//                     <input type="tel" className={inputCls} placeholder="+91 …"
+//                       value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+//                   </div>
+//                 </div>
+//               </SectionCard>
+
+//               {/* ── 2. Classification ── */}
+//               <SectionCard topGradient="from-emerald-500 to-teal-400">
+//                 <SectionHead
+//                   icon={Factory}
+//                   title="2. Classification"
+//                   subtitle="Assign vertical, region and product focus."
+//                   accentColor="bg-emerald-500"
+//                 />
+//                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
+//                   <div className="space-y-2">
+//                     <label className={labelCls + ' flex items-center gap-1.5'}><Factory size={11} /> Vertical</label>
+//                     <SelectField value={formData.vertical} onChange={e => setFormData({ ...formData, vertical: e.target.value })}>
+//                       <option value="">Select…</option>
+//                       {verticals.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+//                     </SelectField>
+//                   </div>
+//                   <div className="space-y-2">
+//                     <label className={labelCls + ' flex items-center gap-1.5'}><MapPin size={11} /> Region</label>
+//                     <SelectField value={formData.region_rel} onChange={e => setFormData({ ...formData, region_rel: e.target.value })}>
+//                       <option value="">Select…</option>
+//                       {regions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+//                     </SelectField>
+//                   </div>
+//                   <div className="space-y-2">
+//                     <label className={labelCls + ' flex items-center gap-1.5'}><Package size={11} /> Product</label>
+//                     <SelectField value={formData.product_interest} onChange={e => setFormData({ ...formData, product_interest: e.target.value })}>
+//                       <option value="">Select…</option>
+//                       {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+//                     </SelectField>
+//                   </div>
+//                 </div>
+//               </SectionCard>
+
+//               {/* ── 3. Deal Intelligence ── */}
+//               <SectionCard topGradient="from-blue-500 to-cyan-400">
+//                 <SectionHead
+//                   icon={Gauge}
+//                   title="3. Deal Intelligence"
+//                   subtitle="Value, stage, probability and deal timeline."
+//                   accentColor="bg-blue-500"
+//                 />
+//                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Deal Value ($) <span className="text-rose-400">*</span></label>
+//                     <div className="relative">
+//                       <DollarSign size={14} className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" />
+//                       <input required type="number" className={inputCls + ' pl-11'} placeholder="50000"
+//                         value={formData.value} onChange={e => setFormData({ ...formData, value: e.target.value })} />
+//                     </div>
+//                   </div>
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Stage</label>
+//                     <SelectField value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as LeadStatus })}>
+//                       {statusFlow.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+//                     </SelectField>
+//                   </div>
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Source</label>
+//                     <SelectField value={formData.source} onChange={e => setFormData({ ...formData, source: e.target.value })}>
+//                       <option value="cold_outreach">Cold Call</option>
+//                       <option value="linkedin">LinkedIn</option>
+//                       <option value="referral">Referral</option>
+//                       <option value="website">Website</option>
+//                     </SelectField>
+//                   </div>
+
+//                   {/* Probability slider — full width */}
+//                   <div className="sm:col-span-3 space-y-2">
+//                     <label className={labelCls}>
+//                       Win Probability —{' '}
+//                       <span className="text-indigo-600 normal-case font-black">{probability}%</span>
+//                     </label>
+//                     <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5">
+//                       <input type="range" min={5} max={95} step={5} value={probability}
+//                         onChange={e => setProbability(Number(e.target.value))}
+//                         className="w-full accent-indigo-600 cursor-pointer" />
+//                       <div className="flex justify-between text-[10px] text-slate-400 mt-1.5 font-black">
+//                         <span>5%</span><span>50%</span><span>95%</span>
+//                       </div>
+//                     </div>
+//                   </div>
+
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Priority</label>
+//                     <SelectField value={priority} onChange={e => setPriority(e.target.value as 'low' | 'medium' | 'high')}>
+//                       <option value="low">Low</option>
+//                       <option value="medium">Medium</option>
+//                       <option value="high">High</option>
+//                     </SelectField>
+//                   </div>
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Timeline</label>
+//                     <SelectField value={timeline} onChange={e => setTimeline(e.target.value)}>
+//                       <option>This week</option>
+//                       <option>This month</option>
+//                       <option>Next quarter</option>
+//                       <option>Long-term</option>
+//                     </SelectField>
+//                   </div>
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Next Action</label>
+//                     <input type="text" className={inputCls} value={nextAction} onChange={e => setNextAction(e.target.value)} />
+//                   </div>
+
+//                   <div className="sm:col-span-3 space-y-2">
+//                     <label className={labelCls}>Internal Notes</label>
+//                     <input type="text" className={inputCls} value={notes}
+//                       onChange={e => setNotes(e.target.value)} placeholder="Any internal context…" />
+//                   </div>
+//                 </div>
+//               </SectionCard>
+
+//               {/* ── 4. Stakeholder & Decision ── */}
+//               <SectionCard topGradient="from-violet-500 to-purple-400">
+//                 <SectionHead
+//                   icon={Users}
+//                   title="4. Stakeholder & Decision"
+//                   subtitle="Who decides, when, and what's the core need."
+//                   accentColor="bg-violet-500"
+//                 />
+//                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Decision Maker</label>
+//                     <input className={inputCls} value={decisionMaker}
+//                       onChange={e => setDecisionMaker(e.target.value)} placeholder="Name" />
+//                   </div>
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Role / Title</label>
+//                     <input className={inputCls} value={decisionRole}
+//                       onChange={e => setDecisionRole(e.target.value)} placeholder="CTO, VP Sales…" />
+//                   </div>
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Expected Decision Date</label>
+//                     <input type="date" className={inputCls} value={decisionDate}
+//                       onChange={e => setDecisionDate(e.target.value)} />
+//                   </div>
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Core Need</label>
+//                     <input className={inputCls} value={dealNeed}
+//                       onChange={e => setDealNeed(e.target.value)} placeholder="Main pain point" />
+//                   </div>
+//                 </div>
+//               </SectionCard>
+
+//               {/* ── 5. Qualification & Risk ── */}
+//               <SectionCard topGradient="from-amber-400 to-orange-400">
+//                 <SectionHead
+//                   icon={ShieldCheck}
+//                   title="5. Qualification & Risk"
+//                   subtitle="BANT checklist, competitors and risk assessment."
+//                   accentColor="bg-amber-400"
+//                 />
+//                 {/* BANT toggles */}
+//                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 mb-5">
+//                   {[
+//                     { label: 'Budget Confirmed',   state: budgetConfirmed,    set: setBudgetConfirmed },
+//                     { label: 'Authority Confirmed', state: authorityConfirmed, set: setAuthorityConfirmed },
+//                     { label: 'Timeline Confirmed',  state: timelineConfirmed,  set: setTimelineConfirmed },
+//                   ].map(({ label, state, set }) => (
+//                     <label
+//                       key={label}
+//                       className={`flex items-center gap-2.5 border-2 rounded-xl px-4 py-3.5 cursor-pointer
+//                         transition-all text-[12px] font-black select-none ${
+//                         state
+//                           ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
+//                           : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300'
+//                       }`}
+//                     >
+//                       <input type="checkbox" checked={state}
+//                         onChange={e => set(e.target.checked)} className="accent-emerald-600 w-3.5 h-3.5" />
+//                       {label}
+//                     </label>
+//                   ))}
+//                 </div>
+
+//                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Competitor</label>
+//                     <input className={inputCls} value={competitor}
+//                       onChange={e => setCompetitor(e.target.value)} placeholder="Main competitor" />
+//                   </div>
+//                   <div className="space-y-2">
+//                     <label className={labelCls}>Risk Level</label>
+//                     <SelectField value={riskLevel}
+//                       onChange={e => setRiskLevel(e.target.value as 'low' | 'medium' | 'high')}>
+//                       <option value="low">Low</option>
+//                       <option value="medium">Medium</option>
+//                       <option value="high">High</option>
+//                     </SelectField>
+//                   </div>
+//                   <div className="sm:col-span-2 space-y-2">
+//                     <label className={labelCls}>Risk Notes</label>
+//                     <textarea rows={3} className={inputCls + ' resize-none min-h-[80px]'}
+//                       value={riskNotes} onChange={e => setRiskNotes(e.target.value)} />
+//                   </div>
+//                 </div>
+//               </SectionCard>
+
+//               {/* ── 6. Execution Plan ── */}
+//               <SectionCard topGradient="from-rose-500 to-pink-400">
+//                 <SectionHead
+//                   icon={ClipboardCheck}
+//                   title="6. Execution Plan"
+//                   subtitle="Lay out the three key steps to close this deal."
+//                   accentColor="bg-rose-500"
+//                 />
+//                 <div className="space-y-3 mt-5">
+//                   {[
+//                     { label: 'Step 1', value: actionOne,   set: setActionOne },
+//                     { label: 'Step 2', value: actionTwo,   set: setActionTwo },
+//                     { label: 'Step 3', value: actionThree, set: setActionThree },
+//                   ].map(({ label, value, set }, idx) => (
+//                     <div key={label} className="flex items-center gap-3">
+//                       <div
+//                         className="w-8 h-8 rounded-xl flex items-center justify-center text-[11px] font-black text-white shrink-0"
+//                         style={{ background: 'linear-gradient(125deg, #4f46e5, #7c3aed)' }}
+//                       >
+//                         {idx + 1}
+//                       </div>
+//                       <input className={`${inputCls} flex-1`} value={value}
+//                         onChange={e => set(e.target.value)} />
+//                     </div>
+//                   ))}
+//                 </div>
+//               </SectionCard>
+
+//               {/* ── Footer actions ── */}
+//               <div className="flex items-center justify-end gap-3 pt-1 pb-6">
+//                 <button
+//                   type="button"
+//                   onClick={() => navigate('/pipeline')}
+//                   className="px-5 py-3 rounded-xl text-sm font-semibold text-slate-500
+//                     bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+//                 >
+//                   Cancel
+//                 </button>
+//                 <button
+//                   type="submit"
+//                   disabled={saving}
+//                   className="px-7 py-3 text-white rounded-xl text-sm font-black
+//                     flex items-center gap-2 transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
+//                   style={{
+//                     background: 'linear-gradient(125deg, #3730a3 0%, #4f46e5 40%, #7c3aed 100%)',
+//                     boxShadow:  '0 4px 18px rgba(79,70,229,0.40)',
+//                   }}
+//                 >
+//                   {saving && <Loader2 size={14} className="animate-spin" />}
+//                   {saving ? 'Creating…' : 'Create Deal'}
+//                 </button>
+//               </div>
+//             </div>
+
+//             {/* ══ RIGHT SIDEBAR ══ */}
+//             <aside className="space-y-4 xl:sticky xl:top-4 h-fit anim-fade-3">
+
+//               {/* Deal Snapshot */}
+//               <SideCard topGradient="from-indigo-500 to-violet-500">
+//                 <SideHead icon={<Gauge size={14} />} label="Deal Snapshot" accentColor="bg-indigo-500" />
+//                 <p className="text-[15px] font-black text-slate-800 truncate">
+//                   {formData.company || 'Your company'}
+//                 </p>
+//                 <p className="text-[12px] text-slate-400 mb-4 font-medium">
+//                   {formData.name || 'Primary contact'}
+//                 </p>
+
+//                 <div className="grid grid-cols-2 gap-2.5 mb-3">
+//                   <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3.5">
+//                     <Gauge size={13} className="text-indigo-400 mb-1.5" />
+//                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">Probability</p>
+//                     <p className="text-[16px] font-black text-indigo-700">{probability}%</p>
+//                   </div>
+//                   <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3.5">
+//                     <Target size={13} className="text-indigo-400 mb-1.5" />
+//                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">Expected</p>
+//                     <p className="text-[16px] font-black text-indigo-700">${expectedValue.toLocaleString()}</p>
+//                   </div>
+//                 </div>
+
+//                 <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3">
+//                   <Clock3 size={14} className="text-indigo-400 shrink-0" />
+//                   <div>
+//                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Timeline</p>
+//                     <p className="text-[13px] font-black text-slate-700">{timeline}</p>
+//                   </div>
+//                 </div>
+//               </SideCard>
+
+//               {/* Readiness */}
+//               <SideCard topGradient="from-emerald-500 to-teal-400">
+//                 <SideHead icon={<ClipboardCheck size={14} />} label="Readiness" accentColor="bg-emerald-500" />
+//                 <div className="space-y-2">
+//                   {[
+//                     { label: 'Contact details',   ok: !!formData.name && !!formData.email,         icon: <UserRound size={12} /> },
+//                     { label: 'Company and value', ok: !!formData.company && !!formData.value,       icon: <Building2 size={12} /> },
+//                     { label: 'Classification',    ok: !!formData.vertical && !!formData.region_rel, icon: <ClipboardCheck size={12} /> },
+//                     { label: 'Next action',       ok: !!nextAction,                                 icon: <CircleDashed size={12} /> },
+//                   ].map(({ label, ok, icon }) => (
+//                     <div
+//                       key={label}
+//                       className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border
+//                         text-[12px] font-black transition-all ${
+//                         ok
+//                           ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+//                           : 'bg-slate-50 border-slate-200 text-slate-400'
+//                       }`}
+//                     >
+//                       <span className="flex items-center gap-2">{icon}{label}</span>
+//                       <CheckCircle2 size={14} className={ok ? 'text-emerald-500' : 'text-slate-200'} />
+//                     </div>
+//                   ))}
+//                 </div>
+//               </SideCard>
+
+//               {/* Deal Guidance */}
+//               <SideCard topGradient="from-violet-500 to-purple-400">
+//                 <SideHead icon={<ShieldCheck size={14} />} label="Deal Guidance" accentColor="bg-violet-500" />
+//                 <p className="text-[12px] text-slate-600 leading-relaxed font-medium">
+//                   {priority === 'high'
+//                     ? 'High-priority motion: schedule decision-maker call within 24 hours and share a concise, ROI-led proposal.'
+//                     : 'Keep momentum: lock next action, confirm authority, and close timeline gaps before negotiation.'}
+//                 </p>
+//                 <div className={`mt-4 inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-[12px] font-black ${riskColor}`}>
+//                   <ShieldCheck size={13} /> Risk: {riskLevel}
+//                 </div>
+//               </SideCard>
+
+//             </aside>
+//           </form>
+//         )}
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default AddDealPage;
+
+
+
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -971,46 +1681,59 @@ const statusFlow: { id: LeadStatus; label: string }[] = [
   { id: 'lost',        label: 'Lost'        },
 ];
 
-// ─── shared field classes — BDMTargetCreate style ────────────────────────────
-const labelCls  = 'block text-xs font-black text-slate-500 uppercase tracking-widest mb-2';
-const inputCls  = 'w-full px-4 py-3.5 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-xl placeholder:text-slate-300 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none transition-all';
-const selectCls = 'w-full px-4 py-3.5 text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-xl appearance-none focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none transition-all pr-9';
+// ─── shared field classes ────────────────────────────────────────────────────
+const labelCls = 'block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-1.5';
+const inputCls =
+  'w-full px-3 py-2 text-[13px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-xl ' +
+  'placeholder:text-slate-300 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none transition-all duration-200';
+const selectCls =
+  'w-full px-3 py-2 text-[13px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-xl ' +
+  'appearance-none focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none transition-all duration-200 pr-8';
 
-// ─── SectionHead — exact BDMTargetCreate pattern ─────────────────────────────
+// ─── SectionHead — no vertical divider line, bold heading ────────────────────
 const SectionHead = ({
   icon: Icon,
   title,
   subtitle,
-  accentColor = 'bg-indigo-500',
+  iconBg = 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+  iconGlow = 'rgba(79,70,229,0.3)',
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   title: string;
   subtitle: string;
-  accentColor?: string;
+  iconBg?: string;
+  iconGlow?: string;
 }) => (
-  <div className="flex items-start gap-3 pb-4 border-b border-slate-100">
-    <div className={`w-1 self-stretch rounded-full ${accentColor} shrink-0`} />
-    <div className="flex items-center gap-2.5">
-      <Icon className="text-slate-400 shrink-0" size={16} />
-      <div>
-        <h3 className="text-[14px] font-black text-slate-800">{title}</h3>
-        <p className="text-[11px] text-slate-400 mt-0.5">{subtitle}</p>
-      </div>
+  <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+    <div
+      className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+      style={{ background: iconBg, boxShadow: `0 4px 14px ${iconGlow}` }}
+    >
+      <Icon size={15} className="text-white" />
+    </div>
+    <div>
+      <h3 className="text-[15px] font-black text-slate-800 leading-tight">{title}</h3>
+      <p className="text-[11px] text-slate-400 mt-0.5 font-medium">{subtitle}</p>
     </div>
   </div>
 );
 
-// ─── SectionCard — white card with top accent bar ─────────────────────────────
+// ─── SectionCard — colored border top + colored left border ──────────────────
 const SectionCard = ({
   children,
   topGradient = 'from-indigo-500 to-violet-500',
+  borderColor = '#e0e7ff',
 }: {
   children: React.ReactNode;
   topGradient?: string;
+  borderColor?: string;
 }) => (
-  <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+  <div
+    className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300"
+    style={{ border: `1.5px solid ${borderColor}` }}
+  >
     <div className={`h-1 w-full bg-gradient-to-r ${topGradient} rounded-t-2xl`} />
-    <div className="p-5 md:p-6">{children}</div>
+    <div className="p-5">{children}</div>
   </div>
 );
 
@@ -1018,7 +1741,7 @@ const SectionCard = ({
 const SelectField = ({ className = '', ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) => (
   <div className="relative">
     <select className={`${selectCls} ${className}`} {...props} />
-    <ChevronDown size={13} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+    <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
   </div>
 );
 
@@ -1026,13 +1749,18 @@ const SelectField = ({ className = '', ...props }: React.SelectHTMLAttributes<HT
 const SideCard = ({
   children,
   topGradient = 'from-indigo-500 to-violet-500',
+  borderColor = '#e0e7ff',
   className = '',
 }: {
   children: React.ReactNode;
   topGradient?: string;
+  borderColor?: string;
   className?: string;
 }) => (
-  <div className={`bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden ${className}`}>
+  <div
+    className={`bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 ${className}`}
+    style={{ border: `1.5px solid ${borderColor}` }}
+  >
     <div className={`h-1 w-full bg-gradient-to-r ${topGradient}`} />
     <div className="p-5">{children}</div>
   </div>
@@ -1042,18 +1770,22 @@ const SideCard = ({
 const SideHead = ({
   icon,
   label,
-  accentColor = 'bg-indigo-500',
+  iconBg = 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+  iconGlow = 'rgba(79,70,229,0.3)',
 }: {
   icon: React.ReactNode;
   label: string;
-  accentColor?: string;
+  iconBg?: string;
+  iconGlow?: string;
 }) => (
-  <div className="flex items-start gap-3 pb-3 mb-4 border-b border-slate-100">
-    <div className={`w-1 self-stretch rounded-full ${accentColor} shrink-0`} />
-    <div className="flex items-center gap-2">
-      <span className="text-slate-400">{icon}</span>
-      <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
+  <div className="flex items-center gap-3 pb-3 mb-4 border-b border-slate-100">
+    <div
+      className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+      style={{ background: iconBg, boxShadow: `0 4px 12px ${iconGlow}` }}
+    >
+      <span className="text-white">{icon}</span>
     </div>
+    <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
   </div>
 );
 
@@ -1163,31 +1895,70 @@ export const AddDealPage = () => {
           0%,100% { transform: translateY(0px) translateX(0px); }
           50%     { transform: translateY(-10px) translateX(6px); }
         }
+        @keyframes shimmer {
+          0%   { background-position:-200% center; }
+          100% { background-position:200% center; }
+        }
         .anim-blob   { animation: floatBlob 7s ease-in-out infinite; }
-        .anim-fade-1 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.05s; }
-        .anim-fade-2 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.15s; }
-        .anim-fade-3 { opacity:0; animation: fadeUp .5s ease-out forwards; animation-delay:.25s; }
+        .anim-fade-1 { opacity:0; animation: fadeUp .5s cubic-bezier(0.34,1.1,0.64,1) forwards; animation-delay:.05s; }
+        .anim-fade-2 { opacity:0; animation: fadeUp .5s cubic-bezier(0.34,1.1,0.64,1) forwards; animation-delay:.15s; }
+        .anim-fade-3 { opacity:0; animation: fadeUp .5s cubic-bezier(0.34,1.1,0.64,1) forwards; animation-delay:.25s; }
+        .shimmer-overlay {
+          position:absolute; inset:0; pointer-events:none;
+          background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,0.07) 50%,transparent 60%);
+          background-size:200% 100%;
+          animation:shimmer 4s ease-in-out infinite;
+        }
+        .section-card-hover {
+          transition: all 0.28s cubic-bezier(0.34,1.1,0.64,1);
+        }
+        .section-card-hover:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 28px rgba(79,70,229,0.10);
+        }
+        .btn-cta {
+          transition: all 0.22s cubic-bezier(0.34,1.2,0.64,1);
+          background: linear-gradient(125deg,#3730a3 0%,#4f46e5 40%,#7c3aed 100%);
+          box-shadow: 0 4px 18px rgba(79,70,229,0.38);
+        }
+        .btn-cta:hover:not(:disabled) {
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 0 8px 28px rgba(79,70,229,0.50);
+        }
+        .btn-cta:active:not(:disabled) { transform: scale(0.97); }
+        .btn-cancel {
+          transition: all 0.22s cubic-bezier(0.34,1.2,0.64,1);
+        }
+        .btn-cancel:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+          background: #f8fafc;
+        }
+        .btn-cancel:active { transform: scale(0.97); }
+        .bant-toggle {
+          transition: all 0.2s cubic-bezier(0.34,1.2,0.64,1);
+        }
+        .bant-toggle:hover { transform: translateY(-1px); }
       `}</style>
 
-      {/* ══════════════════════════════════════════════════
-          BANNER — identical structure to BDMTargetCreate
-      ══════════════════════════════════════════════════ */}
+      {/* ══ BANNER ══ */}
       <div
-        className="shrink-0 mx-4 mt-4 rounded-2xl overflow-hidden anim-fade-1"
+        className="shrink-0 mx-4 mt-4 rounded-2xl overflow-hidden relative anim-fade-1"
         style={{
           background: 'linear-gradient(125deg, #3730a3 0%, #4f46e5 40%, #7c3aed 100%)',
           boxShadow:  '0 8px 32px -4px rgba(79,70,229,0.45)',
         }}
       >
+        <div className="shimmer-overlay" />
         <div
-          className="px-6 py-5 flex items-center gap-4 flex-wrap"
+          className="px-6 py-5 flex items-center gap-4 flex-wrap relative z-10"
           style={{ backgroundImage: 'radial-gradient(ellipse at 80% 50%, rgba(255,255,255,0.08) 0%, transparent 60%)' }}
         >
           {/* back button */}
           <button
             onClick={() => navigate('/pipeline')}
             className="flex items-center gap-1.5 text-indigo-200 hover:text-white text-xs font-semibold
-              bg-white/10 hover:bg-white/20 px-3 py-2 rounded-xl transition-all shrink-0"
+              bg-white/10 hover:bg-white/20 px-3 py-2 rounded-xl transition-all duration-200 shrink-0"
           >
             <ArrowLeft size={14} /> Back to Pipeline
           </button>
@@ -1202,7 +1973,7 @@ export const AddDealPage = () => {
 
           {/* text */}
           <div className="flex-1 min-w-0">
-            <h1 className="text-[20px] font-black text-white leading-tight tracking-tight">Deal Builder</h1>
+            <h1 className="text-[22px] font-black text-white leading-tight tracking-tight">Deal Builder</h1>
             <p className="text-[12px] text-indigo-200 mt-0.5 font-medium">
               Qualify, structure and launch a new deal into pipeline.
             </p>
@@ -1250,7 +2021,7 @@ export const AddDealPage = () => {
 
         {/* decorative blobs */}
         <div className="pointer-events-none fixed -top-10 -left-16 w-72 h-72 rounded-full bg-blue-300/20 blur-3xl anim-blob -z-10" />
-        <div className="pointer-events-none fixed top-40 -right-20 w-80 h-80 rounded-full bg-indigo-300/15 blur-3xl anim-blob -z-10" />
+        <div className="pointer-events-none fixed top-40 -right-20 w-80 h-80 rounded-full bg-indigo-300/15 blur-3xl anim-blob -z-10" style={{ animationDelay: '3s' }} />
 
         {loadingConfig ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
@@ -1258,301 +2029,315 @@ export const AddDealPage = () => {
             <p className="text-[13px] font-medium text-slate-400">Loading form details…</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-[1fr_290px] gap-4 items-start mt-1">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-4 items-start mt-1">
 
             {/* ══ LEFT COLUMN ══ */}
             <div className="space-y-4 min-w-0">
 
               {/* error */}
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3.5 rounded-2xl flex items-center gap-2.5 font-medium">
+                <div className="bg-red-50 border border-red-200 text-red-700 text-[12px] px-4 py-3 rounded-2xl flex items-center gap-2.5 font-medium">
                   <AlertTriangle size={14} className="shrink-0" /> {error}
                 </div>
               )}
 
               {/* ── 1. Core Details ── */}
-              <SectionCard topGradient="from-indigo-500 to-violet-500" >
-                <SectionHead
-                  icon={UserRound}
-                  title="1. Core Details"
-                  subtitle="Primary contact and company information."
-                  accentColor="bg-indigo-500"
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
-                  <div className="space-y-2">
-                    <label className={labelCls}>Contact Name <span className="text-rose-400">*</span></label>
-                    <div className="relative">
-                      <UserRound size={14} className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" />
-                      <input required type="text" className={inputCls + ' pl-11'} placeholder="John Smith"
-                        value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+              <div className="section-card-hover">
+                <SectionCard topGradient="from-indigo-500 to-violet-500" borderColor="#e0e7ff">
+                  <SectionHead
+                    icon={UserRound}
+                    title="1. Core Details"
+                    subtitle="Primary contact and company information."
+                    iconBg="linear-gradient(135deg,#4f46e5,#7c3aed)"
+                    iconGlow="rgba(79,70,229,0.3)"
+                  />
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Contact Name <span className="text-rose-400">*</span></label>
+                      <div className="relative">
+                        <UserRound size={13} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none" />
+                        <input required type="text" className={inputCls + ' pl-9'} placeholder="John Smith"
+                          value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Company <span className="text-rose-400">*</span></label>
+                      <div className="relative">
+                        <Building2 size={13} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none" />
+                        <input required type="text" className={inputCls + ' pl-9'} placeholder="Acme Corp"
+                          value={formData.company} onChange={e => setFormData({ ...formData, company: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Email <span className="text-rose-400">*</span></label>
+                      <input required type="email" className={inputCls} placeholder="john@acme.com"
+                        value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Phone</label>
+                      <input type="tel" className={inputCls} placeholder="+91 …"
+                        value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Company <span className="text-rose-400">*</span></label>
-                    <div className="relative">
-                      <Building2 size={14} className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" />
-                      <input required type="text" className={inputCls + ' pl-11'} placeholder="Acme Corp"
-                        value={formData.company} onChange={e => setFormData({ ...formData, company: e.target.value })} />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Email <span className="text-rose-400">*</span></label>
-                    <input required type="email" className={inputCls} placeholder="john@acme.com"
-                      value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Phone</label>
-                    <input type="tel" className={inputCls} placeholder="+91 …"
-                      value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-                  </div>
-                </div>
-              </SectionCard>
+                </SectionCard>
+              </div>
 
               {/* ── 2. Classification ── */}
-              <SectionCard topGradient="from-emerald-500 to-teal-400">
-                <SectionHead
-                  icon={Factory}
-                  title="2. Classification"
-                  subtitle="Assign vertical, region and product focus."
-                  accentColor="bg-emerald-500"
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
-                  <div className="space-y-2">
-                    <label className={labelCls + ' flex items-center gap-1.5'}><Factory size={11} /> Vertical</label>
-                    <SelectField value={formData.vertical} onChange={e => setFormData({ ...formData, vertical: e.target.value })}>
-                      <option value="">Select…</option>
-                      {verticals.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-                    </SelectField>
+              <div className="section-card-hover">
+                <SectionCard topGradient="from-emerald-500 to-teal-400" borderColor="#d1fae5">
+                  <SectionHead
+                    icon={Factory}
+                    title="2. Classification"
+                    subtitle="Assign vertical, region and product focus."
+                    iconBg="linear-gradient(135deg,#10b981,#0d9488)"
+                    iconGlow="rgba(16,185,129,0.3)"
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+                    <div className="space-y-1.5">
+                      <label className={labelCls + ' flex items-center gap-1.5'}><Factory size={10} /> Vertical</label>
+                      <SelectField value={formData.vertical} onChange={e => setFormData({ ...formData, vertical: e.target.value })}>
+                        <option value="">Select…</option>
+                        {verticals.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                      </SelectField>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelCls + ' flex items-center gap-1.5'}><MapPin size={10} /> Region</label>
+                      <SelectField value={formData.region_rel} onChange={e => setFormData({ ...formData, region_rel: e.target.value })}>
+                        <option value="">Select…</option>
+                        {regions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                      </SelectField>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelCls + ' flex items-center gap-1.5'}><Package size={10} /> Product</label>
+                      <SelectField value={formData.product_interest} onChange={e => setFormData({ ...formData, product_interest: e.target.value })}>
+                        <option value="">Select…</option>
+                        {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </SelectField>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className={labelCls + ' flex items-center gap-1.5'}><MapPin size={11} /> Region</label>
-                    <SelectField value={formData.region_rel} onChange={e => setFormData({ ...formData, region_rel: e.target.value })}>
-                      <option value="">Select…</option>
-                      {regions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                    </SelectField>
-                  </div>
-                  <div className="space-y-2">
-                    <label className={labelCls + ' flex items-center gap-1.5'}><Package size={11} /> Product</label>
-                    <SelectField value={formData.product_interest} onChange={e => setFormData({ ...formData, product_interest: e.target.value })}>
-                      <option value="">Select…</option>
-                      {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </SelectField>
-                  </div>
-                </div>
-              </SectionCard>
+                </SectionCard>
+              </div>
 
               {/* ── 3. Deal Intelligence ── */}
-              <SectionCard topGradient="from-blue-500 to-cyan-400">
-                <SectionHead
-                  icon={Gauge}
-                  title="3. Deal Intelligence"
-                  subtitle="Value, stage, probability and deal timeline."
-                  accentColor="bg-blue-500"
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
-                  <div className="space-y-2">
-                    <label className={labelCls}>Deal Value ($) <span className="text-rose-400">*</span></label>
-                    <div className="relative">
-                      <DollarSign size={14} className="absolute left-4 top-3.5 text-slate-400 pointer-events-none" />
-                      <input required type="number" className={inputCls + ' pl-11'} placeholder="50000"
-                        value={formData.value} onChange={e => setFormData({ ...formData, value: e.target.value })} />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Stage</label>
-                    <SelectField value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as LeadStatus })}>
-                      {statusFlow.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                    </SelectField>
-                  </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Source</label>
-                    <SelectField value={formData.source} onChange={e => setFormData({ ...formData, source: e.target.value })}>
-                      <option value="cold_outreach">Cold Call</option>
-                      <option value="linkedin">LinkedIn</option>
-                      <option value="referral">Referral</option>
-                      <option value="website">Website</option>
-                    </SelectField>
-                  </div>
-
-                  {/* Probability slider — full width */}
-                  <div className="sm:col-span-3 space-y-2">
-                    <label className={labelCls}>
-                      Win Probability —{' '}
-                      <span className="text-indigo-600 normal-case font-black">{probability}%</span>
-                    </label>
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5">
-                      <input type="range" min={5} max={95} step={5} value={probability}
-                        onChange={e => setProbability(Number(e.target.value))}
-                        className="w-full accent-indigo-600 cursor-pointer" />
-                      <div className="flex justify-between text-[10px] text-slate-400 mt-1.5 font-black">
-                        <span>5%</span><span>50%</span><span>95%</span>
+              <div className="section-card-hover">
+                <SectionCard topGradient="from-blue-500 to-cyan-400" borderColor="#dbeafe">
+                  <SectionHead
+                    icon={Gauge}
+                    title="3. Deal Intelligence"
+                    subtitle="Value, stage, probability and deal timeline."
+                    iconBg="linear-gradient(135deg,#3b82f6,#06b6d4)"
+                    iconGlow="rgba(59,130,246,0.3)"
+                  />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Deal Value ($) <span className="text-rose-400">*</span></label>
+                      <div className="relative">
+                        <DollarSign size={13} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none" />
+                        <input required type="number" className={inputCls + ' pl-9'} placeholder="50000"
+                          value={formData.value} onChange={e => setFormData({ ...formData, value: e.target.value })} />
                       </div>
                     </div>
-                  </div>
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Stage</label>
+                      <SelectField value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as LeadStatus })}>
+                        {statusFlow.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                      </SelectField>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Source</label>
+                      <SelectField value={formData.source} onChange={e => setFormData({ ...formData, source: e.target.value })}>
+                        <option value="cold_outreach">Cold Call</option>
+                        <option value="linkedin">LinkedIn</option>
+                        <option value="referral">Referral</option>
+                        <option value="website">Website</option>
+                      </SelectField>
+                    </div>
 
-                  <div className="space-y-2">
-                    <label className={labelCls}>Priority</label>
-                    <SelectField value={priority} onChange={e => setPriority(e.target.value as 'low' | 'medium' | 'high')}>
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                    </SelectField>
-                  </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Timeline</label>
-                    <SelectField value={timeline} onChange={e => setTimeline(e.target.value)}>
-                      <option>This week</option>
-                      <option>This month</option>
-                      <option>Next quarter</option>
-                      <option>Long-term</option>
-                    </SelectField>
-                  </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Next Action</label>
-                    <input type="text" className={inputCls} value={nextAction} onChange={e => setNextAction(e.target.value)} />
-                  </div>
+                    {/* Probability slider — full width */}
+                    <div className="col-span-2 sm:col-span-3 space-y-1.5">
+                      <label className={labelCls}>
+                        Win Probability —{' '}
+                        <span className="text-indigo-600 normal-case font-black">{probability}%</span>
+                      </label>
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                        <input type="range" min={5} max={95} step={5} value={probability}
+                          onChange={e => setProbability(Number(e.target.value))}
+                          className="w-full accent-indigo-600 cursor-pointer" />
+                        <div className="flex justify-between text-[10px] text-slate-400 mt-1 font-black">
+                          <span>5%</span><span>50%</span><span>95%</span>
+                        </div>
+                      </div>
+                    </div>
 
-                  <div className="sm:col-span-3 space-y-2">
-                    <label className={labelCls}>Internal Notes</label>
-                    <input type="text" className={inputCls} value={notes}
-                      onChange={e => setNotes(e.target.value)} placeholder="Any internal context…" />
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Priority</label>
+                      <SelectField value={priority} onChange={e => setPriority(e.target.value as 'low' | 'medium' | 'high')}>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </SelectField>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Timeline</label>
+                      <SelectField value={timeline} onChange={e => setTimeline(e.target.value)}>
+                        <option>This week</option>
+                        <option>This month</option>
+                        <option>Next quarter</option>
+                        <option>Long-term</option>
+                      </SelectField>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Next Action</label>
+                      <input type="text" className={inputCls} value={nextAction} onChange={e => setNextAction(e.target.value)} />
+                    </div>
+
+                    <div className="col-span-2 sm:col-span-3 space-y-1.5">
+                      <label className={labelCls}>Internal Notes</label>
+                      <input type="text" className={inputCls} value={notes}
+                        onChange={e => setNotes(e.target.value)} placeholder="Any internal context…" />
+                    </div>
                   </div>
-                </div>
-              </SectionCard>
+                </SectionCard>
+              </div>
 
               {/* ── 4. Stakeholder & Decision ── */}
-              <SectionCard topGradient="from-violet-500 to-purple-400">
-                <SectionHead
-                  icon={Users}
-                  title="4. Stakeholder & Decision"
-                  subtitle="Who decides, when, and what's the core need."
-                  accentColor="bg-violet-500"
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
-                  <div className="space-y-2">
-                    <label className={labelCls}>Decision Maker</label>
-                    <input className={inputCls} value={decisionMaker}
-                      onChange={e => setDecisionMaker(e.target.value)} placeholder="Name" />
+              <div className="section-card-hover">
+                <SectionCard topGradient="from-violet-500 to-purple-400" borderColor="#ede9fe">
+                  <SectionHead
+                    icon={Users}
+                    title="4. Stakeholder & Decision"
+                    subtitle="Who decides, when, and what's the core need."
+                    iconBg="linear-gradient(135deg,#7c3aed,#9333ea)"
+                    iconGlow="rgba(124,58,237,0.3)"
+                  />
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Decision Maker</label>
+                      <input className={inputCls} value={decisionMaker}
+                        onChange={e => setDecisionMaker(e.target.value)} placeholder="Name" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Role / Title</label>
+                      <input className={inputCls} value={decisionRole}
+                        onChange={e => setDecisionRole(e.target.value)} placeholder="CTO, VP Sales…" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Decision Date</label>
+                      <input type="date" className={inputCls} value={decisionDate}
+                        onChange={e => setDecisionDate(e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Core Need</label>
+                      <input className={inputCls} value={dealNeed}
+                        onChange={e => setDealNeed(e.target.value)} placeholder="Main pain point" />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Role / Title</label>
-                    <input className={inputCls} value={decisionRole}
-                      onChange={e => setDecisionRole(e.target.value)} placeholder="CTO, VP Sales…" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Expected Decision Date</label>
-                    <input type="date" className={inputCls} value={decisionDate}
-                      onChange={e => setDecisionDate(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Core Need</label>
-                    <input className={inputCls} value={dealNeed}
-                      onChange={e => setDealNeed(e.target.value)} placeholder="Main pain point" />
-                  </div>
-                </div>
-              </SectionCard>
+                </SectionCard>
+              </div>
 
               {/* ── 5. Qualification & Risk ── */}
-              <SectionCard topGradient="from-amber-400 to-orange-400">
-                <SectionHead
-                  icon={ShieldCheck}
-                  title="5. Qualification & Risk"
-                  subtitle="BANT checklist, competitors and risk assessment."
-                  accentColor="bg-amber-400"
-                />
-                {/* BANT toggles */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 mb-5">
-                  {[
-                    { label: 'Budget Confirmed',   state: budgetConfirmed,    set: setBudgetConfirmed },
-                    { label: 'Authority Confirmed', state: authorityConfirmed, set: setAuthorityConfirmed },
-                    { label: 'Timeline Confirmed',  state: timelineConfirmed,  set: setTimelineConfirmed },
-                  ].map(({ label, state, set }) => (
-                    <label
-                      key={label}
-                      className={`flex items-center gap-2.5 border-2 rounded-xl px-4 py-3.5 cursor-pointer
-                        transition-all text-[12px] font-black select-none ${
-                        state
-                          ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
-                          : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300'
-                      }`}
-                    >
-                      <input type="checkbox" checked={state}
-                        onChange={e => set(e.target.checked)} className="accent-emerald-600 w-3.5 h-3.5" />
-                      {label}
-                    </label>
-                  ))}
-                </div>
+              <div className="section-card-hover">
+                <SectionCard topGradient="from-amber-400 to-orange-400" borderColor="#fef3c7">
+                  <SectionHead
+                    icon={ShieldCheck}
+                    title="5. Qualification & Risk"
+                    subtitle="BANT checklist, competitors and risk assessment."
+                    iconBg="linear-gradient(135deg,#f59e0b,#f97316)"
+                    iconGlow="rgba(245,158,11,0.3)"
+                  />
+                  {/* BANT toggles */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-4 mb-4">
+                    {[
+                      { label: 'Budget Confirmed',   state: budgetConfirmed,    set: setBudgetConfirmed },
+                      { label: 'Authority Confirmed', state: authorityConfirmed, set: setAuthorityConfirmed },
+                      { label: 'Timeline Confirmed',  state: timelineConfirmed,  set: setTimelineConfirmed },
+                    ].map(({ label, state, set }) => (
+                      <label
+                        key={label}
+                        className={`bant-toggle flex items-center gap-2.5 border-2 rounded-xl px-4 py-3 cursor-pointer
+                          text-[12px] font-black select-none ${
+                          state
+                            ? 'bg-emerald-50 border-emerald-400 text-emerald-700'
+                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300'
+                        }`}
+                      >
+                        <input type="checkbox" checked={state}
+                          onChange={e => set(e.target.checked)} className="accent-emerald-600 w-3.5 h-3.5" />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className={labelCls}>Competitor</label>
-                    <input className={inputCls} value={competitor}
-                      onChange={e => setCompetitor(e.target.value)} placeholder="Main competitor" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Competitor</label>
+                      <input className={inputCls} value={competitor}
+                        onChange={e => setCompetitor(e.target.value)} placeholder="Main competitor" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelCls}>Risk Level</label>
+                      <SelectField value={riskLevel}
+                        onChange={e => setRiskLevel(e.target.value as 'low' | 'medium' | 'high')}>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                      </SelectField>
+                    </div>
+                    <div className="col-span-2 space-y-1.5">
+                      <label className={labelCls}>Risk Notes</label>
+                      <textarea rows={2} className={inputCls + ' resize-none'}
+                        value={riskNotes} onChange={e => setRiskNotes(e.target.value)} />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Risk Level</label>
-                    <SelectField value={riskLevel}
-                      onChange={e => setRiskLevel(e.target.value as 'low' | 'medium' | 'high')}>
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                    </SelectField>
-                  </div>
-                  <div className="sm:col-span-2 space-y-2">
-                    <label className={labelCls}>Risk Notes</label>
-                    <textarea rows={3} className={inputCls + ' resize-none min-h-[80px]'}
-                      value={riskNotes} onChange={e => setRiskNotes(e.target.value)} />
-                  </div>
-                </div>
-              </SectionCard>
+                </SectionCard>
+              </div>
 
               {/* ── 6. Execution Plan ── */}
-              <SectionCard topGradient="from-rose-500 to-pink-400">
-                <SectionHead
-                  icon={ClipboardCheck}
-                  title="6. Execution Plan"
-                  subtitle="Lay out the three key steps to close this deal."
-                  accentColor="bg-rose-500"
-                />
-                <div className="space-y-3 mt-5">
-                  {[
-                    { label: 'Step 1', value: actionOne,   set: setActionOne },
-                    { label: 'Step 2', value: actionTwo,   set: setActionTwo },
-                    { label: 'Step 3', value: actionThree, set: setActionThree },
-                  ].map(({ label, value, set }, idx) => (
-                    <div key={label} className="flex items-center gap-3">
-                      <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center text-[11px] font-black text-white shrink-0"
-                        style={{ background: 'linear-gradient(125deg, #4f46e5, #7c3aed)' }}
-                      >
-                        {idx + 1}
+              <div className="section-card-hover">
+                <SectionCard topGradient="from-rose-500 to-pink-400" borderColor="#ffe4e6">
+                  <SectionHead
+                    icon={ClipboardCheck}
+                    title="6. Execution Plan"
+                    subtitle="Lay out the three key steps to close this deal."
+                    iconBg="linear-gradient(135deg,#f43f5e,#ec4899)"
+                    iconGlow="rgba(244,63,94,0.3)"
+                  />
+                  <div className="space-y-2.5 mt-4">
+                    {[
+                      { label: 'Step 1', value: actionOne,   set: setActionOne },
+                      { label: 'Step 2', value: actionTwo,   set: setActionTwo },
+                      { label: 'Step 3', value: actionThree, set: setActionThree },
+                    ].map(({ label, value, set }, idx) => (
+                      <div key={label} className="flex items-center gap-3">
+                        <div
+                          className="w-7 h-7 rounded-xl flex items-center justify-center text-[11px] font-black text-white shrink-0"
+                          style={{ background: 'linear-gradient(125deg, #4f46e5, #7c3aed)' }}
+                        >
+                          {idx + 1}
+                        </div>
+                        <input className={`${inputCls} flex-1`} value={value}
+                          onChange={e => set(e.target.value)} />
                       </div>
-                      <input className={`${inputCls} flex-1`} value={value}
-                        onChange={e => set(e.target.value)} />
-                    </div>
-                  ))}
-                </div>
-              </SectionCard>
+                    ))}
+                  </div>
+                </SectionCard>
+              </div>
 
-              {/* ── Footer actions ── */}
-              <div className="flex items-center justify-end gap-3 pt-1 pb-6">
+              {/* ── Footer actions — centered with hover shadows ── */}
+              <div className="flex items-center justify-center gap-4 pt-2 pb-6">
                 <button
                   type="button"
                   onClick={() => navigate('/pipeline')}
-                  className="px-5 py-3 rounded-xl text-sm font-semibold text-slate-500
-                    bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+                  className="btn-cancel px-8 py-3 rounded-xl text-sm font-black text-slate-600
+                    bg-white border-2 border-slate-200 min-w-[130px]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-7 py-3 text-white rounded-xl text-sm font-black
-                    flex items-center gap-2 transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
-                  style={{
-                    background: 'linear-gradient(125deg, #3730a3 0%, #4f46e5 40%, #7c3aed 100%)',
-                    boxShadow:  '0 4px 18px rgba(79,70,229,0.40)',
-                  }}
+                  className="btn-cta px-10 py-3 text-white rounded-xl text-sm font-black
+                    flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed min-w-[150px] justify-center"
                 >
                   {saving && <Loader2 size={14} className="animate-spin" />}
                   {saving ? 'Creating…' : 'Create Deal'}
@@ -1564,8 +2349,13 @@ export const AddDealPage = () => {
             <aside className="space-y-4 xl:sticky xl:top-4 h-fit anim-fade-3">
 
               {/* Deal Snapshot */}
-              <SideCard topGradient="from-indigo-500 to-violet-500">
-                <SideHead icon={<Gauge size={14} />} label="Deal Snapshot" accentColor="bg-indigo-500" />
+              <SideCard topGradient="from-indigo-500 to-violet-500" borderColor="#e0e7ff">
+                <SideHead
+                  icon={<Gauge size={13} />}
+                  label="Deal Snapshot"
+                  iconBg="linear-gradient(135deg,#4f46e5,#7c3aed)"
+                  iconGlow="rgba(79,70,229,0.3)"
+                />
                 <p className="text-[15px] font-black text-slate-800 truncate">
                   {formData.company || 'Your company'}
                 </p>
@@ -1573,64 +2363,74 @@ export const AddDealPage = () => {
                   {formData.name || 'Primary contact'}
                 </p>
 
-                <div className="grid grid-cols-2 gap-2.5 mb-3">
-                  <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3.5">
-                    <Gauge size={13} className="text-indigo-400 mb-1.5" />
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3">
+                    <Gauge size={12} className="text-indigo-400 mb-1" />
                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">Probability</p>
-                    <p className="text-[16px] font-black text-indigo-700">{probability}%</p>
+                    <p className="text-[15px] font-black text-indigo-700">{probability}%</p>
                   </div>
-                  <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3.5">
-                    <Target size={13} className="text-indigo-400 mb-1.5" />
+                  <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3">
+                    <Target size={12} className="text-indigo-400 mb-1" />
                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">Expected</p>
-                    <p className="text-[16px] font-black text-indigo-700">${expectedValue.toLocaleString()}</p>
+                    <p className="text-[15px] font-black text-indigo-700">${expectedValue.toLocaleString()}</p>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3">
-                  <Clock3 size={14} className="text-indigo-400 shrink-0" />
+                <div className="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 flex items-center gap-3">
+                  <Clock3 size={13} className="text-indigo-400 shrink-0" />
                   <div>
                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Timeline</p>
-                    <p className="text-[13px] font-black text-slate-700">{timeline}</p>
+                    <p className="text-[12px] font-black text-slate-700">{timeline}</p>
                   </div>
                 </div>
               </SideCard>
 
               {/* Readiness */}
-              <SideCard topGradient="from-emerald-500 to-teal-400">
-                <SideHead icon={<ClipboardCheck size={14} />} label="Readiness" accentColor="bg-emerald-500" />
+              <SideCard topGradient="from-emerald-500 to-teal-400" borderColor="#d1fae5">
+                <SideHead
+                  icon={<ClipboardCheck size={13} />}
+                  label="Readiness"
+                  iconBg="linear-gradient(135deg,#10b981,#0d9488)"
+                  iconGlow="rgba(16,185,129,0.3)"
+                />
                 <div className="space-y-2">
                   {[
-                    { label: 'Contact details',   ok: !!formData.name && !!formData.email,         icon: <UserRound size={12} /> },
-                    { label: 'Company and value', ok: !!formData.company && !!formData.value,       icon: <Building2 size={12} /> },
-                    { label: 'Classification',    ok: !!formData.vertical && !!formData.region_rel, icon: <ClipboardCheck size={12} /> },
-                    { label: 'Next action',       ok: !!nextAction,                                 icon: <CircleDashed size={12} /> },
+                    { label: 'Contact details',   ok: !!formData.name && !!formData.email,         icon: <UserRound size={11} /> },
+                    { label: 'Company and value', ok: !!formData.company && !!formData.value,       icon: <Building2 size={11} /> },
+                    { label: 'Classification',    ok: !!formData.vertical && !!formData.region_rel, icon: <ClipboardCheck size={11} /> },
+                    { label: 'Next action',       ok: !!nextAction,                                 icon: <CircleDashed size={11} /> },
                   ].map(({ label, ok, icon }) => (
                     <div
                       key={label}
-                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border
-                        text-[12px] font-black transition-all ${
+                      className={`flex items-center justify-between px-3 py-2.5 rounded-xl border
+                        text-[12px] font-black transition-all duration-200 ${
                         ok
                           ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                           : 'bg-slate-50 border-slate-200 text-slate-400'
                       }`}
                     >
                       <span className="flex items-center gap-2">{icon}{label}</span>
-                      <CheckCircle2 size={14} className={ok ? 'text-emerald-500' : 'text-slate-200'} />
+                      <CheckCircle2 size={13} className={ok ? 'text-emerald-500' : 'text-slate-200'} />
                     </div>
                   ))}
                 </div>
               </SideCard>
 
               {/* Deal Guidance */}
-              <SideCard topGradient="from-violet-500 to-purple-400">
-                <SideHead icon={<ShieldCheck size={14} />} label="Deal Guidance" accentColor="bg-violet-500" />
+              <SideCard topGradient="from-violet-500 to-purple-400" borderColor="#ede9fe">
+                <SideHead
+                  icon={<ShieldCheck size={13} />}
+                  label="Deal Guidance"
+                  iconBg="linear-gradient(135deg,#7c3aed,#9333ea)"
+                  iconGlow="rgba(124,58,237,0.3)"
+                />
                 <p className="text-[12px] text-slate-600 leading-relaxed font-medium">
                   {priority === 'high'
                     ? 'High-priority motion: schedule decision-maker call within 24 hours and share a concise, ROI-led proposal.'
                     : 'Keep momentum: lock next action, confirm authority, and close timeline gaps before negotiation.'}
                 </p>
                 <div className={`mt-4 inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-[12px] font-black ${riskColor}`}>
-                  <ShieldCheck size={13} /> Risk: {riskLevel}
+                  <ShieldCheck size={12} /> Risk: {riskLevel}
                 </div>
               </SideCard>
 
