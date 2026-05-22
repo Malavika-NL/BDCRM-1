@@ -8,6 +8,7 @@ from django.db import OperationalError
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 import os
 import requests
 import re
@@ -40,7 +41,7 @@ from .serializers import (
     TaskSerializer, TagSerializer, CompanySerializer, AIInteractionLogSerializer,
     ConsumptionPatternSerializer, AgentIngestionSerializer
 )
-from .serializers import LoginSerializer, UserCreateSerializer, UserMeSerializer
+from .serializers import LoginSerializer, ChangePasswordSerializer, UserCreateSerializer, UserMeSerializer
 from .ai_engine import (
     LeadScoringEngine, ChurnPredictionEngine, ConversationIntelligence,
     CRMChatbot, RevenueForecastEngine, AIDocumentGenerator,
@@ -108,6 +109,15 @@ class LoginView(APIView):
         return Response(_token_payload_for_user(user), status=status.HTTP_200_OK)
 
 
+class RefreshAuthTokenView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = TokenRefreshSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+
 class CreateUserView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -121,6 +131,17 @@ class CreateUserView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response(UserMeSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={"user": request.user})
+        serializer.is_valid(raise_exception=True)
+        request.user.set_password(serializer.validated_data["new_password"])
+        request.user.save(update_fields=["password"])
+        return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])

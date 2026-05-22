@@ -44,6 +44,8 @@ urlpatterns = [
     path('api/run-free-campaign/', views.run_free_campaign, name='run_free_campaign'),
     path('admin/', admin.site.urls),
     path('api/auth/login/', views.LoginView.as_view(), name='auth_login'),
+    path('api/auth/refresh/', views.RefreshAuthTokenView.as_view(), name='auth_refresh_token'),
+    path('api/auth/change-password/', views.ChangePasswordView.as_view(), name='auth_change_password'),
     path('api/auth/create-user/', views.CreateUserView.as_view(), name='auth_create_user'),
     path('api/auth/me/', views.me, name='auth_me'),
     path('api/auth/users/', views.list_users, name='auth_list_users'), 

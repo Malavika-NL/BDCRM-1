@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from .models import AIActivityAnalysis, AIAlert, AIDocument, AILeadProfile, AIScoreSnapshot, ConsumptionPattern, Lead, Course, Module, Lesson, Activity, Region, Task, Tag, Company, Vertical
 
 # --- NEW SERIALIZERS ---
@@ -341,6 +343,36 @@ class LoginSerializer(serializers.Serializer):
         email = attrs.get("email", "").strip()
         if not username and not email:
             raise serializers.ValidationError("Provide username or email.")
+        return attrs
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    new_password = serializers.CharField(write_only=True, min_length=6, trim_whitespace=False)
+    confirm_password = serializers.CharField(write_only=True, min_length=6, trim_whitespace=False)
+
+    def validate_current_password(self, value):
+        user = self.context.get("user")
+        if user and not user.check_password(value):
+            raise serializers.ValidationError("Current password is incorrect.")
+        return value
+
+    def validate(self, attrs):
+        user = self.context.get("user")
+        new_password = attrs.get("new_password", "")
+        confirm_password = attrs.get("confirm_password", "")
+
+        if new_password != confirm_password:
+            raise serializers.ValidationError({"confirm_password": "New passwords do not match."})
+
+        if user and user.check_password(new_password):
+            raise serializers.ValidationError({"new_password": "New password must be different from current password."})
+
+        try:
+            validate_password(new_password, user=user)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"new_password": list(exc.messages)})
+
         return attrs
 
 

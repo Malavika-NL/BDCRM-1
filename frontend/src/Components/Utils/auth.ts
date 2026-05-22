@@ -24,12 +24,19 @@ export const authStore = {
     localStorage.setItem(REFRESH_KEY, refresh);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
   },
+  setAccessToken: (access: string) => {
+    localStorage.setItem(TOKEN_KEY, access);
+  },
+  setRefreshToken: (refresh: string) => {
+    localStorage.setItem(REFRESH_KEY, refresh);
+  },
   clearSession: () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(USER_KEY);
   },
   getToken: () => localStorage.getItem(TOKEN_KEY),
+  getRefreshToken: () => localStorage.getItem(REFRESH_KEY),
   getUser: (): AuthUser | null => {
     const raw = localStorage.getItem(USER_KEY);
     if (!raw) return null;
