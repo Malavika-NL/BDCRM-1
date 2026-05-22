@@ -1205,7 +1205,7 @@ import {
   Network, Wrench, Flag, ClipboardList, Lightbulb, Building2,
 } from 'lucide-react';
 
-const API_BASE = 'http://127.0.0.1:8000/api';
+const API_BASE = '/api';
 
 type OptionItem   = { id: number; name: string };
 type ChoiceOption = { value: string; label: string };

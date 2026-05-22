@@ -1162,8 +1162,8 @@ import {
   UserCheck, Eye, EyeOff, Sparkles,
 } from 'lucide-react';
 
-const API_URL   = 'http://127.0.0.1:8000/api/auth/create-user/';
-const USERS_URL = 'http://127.0.0.1:8000/api/auth/users/';
+const API_URL   = '/api/auth/create-user/';
+const USERS_URL = '/api/auth/users/';
 
 const labelCls = 'block text-[13px] font-bold text-slate-500 uppercase tracking-wider mb-1.5';
 const inputCls =
@@ -1264,17 +1264,35 @@ export const UserCreationPage: React.FC = () => {
   if (currentUser?.role !== 'admin') return <Navigate to="/dashboard" replace />;
 
   const update = (key: string, value: any) => setForm(p => ({ ...p, [key]: value }));
+  const extractErrorMessage = (data: any, fallback: string) => {
+    if (!data) return fallback;
+    if (typeof data === 'string') return data;
+    if (typeof data.detail === 'string') return data.detail;
+    if (typeof data.message === 'string') return data.message;
+    if (Array.isArray(data.non_field_errors) && data.non_field_errors.length) {
+      return String(data.non_field_errors[0]);
+    }
+    for (const value of Object.values(data)) {
+      if (Array.isArray(value) && value.length) return String(value[0]);
+      if (typeof value === 'string' && value.trim()) return value;
+    }
+    return fallback;
+  };
 
   const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
       const res = await fetch(USERS_URL, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(Array.isArray(data) ? data : data.results || []);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(extractErrorMessage(data, 'Failed to load users.'));
       }
-    } catch {}
-    setLoadingUsers(false);
+      setUsers(Array.isArray(data) ? data : data?.results || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load users.');
+    } finally {
+      setLoadingUsers(false);
+    }
   };
 
   useEffect(() => { fetchUsers(); }, []);
@@ -1288,12 +1306,12 @@ export const UserCreationPage: React.FC = () => {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(form),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || data.username?.[0] || 'Failed to create user.');
-      setSuccess(`User "${data.username}" created successfully.`);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(extractErrorMessage(data, 'Failed to create user.'));
+      setSuccess(`User "${data?.username || form.username}" created successfully.`);
       setForm(emptyForm);
       setModalOpen(false);
-      fetchUsers();
+      await fetchUsers();
     } catch (err: any) {
       setError(err.message || 'Failed to create user.');
     } finally {
@@ -1607,7 +1625,7 @@ export const UserCreationPage: React.FC = () => {
             </div>
 
             {/* modal body */}
-            <form onSubmit={handleSubmit}
+            <form id="create-user-form" onSubmit={handleSubmit}
               className="flex-1 overflow-y-auto px-7 py-6 space-y-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               style={{ background:'linear-gradient(180deg,#fafbff,#f8fafc)' }}>
 
@@ -1776,7 +1794,7 @@ export const UserCreationPage: React.FC = () => {
                 style={{ border:'1.5px solid #e2e8f0' }}>
                 Cancel
               </button>
-              <button onClick={handleSubmit} disabled={loading}
+              <button type="submit" form="create-user-form" disabled={loading}
                 className={`btn-cta flex items-center gap-2.5 px-8 py-3 text-[15px] font-black rounded-xl text-white ${loading ? '!bg-slate-200 !text-slate-400 !shadow-none cursor-not-allowed' : ''}`}
                 style={loading ? { background:'#e2e8f0', boxShadow:'none' } : {}}>
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}

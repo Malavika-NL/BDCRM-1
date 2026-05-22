@@ -970,7 +970,7 @@ import {
   X, Users, BarChart2, Target
 } from 'lucide-react';
 
-const API_URL = 'http://127.0.0.1:8000/api/ai-prospector';
+const API_URL = '/api/ai-prospector';
 
 interface Profile {
   name: string;

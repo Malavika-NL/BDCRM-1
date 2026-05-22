@@ -2013,7 +2013,7 @@ import {
 import { api } from '../Utils/api';
 import type { DashboardStats } from '../Utils/types';
 
-const API_BASE = 'http://127.0.0.1:8000/api';
+const API_BASE = '/api';
 
 type ActivityItemType = {
   id: number; activity_type: string; summary?: string; created_at: string;

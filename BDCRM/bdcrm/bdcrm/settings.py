@@ -35,6 +35,13 @@ def _load_dotenv(dotenv_path: Path) -> None:
 _load_dotenv(BASE_DIR / ".env")
 
 
+def _csv_env(name: str, default: list[str]) -> list[str]:
+    raw_value = os.getenv(name, "")
+    if not raw_value.strip():
+        return default
+    return [part.strip() for part in raw_value.split(",") if part.strip()]
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
@@ -44,8 +51,20 @@ SECRET_KEY = 'django-insecure-ujsoj4d(t-tiud8l4m%31)&j6@y-9y-qjfo)cxx(i5@!f$)156
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-CORS_ALLOW_ALL_ORIGINS = True
+ALLOWED_HOSTS = _csv_env("DJANGO_ALLOWED_HOSTS", ["127.0.0.1", "localhost"])
+
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = _csv_env(
+    "DJANGO_CORS_ALLOWED_ORIGINS",
+    [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+    ],
+)
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = _csv_env("DJANGO_CSRF_TRUSTED_ORIGINS", CORS_ALLOWED_ORIGINS)
 
 # Application definition
 

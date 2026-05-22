@@ -11,7 +11,7 @@ import type {
 } from './types';
 
 // Change this if you deploy to AWS/Heroku
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = '/api';
 
 export const api = {
 
@@ -20,7 +20,7 @@ export const api = {
   // ==========================================
 
   getLeads: async (search: string = ''): Promise<Lead[]> => {
-    const url = new URL(`${API_BASE_URL}/leads/`);
+    const url = new URL(`${API_BASE_URL}/leads/`, window.location.origin);
     if (search) url.searchParams.append('search', search);
     const res = await fetch(url.toString());
     if (!res.ok) throw new Error('Failed to fetch leads');
@@ -79,7 +79,7 @@ export const api = {
   },
 
   getTasks: async (is_completed?: boolean): Promise<Task[]> => {
-    const url = new URL(`${API_BASE_URL}/tasks/`);
+    const url = new URL(`${API_BASE_URL}/tasks/`, window.location.origin);
     if (is_completed !== undefined) url.searchParams.append('is_completed', is_completed.toString());
     const res = await fetch(url.toString());
     if (!res.ok) throw new Error('Failed to fetch tasks');

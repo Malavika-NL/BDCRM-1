@@ -638,7 +638,7 @@ import {
   Plus, Trash2, Loader2, Users, Network, Wrench, Building2,
 } from 'lucide-react';
 
-const API_BASE = 'http://127.0.0.1:8000/api';
+const API_BASE = '/api';
 
 // ─── CONFIG CARD ─────────────────────────────────────────────────────────────
 const ConfigCard = ({

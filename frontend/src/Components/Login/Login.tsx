@@ -21,7 +21,7 @@ export const LoginPage: React.FC = () => {
 
     try {
       const cleanIdentifier = identifier.trim();
-      const res = await fetch('http://127.0.0.1:8000/api/auth/login/', {
+      const res = await fetch('/api/auth/login/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
@@ -40,7 +40,7 @@ export const LoginPage: React.FC = () => {
       authStore.setSession(data.access, data.refresh, data.user);
 
       if (data.user?.role === 'admin') {
-        await fetch('http://127.0.0.1:8000/api/auth/bootstrap-admin/', {
+        await fetch('/api/auth/bootstrap-admin/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
