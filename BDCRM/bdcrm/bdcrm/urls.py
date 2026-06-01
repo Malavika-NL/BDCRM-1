@@ -4,6 +4,7 @@ from rest_framework import routers
 from crm import views 
 
 router = routers.DefaultRouter()
+router.register(r'contacts', views.ContactViewSet, basename='contact')
 router.register(r'leads', views.LeadViewSet)
 router.register(r'activities', views.ActivityViewSet) # New
 router.register(r'tasks', views.TaskViewSet)          # New

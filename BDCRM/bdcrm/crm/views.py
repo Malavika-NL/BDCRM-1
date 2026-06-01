@@ -32,13 +32,13 @@ from .serializers import (
     CampaignWorkspaceGenerateSerializer, ActivityPlannerSerializer,
     PlannerMemberPlanSerializer, PlannerTaskSerializer
 )
-from .models import (AILeadProfile, Lead, Course, Activity, Task, Tag, Company, Vertical, Region, Industry, Campaign, AIInteractionLog,
+from .models import (AILeadProfile, Lead, Contact, Course, Activity, Task, Tag, Company, Vertical, Region, Industry, Campaign, AIInteractionLog,
                      ConsumptionPattern, ProductCategory, Enrollment, AILeadProfile, AIScoreSnapshot, AIActivityAnalysis,
     AIAlert, AIChatSession, AIDocument)
 from .serializers import (
     LeadSerializer, CourseSerializer, ActivitySerializer,    AILeadProfileSerializer, AIScoreSnapshotSerializer, AIActivityAnalysisSerializer,
     AIAlertSerializer, AIDocumentSerializer, AIChatInputSerializer,
-    TaskSerializer, TagSerializer, CompanySerializer, AIInteractionLogSerializer,
+    TaskSerializer, TagSerializer, CompanySerializer, ContactSerializer, AIInteractionLogSerializer,
     ConsumptionPatternSerializer, AgentIngestionSerializer
 )
 from .serializers import LoginSerializer, ChangePasswordSerializer, UserCreateSerializer, UserMeSerializer
@@ -169,6 +169,14 @@ def list_users(request):
         return Response({"detail": "Only admin can view users."}, status=status.HTTP_403_FORBIDDEN)
     users = User.objects.all().order_by('-date_joined')
     return Response(UserMeSerializer(users, many=True).data)
+
+
+class ContactViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Contact.objects.all().order_by("-created_at")
+    serializer_class = ContactSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["person_name", "company_name", "email", "phone", "address", "region", "vertical"]
+    ordering_fields = ["created_at", "updated_at", "person_name", "company_name"]
 
 
     

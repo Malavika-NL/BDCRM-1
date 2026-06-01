@@ -364,28 +364,20 @@
 
 import React, { useEffect, useState } from 'react';
 import { api } from '../Utils/api';
-import type { Lead } from '../Utils/types';
+import type { Contact } from '../Utils/types';
 import { Search, Users, Mail, Building2 } from 'lucide-react';
 
-const STATUS_BADGE: Record<string, string> = {
-  new:         'bg-blue-50 text-blue-700 border-blue-200',
-  contacted:   'bg-indigo-50 text-indigo-700 border-indigo-200',
-  negotiation: 'bg-amber-50 text-amber-700 border-amber-200',
-  won:         'bg-emerald-50 text-emerald-700 border-emerald-200',
-  lost:        'bg-red-50 text-red-700 border-red-200',
-};
-
 export const Contacts = () => {
-  const [leads, setLeads]   = useState<Lead[]>([]);
+  const [contacts, setContacts]   = useState<Contact[]>([]);
   const [search, setSearch] = useState('');
 
-  const fetchLeads = async () => {
-    const data = await api.getLeads(search);
-    setLeads(data);
+  const fetchContacts = async () => {
+    const data = await api.getContacts(search);
+    setContacts(data);
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => fetchLeads(), 300);
+    const timer = setTimeout(() => fetchContacts(), 300);
     return () => clearTimeout(timer);
   }, [search]);
 
@@ -413,8 +405,8 @@ export const Contacts = () => {
   const TABLE_HEADERS = [
     { label: 'Contact',    color: 'text-blue-200'   },
     { label: 'Company',    color: 'text-violet-200' },
-    { label: 'Status',     color: 'text-emerald-200'},
-    { label: 'Deal Value', color: 'text-amber-200'  },
+    { label: 'Designation', color: 'text-emerald-200'},
+    { label: 'Phone', color: 'text-amber-200'  },
     { label: 'Added',      color: 'text-pink-200'   },
   ];
 
@@ -498,12 +490,12 @@ export const Contacts = () => {
               Complete directory of everyone in your pipeline.
             </p>
           </div>
-          {leads.length > 0 && (
+          {contacts.length > 0 && (
             <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl shrink-0"
               style={{ backgroundColor:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.2)', backdropFilter:'blur(4px)' }}>
               <Users size={14} className="text-indigo-200" />
               <span className="text-[13px] font-black text-indigo-100">
-                {leads.length} contact{leads.length !== 1 ? 's' : ''}
+                {contacts.length} contact{contacts.length !== 1 ? 's' : ''}
               </span>
             </div>
           )}
@@ -529,7 +521,7 @@ export const Contacts = () => {
               <div>
                 <h2 className="text-[17px] font-black text-slate-800 leading-tight">Contact Directory</h2>
                 <p className="text-[12px] text-slate-400 font-medium mt-0.5">
-                  {leads.length} contact{leads.length !== 1 ? 's' : ''} found
+                  {contacts.length} contact{contacts.length !== 1 ? 's' : ''} found
                 </p>
               </div>
             </div>
@@ -553,7 +545,7 @@ export const Contacts = () => {
           </div>
 
           {/* empty state */}
-          {leads.length === 0 ? (
+          {contacts.length === 0 ? (
             <div className="py-20 flex flex-col items-center gap-4">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
                 style={{ background:'linear-gradient(145deg,#f8fafc,#f1f5f9)', border:'1.5px dashed #e2e8f0' }}>
@@ -579,8 +571,8 @@ export const Contacts = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {leads.map((lead, index) => (
-                    <tr key={lead.id}
+                  {contacts.map((contact, index) => (
+                    <tr key={contact.id}
                       className={`trow group border-l-[4px] ${ROW_ACCENTS[index % ROW_ACCENTS.length]} cursor-pointer`}
                       style={{ borderBottom:'1px solid #f1f5f9' }}>
 
@@ -590,14 +582,14 @@ export const Contacts = () => {
                           <div className={`avatar-wrap w-10 h-10 rounded-xl bg-gradient-to-br ${avatarColors[index % avatarColors.length]}
                             flex items-center justify-center text-white text-[12px] font-black shrink-0`}
                             style={{ boxShadow:`0 4px 12px rgba(79,70,229,0.25)` }}>
-                            {getInitials(lead.name)}
+                            {getInitials(contact.name || contact.person_name || contact.company_name || 'N')}
                           </div>
                           <div className="min-w-0">
                             <div className="text-[14px] font-black text-slate-800 group-hover:text-indigo-700 transition-colors leading-snug">
-                              {lead.name}
+                              {contact.name || contact.person_name || contact.company_name}
                             </div>
                             <div className="text-[12px] text-slate-400 flex items-center gap-1.5 mt-0.5 font-medium">
-                              <Mail size={11} /> {lead.email}
+                              <Mail size={11} /> {contact.email || '-'}
                             </div>
                           </div>
                         </div>
@@ -607,26 +599,23 @@ export const Contacts = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 text-[13px] text-slate-600 font-medium">
                           <Building2 size={14} className="text-slate-300 shrink-0" />
-                          {lead.company}
+                          {contact.company_name || '-'}
                         </div>
                       </td>
 
                       {/* Status */}
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1.5 text-[11px] rounded-lg font-black uppercase border shadow-sm
-                          ${STATUS_BADGE[lead.status] || STATUS_BADGE.new}`}>
-                          {lead.status}
-                        </span>
+                        <span className="text-[12px] text-slate-500">{contact.designation || '-'}</span>
                       </td>
 
                       {/* Deal Value */}
                       <td className="px-6 py-4 text-[14px] font-black text-slate-800 text-right">
-                        ${parseFloat(lead.value).toLocaleString()}
+                        {contact.phone || '-'}
                       </td>
 
                       {/* Added */}
                       <td className="px-6 py-4 text-[13px] text-slate-400 font-medium">
-                        {new Date(lead.created_at).toLocaleDateString()}
+                        {new Date(contact.created_at).toLocaleDateString()}
                       </td>
                     </tr>
                   ))}

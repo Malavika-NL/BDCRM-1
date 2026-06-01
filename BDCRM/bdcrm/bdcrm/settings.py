@@ -115,15 +115,26 @@ WSGI_APPLICATION = 'bdcrm.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    "default": {
+        "ENGINE": os.getenv("DATABASE_ENGINE", "django.db.backends.postgresql"),
+        "NAME": os.getenv("DATABASE_NAME", "BDCRM_DB"),
+        "USER": os.getenv("DATABASE_USER", "postgres"),
+        "PASSWORD": os.getenv("DATABASE_PASSWORD", "Mbits123#@"),
+        "HOST": os.getenv("DATABASE_HOST", "127.0.0.1"),
+        "PORT": os.getenv("DATABASE_PORT", "5433"),
+    },
+    "contacts_db": {
+        "ENGINE": os.getenv("CONTACTS_DATABASE_ENGINE", os.getenv("DATABASE_ENGINE", "django.db.backends.postgresql")),
+        "NAME": os.getenv("CONTACTS_DATABASE_NAME", os.getenv("DATABASE_NAME", "BDCRM_DB")),
+        "USER": os.getenv("CONTACTS_DATABASE_USER", os.getenv("DATABASE_USER", "postgres")),
+        "PASSWORD": os.getenv("CONTACTS_DATABASE_PASSWORD", os.getenv("DATABASE_PASSWORD", "Mbits123#@")),
+        "HOST": os.getenv("CONTACTS_DATABASE_HOST", os.getenv("DATABASE_HOST", "127.0.0.1")),
+        "PORT": os.getenv("CONTACTS_DATABASE_PORT", os.getenv("DATABASE_PORT", "5433")),
+    },
 }
 
-
+DATABASE_ROUTERS = ['db_router.ContactRouter']
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 

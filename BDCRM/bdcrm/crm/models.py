@@ -577,38 +577,24 @@ class CampaignResponse(models.Model):
         return f"{self.lead.name} - {self.response_type}"
 
 
-class KeyContact(models.Model):
-    """
-    Required for the 'Map' stage in 'Target' workflow.
-    Identifies Decision Makers vs Gatekeepers.
-    """
-    ROLE_CHOICES = [
-        ('decision_maker', 'Decision Maker'),
-        ('influencer', 'Influencer'),
-        ('gatekeeper', 'Gatekeeper'),
-        ('user', 'End User'),
-    ]
-    lead = models.ForeignKey(Lead, related_name='key_contacts', on_delete=models.CASCADE)
-    name = models.CharField(max_length=100)
-    designation = models.CharField(max_length=100)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    email = models.EmailField(blank=True)
-    phone = models.CharField(max_length=20, blank=True)
-    
-    def __str__(self): return f"{self.name} ({self.role})"
+class Contact(models.Model):
+    region = models.CharField(max_length=100, blank=True, null=True)
+    location = models.CharField(max_length=100, blank=True, default="")
+    vertical = models.CharField(max_length=100, blank=True, null=True)
+    company_name = models.CharField(max_length=255, blank=True, default="")
+    person_name = models.CharField(max_length=255, blank=True, null=True)
+    designation = models.CharField(max_length=255, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=50, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    is_verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
-# Update your Lead model or create a proxy
-# In existing Lead model, add:
-relationship_type = models.CharField(
-    max_length=20, 
-    choices=[
-        ('target', 'Target (New)'),
-        ('current', 'Current (Cross-sell)'),
-        ('repeat', 'Repeat (Retention)')
-    ],
-    default='target'
-)
-is_account_mapped = models.BooleanField(default=False, help_text="Has the org chart been mapped?")
+    class Meta:
+        # Read marketing CRM contacts table directly.
+        db_table = "email_campaign_contact"
+        managed = False
 
 class MarketingAsset(models.Model):
     ASSET_TYPES = [

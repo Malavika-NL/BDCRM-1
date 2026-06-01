@@ -108,6 +108,19 @@ export interface Lead {
   tasks?: Task[];
 }
 
+export interface Contact {
+  id: number;
+  name: string;
+  person_name?: string | null;
+  company_name?: string;
+  designation?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
 // --- ANALYTICS ---
 
 export interface DashboardStats {

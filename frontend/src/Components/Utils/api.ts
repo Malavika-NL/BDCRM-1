@@ -1,4 +1,5 @@
 import type {
+  Contact,
   Lead,
   DashboardStats,
   Task,
@@ -14,6 +15,13 @@ import type {
 const API_BASE_URL = '/api';
 
 export const api = {
+  getContacts: async (search: string = ''): Promise<Contact[]> => {
+    const url = new URL(`${API_BASE_URL}/contacts/`, window.location.origin);
+    if (search) url.searchParams.append('search', search);
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error('Failed to fetch contacts');
+    return res.json();
+  },
 
   // ==========================================
   // 1. LEADS & PIPELINE (CORE CRM)

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from .models import AIActivityAnalysis, AIAlert, AIDocument, AILeadProfile, AIScoreSnapshot, ConsumptionPattern, Lead, Course, Module, Lesson, Activity, Region, Task, Tag, Company, Vertical
+from .models import AIActivityAnalysis, AIAlert, AIDocument, AILeadProfile, AIScoreSnapshot, ConsumptionPattern, Lead, Contact, Course, Module, Lesson, Activity, Region, Task, Tag, Company, Vertical
 
 # --- NEW SERIALIZERS ---
 
@@ -38,6 +38,32 @@ class LeadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lead
         fields = '__all__'
+
+
+class ContactSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Contact
+        fields = [
+            "id",
+            "name",
+            "person_name",
+            "company_name",
+            "designation",
+            "email",
+            "phone",
+            "address",
+            "region",
+            "location",
+            "vertical",
+            "is_verified",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_name(self, obj):
+        return obj.person_name or obj.company_name or ""
 
 # --- EXISTING LMS SERIALIZERS ---
 
