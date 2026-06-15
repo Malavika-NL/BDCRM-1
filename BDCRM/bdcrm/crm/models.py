@@ -588,13 +588,12 @@ class Contact(models.Model):
     phone = models.CharField(max_length=50, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     is_verified = models.BooleanField(default=False)
+    created_by_name = models.CharField(max_length=150, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        # Read marketing CRM contacts table directly.
-        db_table = "email_campaign_contact"
-        managed = False
+        db_table = "contacts"
 
 class MarketingAsset(models.Model):
     ASSET_TYPES = [

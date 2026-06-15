@@ -42,6 +42,7 @@ class LeadSerializer(serializers.ModelSerializer):
 
 class ContactSerializer(serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
+    created_by_info = serializers.SerializerMethodField()
 
     class Meta:
         model = Contact
@@ -58,12 +59,41 @@ class ContactSerializer(serializers.ModelSerializer):
             "location",
             "vertical",
             "is_verified",
+            "created_by_name",
+            "created_by_info",
             "created_at",
             "updated_at",
         ]
+        read_only_fields = ["created_by_name", "created_by_info", "created_at", "updated_at"]
 
     def get_name(self, obj):
         return obj.person_name or obj.company_name or ""
+
+    def get_created_by_info(self, obj):
+        name = getattr(obj, "created_by_name", "")
+        if not name:
+            return None
+        return {
+            "id": None,
+            "name": name,
+            "username": name,
+            "email": "",
+        }
+
+    def validate(self, attrs):
+        email = (attrs.get("email") or "").strip().lower()
+        phone = (attrs.get("phone") or "").strip()
+
+        if self.instance is not None:
+            email = email or (self.instance.email or "").strip().lower()
+            phone = phone or (self.instance.phone or "").strip()
+
+        if not email and not phone:
+            raise serializers.ValidationError("Either email or phone is required.")
+
+        attrs["email"] = email or None
+        attrs["phone"] = phone or None
+        return attrs
 
 # --- EXISTING LMS SERIALIZERS ---
 

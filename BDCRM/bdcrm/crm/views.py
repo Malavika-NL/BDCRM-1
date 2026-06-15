@@ -47,6 +47,13 @@ from .ai_engine import (
     CRMChatbot, RevenueForecastEngine, AIDocumentGenerator,
     AnomalyDetectionEngine, DailyDigestGenerator, _call_claude
 )
+from .contact_sync import (
+    COMMON_CONTACT_FIELDS,
+    find_matching_contact,
+    normalize_contact_payload,
+    upsert_contact_from_common_payload,
+    validate_sync_token,
+)
 from django.conf import settings
 
 
@@ -171,12 +178,77 @@ def list_users(request):
     return Response(UserMeSerializer(users, many=True).data)
 
 
-class ContactViewSet(viewsets.ReadOnlyModelViewSet):
+class ContactViewSet(viewsets.ModelViewSet):
     queryset = Contact.objects.all().order_by("-created_at")
     serializer_class = ContactSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["person_name", "company_name", "email", "phone", "address", "region", "vertical"]
     ordering_fields = ["created_at", "updated_at", "person_name", "company_name"]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if getattr(user, "is_authenticated", False):
+            serializer.save(created_by_name=user.get_full_name() or user.username)
+        else:
+            serializer.save()
+
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+        if data.get("name") and not data.get("person_name"):
+            data["person_name"] = data.get("name")
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        validated = serializer.validated_data
+
+        contact = find_matching_contact({
+            "email": validated.get("email") or "",
+            "mobile_number": validated.get("phone") or "",
+        })
+        if contact:
+            update_serializer = self.get_serializer(contact, data=validated, partial=True)
+            update_serializer.is_valid(raise_exception=True)
+            if not contact.created_by_name and getattr(request.user, "is_authenticated", False):
+                update_serializer.save(created_by_name=request.user.get_full_name() or request.user.username)
+            else:
+                self.perform_update(update_serializer)
+            return Response(update_serializer.data, status=status.HTTP_200_OK)
+
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class ContactSyncView(APIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        if not validate_sync_token(request):
+            return Response(
+                {"error": "Invalid or missing contact sync token."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        payload = normalize_contact_payload(request.data)
+        if not payload["email"] and not payload["mobile_number"]:
+            return Response(
+                {"error": "Either email or mobile_number is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            contact, created = upsert_contact_from_common_payload(payload)
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "status": "created" if created else "updated",
+                "contact_id": contact.id,
+                "contact": {field: payload[field] for field in COMMON_CONTACT_FIELDS},
+            },
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
 
 
     

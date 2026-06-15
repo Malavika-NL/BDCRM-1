@@ -365,11 +365,26 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../Utils/api';
 import type { Contact } from '../Utils/types';
-import { Search, Users, Mail, Building2 } from 'lucide-react';
+import { Search, Users, Mail, Building2, Plus, X, Pencil, Trash2, MapPin } from 'lucide-react';
 
 export const Contacts = () => {
   const [contacts, setContacts]   = useState<Contact[]>([]);
   const [search, setSearch] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [form, setForm] = useState({
+    person_name: '',
+    company_name: '',
+    designation: '',
+    email: '',
+    phone: '',
+    address: '',
+    region: '',
+    location: '',
+    vertical: '',
+  });
 
   const fetchContacts = async () => {
     const data = await api.getContacts(search);
@@ -380,6 +395,103 @@ export const Contacts = () => {
     const timer = setTimeout(() => fetchContacts(), 300);
     return () => clearTimeout(timer);
   }, [search]);
+
+  const resetForm = () => {
+    setForm({
+      person_name: '',
+      company_name: '',
+      designation: '',
+      email: '',
+      phone: '',
+      address: '',
+      region: '',
+      location: '',
+      vertical: '',
+    });
+    setEditingContact(null);
+    setError('');
+  };
+
+  const updateForm = (field: keyof typeof form, value: string) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const openAddModal = () => {
+    resetForm();
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (contact: Contact) => {
+    setEditingContact(contact);
+    setForm({
+      person_name: contact.person_name || contact.name || '',
+      company_name: contact.company_name || '',
+      designation: contact.designation || '',
+      email: contact.email || '',
+      phone: contact.phone || '',
+      address: contact.address || '',
+      region: contact.region || '',
+      location: contact.location || '',
+      vertical: contact.vertical || '',
+    });
+    setError('');
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    resetForm();
+    setIsModalOpen(false);
+  };
+
+  const handleSaveContact = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError('');
+
+    if (!form.email.trim() && !form.phone.trim()) {
+      setError('Email or phone is required.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const payload = {
+        person_name: form.person_name.trim(),
+        company_name: form.company_name.trim(),
+        designation: form.designation.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        address: form.address.trim(),
+        region: form.region.trim(),
+        location: form.location.trim(),
+        vertical: form.vertical.trim(),
+      };
+
+      if (editingContact) {
+        await api.updateContact(editingContact.id, payload);
+      } else {
+        await api.createContact(payload);
+      }
+
+      closeModal();
+      await fetchContacts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save contact.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteContact = async (contact: Contact) => {
+    const label = contact.name || contact.person_name || contact.email || 'this contact';
+    if (!window.confirm(`Delete ${label}?`)) return;
+
+    try {
+      await api.deleteContact(contact.id);
+      await fetchContacts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete contact.');
+    }
+  };
 
   const getInitials = (name: string) =>
     name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -407,7 +519,10 @@ export const Contacts = () => {
     { label: 'Company',    color: 'text-violet-200' },
     { label: 'Designation', color: 'text-emerald-200'},
     { label: 'Phone', color: 'text-amber-200'  },
+    { label: 'Region / Location', color: 'text-cyan-200' },
     { label: 'Added',      color: 'text-pink-200'   },
+    { label: 'Created By', color: 'text-sky-200' },
+    { label: 'Actions',      color: 'text-indigo-100'   },
   ];
 
   return (
@@ -527,6 +642,17 @@ export const Contacts = () => {
             </div>
 
             {/* search */}
+            <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={openAddModal}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-black text-white transition-all hover:translate-y-[-1px]"
+              style={{ background:'linear-gradient(135deg,#4f46e5,#7c3aed)', boxShadow:'0 4px 14px rgba(79,70,229,0.28)' }}
+            >
+              <Plus size={15} />
+              Add Contact
+            </button>
+
             <div className="search-wrap">
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
@@ -541,6 +667,7 @@ export const Contacts = () => {
                   onChange={e => setSearch(e.target.value)}
                 />
               </div>
+            </div>
             </div>
           </div>
 
@@ -613,9 +740,50 @@ export const Contacts = () => {
                         {contact.phone || '-'}
                       </td>
 
+                      {/* Region / Location */}
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1 text-[13px] text-slate-600 font-medium">
+                          <span className="inline-flex items-center gap-1.5">
+                            <MapPin size={13} className="text-slate-300 shrink-0" />
+                            {contact.region || '-'}
+                          </span>
+                          <span className="text-[12px] text-slate-400 pl-5">
+                            {contact.location || '-'}
+                          </span>
+                        </div>
+                      </td>
+
                       {/* Added */}
                       <td className="px-6 py-4 text-[13px] text-slate-400 font-medium">
                         {new Date(contact.created_at).toLocaleDateString()}
+                      </td>
+
+                      {/* Created By */}
+                      <td className="px-6 py-4">
+                        <span className="text-[13px] font-semibold text-slate-600">
+                          {contact.created_by_info?.name || '-'}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(contact)}
+                            className="w-9 h-9 rounded-xl inline-flex items-center justify-center text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                            title="Edit contact"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteContact(contact)}
+                            className="w-9 h-9 rounded-xl inline-flex items-center justify-center text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors"
+                            title="Delete contact"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -627,6 +795,91 @@ export const Contacts = () => {
 
         <div className="pb-4" />
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div>
+                <h3 className="text-[18px] font-black text-slate-800">{editingContact ? 'Edit Contact' : 'Add Contact'}</h3>
+                <p className="text-[12px] text-slate-400 font-medium">Saved contacts sync to Marketing CRM.</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveContact} className="p-6 space-y-4">
+              {error && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[13px] font-bold text-rose-700">
+                  {error}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Field label="Name" value={form.person_name} onChange={value => updateForm('person_name', value)} />
+                <Field label="Company" value={form.company_name} onChange={value => updateForm('company_name', value)} />
+                <Field label="Designation" value={form.designation} onChange={value => updateForm('designation', value)} />
+                <Field label="Email" value={form.email} onChange={value => updateForm('email', value)} type="email" />
+                <Field label="Phone" value={form.phone} onChange={value => updateForm('phone', value)} />
+                <Field label="Region" value={form.region} onChange={value => updateForm('region', value)} />
+                <Field label="Location" value={form.location} onChange={value => updateForm('location', value)} />
+                <Field label="Vertical" value={form.vertical} onChange={value => updateForm('vertical', value)} />
+              </div>
+
+              <label className="block">
+                <span className="mb-1.5 block text-[12px] font-black uppercase tracking-wide text-slate-500">Address</span>
+                <textarea
+                  value={form.address}
+                  onChange={event => updateForm('address', event.target.value)}
+                  className="min-h-20 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[13px] font-medium text-slate-700 outline-none focus:border-indigo-300 focus:bg-white"
+                />
+              </label>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-[13px] font-black text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="rounded-xl px-5 py-2.5 text-[13px] font-black text-white disabled:opacity-60"
+                  style={{ background:'linear-gradient(135deg,#4f46e5,#7c3aed)' }}
+                >
+                  {isSaving ? 'Saving...' : editingContact ? 'Update Contact' : 'Save Contact'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+type FieldProps = {
+  label: string;
+  value: string;
+  type?: string;
+  onChange: (value: string) => void;
+};
+
+const Field = ({ label, value, type = 'text', onChange }: FieldProps) => (
+  <label className="block">
+    <span className="mb-1.5 block text-[12px] font-black uppercase tracking-wide text-slate-500">{label}</span>
+    <input
+      type={type}
+      value={value}
+      onChange={event => onChange(event.target.value)}
+      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[13px] font-medium text-slate-700 outline-none focus:border-indigo-300 focus:bg-white"
+    />
+  </label>
+);

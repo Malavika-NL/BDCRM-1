@@ -1,6 +1,12 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Lead, Course, Enrollment
+from .contact_sync import send_contact_to_peer
+from .models import Lead, Course, Enrollment, Contact
+
+
+@receiver(post_save, sender=Contact)
+def sync_contact_after_save(sender, instance, **kwargs):
+    send_contact_to_peer(instance)
 
 @receiver(post_save, sender=Lead)
 def auto_enroll_workflow(sender, instance, created, **kwargs):

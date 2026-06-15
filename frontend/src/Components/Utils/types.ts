@@ -117,9 +117,32 @@ export interface Contact {
   email?: string | null;
   phone?: string | null;
   address?: string | null;
+  region?: string | null;
+  location?: string | null;
+  vertical?: string | null;
+  created_by?: number | null;
+  created_by_name?: string;
+  created_by_info?: {
+    id: number | null;
+    name: string;
+    username?: string;
+    email?: string;
+  } | null;
   created_at: string;
   updated_at?: string;
 }
+
+export type ContactInput = {
+  person_name?: string;
+  company_name?: string;
+  designation?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  region?: string;
+  location?: string;
+  vertical?: string;
+};
 
 // --- ANALYTICS ---
 

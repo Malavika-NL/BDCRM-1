@@ -43,6 +43,7 @@ urlpatterns = [
     path('api/run-agent/', views.trigger_agent, name='run_agent'),
     path('api/agent-status/', views.agent_status, name='agent_status'),
     path('api/run-free-campaign/', views.run_free_campaign, name='run_free_campaign'),
+    path('api/integrations/sync/contact/', views.ContactSyncView.as_view(), name='contact_sync'),
     path('admin/', admin.site.urls),
     path('api/auth/login/', views.LoginView.as_view(), name='auth_login'),
     path('api/auth/refresh/', views.RefreshAuthTokenView.as_view(), name='auth_refresh_token'),

@@ -75,7 +75,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'crm',
+    'crm.apps.CrmConfig',
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
@@ -188,3 +188,12 @@ GREEN_API_ID = os.getenv("GREEN_API_ID", "")
 GREEN_API_TOKEN = os.getenv("GREEN_API_TOKEN", "")
 APOLLO_API_KEY = os.getenv("APOLLO_API_KEY", "")
 GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID", "")
+
+CONTACT_SYNC_SOURCE = os.getenv("CONTACT_SYNC_SOURCE", "bdcrm")
+CONTACT_SYNC_TARGET_URL = os.getenv(
+    "CONTACT_SYNC_TARGET_URL",
+    "http://192.168.1.94:8000/api/integrations/sync/contact/",
+)
+CONTACT_SYNC_TARGET_URLS = os.getenv("CONTACT_SYNC_TARGET_URLS", "")
+CONTACT_SYNC_API_TOKEN = os.getenv("CONTACT_SYNC_API_TOKEN", "")
+CONTACT_SYNC_TIMEOUT_SECONDS = float(os.getenv("CONTACT_SYNC_TIMEOUT_SECONDS", "5"))

@@ -1,5 +1,6 @@
 import type {
   Contact,
+  ContactInput,
   Lead,
   DashboardStats,
   Task,
@@ -21,6 +22,37 @@ export const api = {
     const res = await fetch(url.toString());
     if (!res.ok) throw new Error('Failed to fetch contacts');
     return res.json();
+  },
+
+  createContact: async (data: ContactInput): Promise<Contact> => {
+    const res = await fetch(`${API_BASE_URL}/contacts/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.detail || error.non_field_errors?.[0] || 'Failed to create contact');
+    }
+    return res.json();
+  },
+
+  updateContact: async (id: number | string, data: ContactInput): Promise<Contact> => {
+    const res = await fetch(`${API_BASE_URL}/contacts/${id}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.detail || error.non_field_errors?.[0] || 'Failed to update contact');
+    }
+    return res.json();
+  },
+
+  deleteContact: async (id: number | string): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/contacts/${id}/`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Failed to delete contact');
   },
 
   // ==========================================
