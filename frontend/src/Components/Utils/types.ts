@@ -63,6 +63,76 @@ export interface Company {
   region?: string;
 }
 
+export interface AccountTargetPIC {
+  id: number;
+  pic_name: string;
+  phone_number: string;
+  created_at: string;
+  updated_at?: string;
+  created_by_info?: {
+    id: number;
+    name: string;
+    username?: string;
+    email?: string;
+  } | null;
+}
+
+export interface AccountTargetCompany {
+  id: number;
+  name: string;
+  location?: string;
+  region?: string;
+  created_at: string;
+  updated_at?: string;
+  total_pics: number;
+  created_by_info?: {
+    id: number;
+    name: string;
+    username?: string;
+    email?: string;
+  } | null;
+  pics: AccountTargetPIC[];
+}
+
+export interface AccountTargetRegistrationInput {
+  company_name: string;
+  pic_name: string;
+  location?: string;
+  region?: string;
+  phone_number: string;
+}
+
+export interface AccountTargetOwnershipSummaryItem {
+  user: {
+    id: number | null;
+    name: string;
+    username?: string;
+    email?: string;
+  };
+  company_count: number;
+  total_pics: number;
+  companies: Array<{
+    id: number;
+    name: string;
+    location?: string;
+    region?: string;
+    total_pics: number;
+    created_at: string;
+    pics: Array<{
+      id: number;
+      pic_name: string;
+      phone_number: string;
+      created_at: string;
+      created_by_info?: {
+        id: number;
+        name: string;
+        username?: string;
+        email?: string;
+      } | null;
+    }>;
+  }>;
+}
+
 export interface Activity {
   id: number;
   lead: number;
@@ -298,6 +368,34 @@ export interface PlannerTask {
   title: string;
   status: 'pending' | 'in_progress' | 'done';
   created_by_admin: boolean;
+  assigned_contacts_count?: number;
+  contacted_contacts_count?: number;
+  assignments?: PlannerCallAssignment[];
+}
+
+export interface PlannerCallAssignment {
+  id: number;
+  member_plan: number;
+  planner_task: number;
+  contact: number;
+  assigned_user: number | null;
+  assigned_user_name?: string;
+  sequence_number: number;
+  scheduled_date: string;
+  status: 'pending' | 'contacted' | 'skipped';
+  remarks: string;
+  contacted_at: string | null;
+  contact_detail?: Contact;
+}
+
+export interface PlannerQueueResponse {
+  today: string;
+  today_total: number;
+  today_done: number;
+  today_remaining: number;
+  next_assignment: PlannerCallAssignment | null;
+  contacted_today: PlannerCallAssignment[];
+  contacted_history: PlannerCallAssignment[];
 }
 
 export interface PlannerMemberPlan {
@@ -315,6 +413,7 @@ export interface PlannerMemberPlan {
   email_weightage: number;
   linkedin_weightage: number;
   tasks: PlannerTask[];
+  call_assignments?: PlannerCallAssignment[];
 }
 
 export interface ActivityPlanner {

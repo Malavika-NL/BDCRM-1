@@ -18,6 +18,7 @@ import {
   PanelLeftClose,
   ChevronDown,
   Settings,
+  Building2,
 } from 'lucide-react';
 import { api } from '../Utils/api';
 import { authStore } from '../Utils/auth';
@@ -32,7 +33,7 @@ type NavItem = {
 
 const topNavItems: NavItem[] = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, bg: 'bg-gradient-to-br from-sky-400 to-blue-600' },
-  { path: '/bdm-targets', label: 'BDM Targets', icon: Target, bg: 'bg-gradient-to-br from-amber-400 to-orange-600' },
+  { path: '/bdm-targets', label: 'BD Targets', icon: Target, bg: 'bg-gradient-to-br from-amber-400 to-orange-600' },
   { path: '/campaign-workspace', label: 'Campaign Workspace', icon: Wand2, bg: 'bg-gradient-to-br from-violet-400 to-purple-700' },
   { path: '/activity-planner', label: 'Activity Planner', icon: CalendarDays, bg: 'bg-gradient-to-br from-emerald-400 to-green-600', isNew: true },
   { path: '/pipeline', label: 'Pipeline', icon: GitBranch, bg: 'bg-gradient-to-br from-blue-400 to-blue-700' },
@@ -49,7 +50,7 @@ const bottomNavItems: NavItem[] = [
   { path: '/tasks', label: 'Tasks', icon: CheckSquare, bg: 'bg-gradient-to-br from-green-400 to-green-600' },
   { path: '/contacts', label: 'Contacts', icon: Users, bg: 'bg-gradient-to-br from-cyan-400 to-cyan-700' },
   { path: '/playbooks', label: 'Playbooks', icon: BookOpen, bg: 'bg-gradient-to-br from-orange-400 to-orange-600' },
-  { path: '/bdm-core', label: 'BDM Dashboard', icon: BarChart3, bg: 'bg-gradient-to-br from-indigo-400 to-blue-700' },
+  { path: '/bdm-core', label: 'BD Dashboard', icon: BarChart3, bg: 'bg-gradient-to-br from-indigo-400 to-blue-700' },
 ];
 
 const adminItem: NavItem = {
@@ -58,6 +59,11 @@ const adminItem: NavItem = {
   icon: UserPlus,
   bg: 'bg-gradient-to-br from-pink-400 to-pink-700',
 };
+
+const accountTargetingItems: NavItem[] = [
+  { path: '/account-targetting', label: 'Company Registry', icon: Building2, bg: 'bg-gradient-to-br from-cyan-500 to-teal-600' },
+  { path: '/account-targetting/owners', label: 'Owner Summary', icon: Users, bg: 'bg-gradient-to-br from-sky-500 to-blue-700' },
+];
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -70,6 +76,8 @@ export const Sidebar: React.FC = () => {
 
   const isAiRoute = aiNavItems.some((item) => location.pathname.startsWith(item.path));
   const [aiOpen, setAiOpen] = useState(() => isAiRoute);
+  const isAccountTargetingRoute = accountTargetingItems.some((item) => location.pathname.startsWith(item.path));
+  const [accountTargetingOpen, setAccountTargetingOpen] = useState(() => isAccountTargetingRoute);
 
   useEffect(() => {
     const fetchCount = () => {
@@ -83,6 +91,10 @@ export const Sidebar: React.FC = () => {
   useEffect(() => {
     if (isAiRoute) setAiOpen(true);
   }, [isAiRoute]);
+
+  useEffect(() => {
+    if (isAccountTargetingRoute) setAccountTargetingOpen(true);
+  }, [isAccountTargetingRoute]);
 
   const renderNavItem = (item: NavItem, index: number, nested = false) => {
     const Icon = item.icon;
@@ -245,7 +257,50 @@ export const Sidebar: React.FC = () => {
           )}
         </div>
 
-        {utilityNavItems.map((item, i) => renderNavItem(item, topNavItems.length + aiNavItems.length + i + 1))}
+        <div className="space-y-1">
+          <button
+            type="button"
+            onClick={() => setAccountTargetingOpen((prev) => !prev)}
+            title={collapsed ? 'Account Targetting' : undefined}
+            className={`
+              group w-full flex items-center gap-3 rounded-xl
+              font-medium text-[13.5px] relative overflow-hidden
+              transition-all duration-200
+              ${collapsed ? 'w-[46px] h-[44px] mx-auto justify-center p-0' : 'h-[46px] px-3'}
+              ${isAccountTargetingRoute
+                ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-[0_4px_14px_rgba(79,70,229,0.3)]'
+                : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 hover:translate-x-0.5'}
+            `}
+          >
+            <div className={`
+              flex items-center justify-center shrink-0 rounded-[9px]
+              w-[32px] h-[32px] text-white
+              shadow-[inset_0_0_0_1px_rgba(255,255,255,0.3)]
+              transition-transform duration-200
+              group-hover:-translate-y-0.5 group-hover:scale-110 group-hover:rotate-1
+              ${isAccountTargetingRoute ? 'bg-white/25 !transform-none' : 'bg-gradient-to-br from-cyan-500 to-teal-600'}
+            `}>
+              <Building2 size={15} />
+            </div>
+
+            {!collapsed && <span className="truncate">Account Targetting</span>}
+
+            {!collapsed && (
+              <ChevronDown
+                size={15}
+                className={`ml-auto transition-transform duration-200 ${accountTargetingOpen ? 'rotate-0' : '-rotate-90'}`}
+              />
+            )}
+          </button>
+
+          {accountTargetingOpen && (
+            <div className={`${collapsed ? 'space-y-1 mt-1' : 'space-y-1 mt-1 pl-2 border-l-2 border-cyan-100 ml-2'}`}>
+              {accountTargetingItems.map((item, i) => renderNavItem(item, topNavItems.length + aiNavItems.length + i + 1, true))}
+            </div>
+          )}
+        </div>
+
+        {utilityNavItems.map((item, i) => renderNavItem(item, topNavItems.length + aiNavItems.length + accountTargetingItems.length + i + 2))}
       </nav>
 
       <div className={`shrink-0 border-t border-slate-100 p-2 ${collapsed ? 'pb-3' : 'pb-4'}`}>

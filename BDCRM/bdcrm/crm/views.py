@@ -2,6 +2,7 @@ from rest_framework import viewsets, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import permissions, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 from django.db.models import Sum, Count, Q
 from django.db import OperationalError
@@ -12,7 +13,9 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 import os
 import requests
 import re
+import json
 from django.conf import settings
+from django.utils import timezone
 import requests # Make sure this is at the top of views.py
 from datetime import date
 import calendar
@@ -21,7 +24,7 @@ from .ai_helper import ask_ai, ask_ai_json
 from .models import (
     ProductLine, CustomerCategory, SalesChannel, EngagementTool,
     LeadBusinessMeta, BDMTarget, BDMReview, CampaignWorkspace, CampaignResponse,
-    ActivityPlanner, PlannerMemberPlan, PlannerTask
+    ActivityPlanner, PlannerMemberPlan, PlannerTask, PlannerCallAssignment, AccountTargetCompany, AccountTargetPIC
 )
 
 from .serializers import (
@@ -30,7 +33,8 @@ from .serializers import (
     BDMTargetSerializer, BDMReviewSerializer,
     CampaignWorkspaceSerializer, CampaignResponseSerializer,
     CampaignWorkspaceGenerateSerializer, ActivityPlannerSerializer,
-    PlannerMemberPlanSerializer, PlannerTaskSerializer
+    PlannerMemberPlanSerializer, PlannerTaskSerializer, PlannerCallAssignmentSerializer, AccountTargetCompanySerializer,
+    AccountTargetRegistrationSerializer
 )
 from .models import (AILeadProfile, Lead, Contact, Course, Activity, Task, Tag, Company, Vertical, Region, Industry, Campaign, AIInteractionLog,
                      ConsumptionPattern, ProductCategory, Enrollment, AILeadProfile, AIScoreSnapshot, AIActivityAnalysis,
@@ -41,7 +45,7 @@ from .serializers import (
     TaskSerializer, TagSerializer, CompanySerializer, ContactSerializer, AIInteractionLogSerializer,
     ConsumptionPatternSerializer, AgentIngestionSerializer
 )
-from .serializers import LoginSerializer, ChangePasswordSerializer, UserCreateSerializer, UserMeSerializer
+from .serializers import LoginSerializer, ChangePasswordSerializer, UserCreateSerializer, UserMeSerializer, UserUpdateSerializer
 from .ai_engine import (
     LeadScoringEngine, ChurnPredictionEngine, ConversationIntelligence,
     CRMChatbot, RevenueForecastEngine, AIDocumentGenerator,
@@ -67,6 +71,11 @@ def _token_payload_for_user(user: User):
         "user": UserMeSerializer(user).data,
         "role": role,
     }
+
+
+def _is_admin(user):
+    request_role = getattr(getattr(user, "profile", None), "role", None)
+    return bool(user and (user.is_superuser or user.is_staff or request_role == "admin"))
 
 
 class LoginView(APIView):
@@ -129,9 +138,7 @@ class CreateUserView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        request_role = getattr(getattr(request.user, "profile", None), "role", None)
-        is_admin = request.user.is_superuser or request.user.is_staff or request_role == "admin"
-        if not is_admin:
+        if not _is_admin(request.user):
             return Response({"detail": "Only admin can create users."}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = UserCreateSerializer(data=request.data)
@@ -170,12 +177,47 @@ def bootstrap_admin_profile(request):
 @api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
 def list_users(request):
-    request_role = getattr(getattr(request.user, "profile", None), "role", None)
-    is_admin = request.user.is_superuser or request.user.is_staff or request_role == "admin"
-    if not is_admin:
+    if not _is_admin(request.user):
         return Response({"detail": "Only admin can view users."}, status=status.HTTP_403_FORBIDDEN)
     users = User.objects.all().order_by('-date_joined')
     return Response(UserMeSerializer(users, many=True).data)
+
+
+class UserDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, user_id):
+        if not _is_admin(request.user):
+            return Response({"detail": "Only admin can edit users."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UserUpdateSerializer(
+            data=request.data,
+            context={"user_instance": user},
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.update(user, serializer.validated_data)
+        return Response(UserMeSerializer(user).data, status=status.HTTP_200_OK)
+
+    def delete(self, request, user_id):
+        if not _is_admin(request.user):
+            return Response({"detail": "Only admin can delete users."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.pk == request.user.pk:
+            return Response({"detail": "You cannot delete your own account."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ContactViewSet(viewsets.ModelViewSet):
@@ -607,6 +649,83 @@ class CompanyViewSet(viewsets.ModelViewSet):
     serializer_class = CompanySerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'industry']
+
+
+class AccountTargetCompanyViewSet(viewsets.ModelViewSet):
+    queryset = AccountTargetCompany.objects.all().prefetch_related("pics__created_by", "created_by")
+    serializer_class = AccountTargetCompanySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["get", "post", "head", "options"]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["name", "location", "region", "pics__pic_name", "pics__phone_number", "pics__created_by__username"]
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        if not getattr(request.user, "is_authenticated", False):
+            return Response({"detail": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        serializer = AccountTargetRegistrationSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        result = serializer.save()
+        company = result["company"]
+        return Response(AccountTargetCompanySerializer(company).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=["get"], url_path="ownership-summary")
+    def ownership_summary(self, request):
+        queryset = self.get_queryset()
+        owners = {}
+
+        for company in queryset:
+            owner = getattr(company, "created_by", None)
+            owner_key = owner.id if owner else "unknown"
+            if owner_key not in owners:
+                owners[owner_key] = {
+                    "user": {
+                        "id": owner.id if owner else None,
+                        "name": owner.get_full_name() or owner.username if owner else "Unknown owner",
+                        "username": owner.username if owner else "",
+                        "email": owner.email if owner else "",
+                    },
+                    "company_count": 0,
+                    "total_pics": 0,
+                    "companies": [],
+                }
+
+            owners[owner_key]["company_count"] += 1
+            owners[owner_key]["total_pics"] += company.pics.count()
+            owners[owner_key]["companies"].append({
+                "id": company.id,
+                "name": company.name,
+                "location": company.location,
+                "region": company.region,
+                "total_pics": company.pics.count(),
+                "created_at": company.created_at,
+                "pics": [
+                    {
+                        "id": pic.id,
+                        "pic_name": pic.pic_name,
+                        "phone_number": pic.phone_number,
+                        "created_at": pic.created_at,
+                        "created_by_info": {
+                            "id": pic.created_by.id,
+                            "name": pic.created_by.get_full_name() or pic.created_by.username,
+                            "username": pic.created_by.username,
+                            "email": pic.created_by.email,
+                        } if getattr(pic, "created_by", None) else None,
+                    }
+                    for pic in company.pics.all()
+                ],
+            })
+
+        summary = sorted(
+            owners.values(),
+            key=lambda item: (-item["company_count"], item["user"]["name"].lower()),
+        )
+        return Response(summary, status=status.HTTP_200_OK)
 
 import json
 import re
@@ -1487,8 +1606,25 @@ class CampaignWorkspaceViewSet(viewsets.ModelViewSet):
 class ActivityPlannerViewSet(viewsets.ModelViewSet):
     queryset = ActivityPlanner.objects.all().order_by('-year', '-month', '-created_at')
     serializer_class = ActivityPlannerSerializer
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'member_plans__member_name', 'member_plans__workspace_name']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if _is_admin(self.request.user):
+            return queryset
+        return queryset.filter(member_plans__user=self.request.user).distinct()
+
+    def perform_create(self, serializer):
+        if not _is_admin(self.request.user):
+            raise PermissionDenied("Only admin can create activity planners.")
+        serializer.save(created_by=self.request.user)
+
+    def perform_update(self, serializer):
+        if not _is_admin(self.request.user):
+            raise PermissionDenied("Only admin can update activity planners.")
+        serializer.save()
 
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
@@ -1506,9 +1642,11 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def assign_members(self, request, pk=None):
+        if not _is_admin(request.user):
+            return Response({"detail": "Only admin can assign planner members."}, status=status.HTTP_403_FORBIDDEN)
         planner = self.get_object()
         member_data = request.data.get('members', [])
-        created = []
+        planner.member_plans.all().delete()
         for item in member_data:
             member_plan = PlannerMemberPlan.objects.create(
                 planner=planner,
@@ -1526,16 +1664,101 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                 assigned_by=request.user if request.user and request.user.is_authenticated else None,
             )
             self._generate_member_tasks(member_plan)
-            created.append(member_plan)
-        return Response(PlannerMemberPlanSerializer(created, many=True).data, status=201)
+        assignment_summary = self._rebuild_contact_assignments(planner)
+        return Response(
+            {
+                "planner_id": planner.id,
+                "planner_name": planner.name,
+                "members_count": planner.member_plans.count(),
+                **assignment_summary,
+            },
+            status=201,
+        )
 
     @action(detail=True, methods=['post'])
     def regenerate(self, request, pk=None):
+        if not _is_admin(request.user):
+            return Response({"detail": "Only admin can regenerate planner tasks."}, status=status.HTTP_403_FORBIDDEN)
         planner = self.get_object()
         for member in planner.member_plans.all():
             member.tasks.all().delete()
             self._generate_member_tasks(member)
+        self._rebuild_contact_assignments(planner)
         return Response({"success": True, "message": "Planner tasks regenerated"})
+
+    @action(detail=True, methods=['post'])
+    def assign_contacts(self, request, pk=None):
+        if not _is_admin(request.user):
+            return Response({"detail": "Only admin can assign contacts."}, status=status.HTTP_403_FORBIDDEN)
+        planner = self.get_object()
+        summary = self._rebuild_contact_assignments(planner)
+        return Response(summary, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'])
+    def assignment_overview(self, request, pk=None):
+        planner = self.get_object()
+        if not _is_admin(request.user):
+            planner = ActivityPlanner.objects.filter(member_plans__user=request.user, pk=planner.pk).distinct().first()
+            if not planner:
+                return Response({"detail": "You do not have access to this planner."}, status=status.HTTP_403_FORBIDDEN)
+
+        today = timezone.now().date()
+        overview = []
+        for member in planner.member_plans.select_related('user').all():
+            assignments = member.call_assignments.select_related('contact', 'planner_task').all()
+            contacted_history = assignments.filter(status='contacted').order_by('-contacted_at', '-updated_at', '-id')
+            overview.append({
+                "member_plan_id": member.id,
+                "user_id": member.user_id,
+                "member_name": member.member_name,
+                "workspace_name": member.workspace_name,
+                "monthly_calls_target": member.monthly_calls_target,
+                "assigned_contacts": assignments.count(),
+                "contacted_contacts": contacted_history.count(),
+                "today_assigned": assignments.filter(scheduled_date=today).count(),
+                "today_done": assignments.filter(status='contacted', contacted_at__date=today).count(),
+                "today_pending": assignments.filter(scheduled_date=today, status='pending').count(),
+                "next_scheduled_date": assignments.filter(status='pending').order_by('scheduled_date', 'sequence_number').values_list('scheduled_date', flat=True).first(),
+                "assignments": [
+                    {
+                        "assignment_id": assignment.id,
+                        "contact_id": assignment.contact_id,
+                        "person_name": assignment.contact.person_name or assignment.contact.company_name or "",
+                        "company_name": assignment.contact.company_name or "",
+                        "phone": assignment.contact.phone or "",
+                        "region": assignment.contact.region or "",
+                        "scheduled_date": assignment.scheduled_date,
+                        "status": assignment.status,
+                        "contacted_at": assignment.contacted_at,
+                        "remarks": assignment.remarks,
+                        "is_verified": assignment.status == 'contacted',
+                    }
+                    for assignment in assignments.order_by('scheduled_date', 'sequence_number', 'id')
+                ],
+                "contacted_history": [
+                    {
+                        "assignment_id": assignment.id,
+                        "contact_id": assignment.contact_id,
+                        "person_name": assignment.contact.person_name or assignment.contact.company_name or "",
+                        "company_name": assignment.contact.company_name or "",
+                        "phone": assignment.contact.phone or "",
+                        "region": assignment.contact.region or "",
+                        "scheduled_date": assignment.scheduled_date,
+                        "contacted_at": assignment.contacted_at,
+                        "remarks": assignment.remarks,
+                    }
+                    for assignment in contacted_history
+                ],
+            })
+
+        return Response({
+            "planner_id": planner.id,
+            "planner_name": planner.name,
+            "month": planner.month,
+            "year": planner.year,
+            "members": overview,
+            "available_contacts": Contact.objects.count(),
+        }, status=status.HTTP_200_OK)
 
     def _channel_distribution(self, total, weight, slots):
         if total <= 0 or weight <= 0 or slots <= 0:
@@ -1545,11 +1768,29 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
         rem = weighted_total % slots
         return [base + (1 if i < rem else 0) for i in range(slots)]
 
+    def _working_weekend_dates(self, planner):
+        try:
+            notes = json.loads(planner.notes or "{}")
+        except (TypeError, ValueError):
+            return set()
+        dates = notes.get("working_weekend_dates", [])
+        return {item for item in dates if isinstance(item, str)}
+
+    def _is_working_day(self, day, working_weekend_dates):
+        if day.weekday() < 5:
+            return True
+        return day.isoformat() in working_weekend_dates
+
     def _generate_member_tasks(self, member_plan):
         month = member_plan.planner.month
         year = member_plan.planner.year
+        working_weekend_dates = self._working_weekend_dates(member_plan.planner)
         _, num_days = calendar.monthrange(year, month)
-        days = [date(year, month, d) for d in range(1, num_days + 1)]
+        days = [
+            day
+            for day in (date(year, month, d) for d in range(1, num_days + 1))
+            if self._is_working_day(day, working_weekend_dates)
+        ]
         week_map = {}
         for day in days:
             week_num = ((day.day - 1) // 7) + 1
@@ -1590,12 +1831,81 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                         created_by_admin=True,
                     )
 
+    def _rebuild_contact_assignments(self, planner):
+        assigned_elsewhere = PlannerCallAssignment.objects.exclude(
+            member_plan__planner=planner
+        ).values_list('contact_id', flat=True)
+        PlannerCallAssignment.objects.filter(member_plan__planner=planner).delete()
+
+        contacts = list(
+            Contact.objects.exclude(id__in=assigned_elsewhere)
+            .distinct()
+            .order_by('created_at', 'id')
+        )
+        contact_index = 0
+        assigned_total = 0
+        member_summaries = []
+        assigned_in_planner = set()
+
+        member_plans = planner.member_plans.select_related('user').all().order_by('member_name', 'id')
+        for member in member_plans:
+            daily_call_tasks = member.tasks.filter(
+                period_type='daily',
+                channel='calls',
+                target_count__gt=0,
+            ).order_by('task_date', 'id')
+
+            member_assigned = 0
+            for task in daily_call_tasks:
+                for seq in range(1, task.target_count + 1):
+                    if contact_index >= len(contacts):
+                        break
+                    contact = contacts[contact_index]
+                    contact_index += 1
+                    if contact.id in assigned_in_planner:
+                        continue
+                    PlannerCallAssignment.objects.create(
+                        member_plan=member,
+                        planner_task=task,
+                        contact=contact,
+                        assigned_user=member.user,
+                        sequence_number=seq,
+                        scheduled_date=task.task_date,
+                    )
+                    assigned_in_planner.add(contact.id)
+                    assigned_total += 1
+                    member_assigned += 1
+                if contact_index >= len(contacts):
+                    break
+
+            member_summaries.append({
+                "member_plan_id": member.id,
+                "member_name": member.member_name,
+                "monthly_calls_target": member.monthly_calls_target,
+                "assigned_contacts": member_assigned,
+            })
+
+        return {
+            "planner_id": planner.id,
+            "assigned_contacts": assigned_total,
+            "remaining_unassigned_contacts": max(len(contacts) - contact_index, 0),
+            "members": member_summaries,
+        }
 
 class PlannerMemberPlanViewSet(viewsets.ModelViewSet):
     queryset = PlannerMemberPlan.objects.all().order_by('-created_at')
     serializer_class = PlannerMemberPlanSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if _is_admin(self.request.user):
+            return queryset
+        return queryset.filter(user=self.request.user)
 
     def perform_update(self, serializer):
+        if not _is_admin(self.request.user):
+            raise PermissionDenied("Only admin can update member plans.")
         member_plan = serializer.save()
         if any(
             f in serializer.validated_data for f in [
@@ -1606,11 +1916,110 @@ class PlannerMemberPlanViewSet(viewsets.ModelViewSet):
         ):
             member_plan.tasks.all().delete()
             ActivityPlannerViewSet()._generate_member_tasks(member_plan)
+            ActivityPlannerViewSet()._rebuild_contact_assignments(member_plan.planner)
 
 
 class PlannerTaskViewSet(viewsets.ModelViewSet):
     queryset = PlannerTask.objects.all().order_by('task_date', 'week_number')
     serializer_class = PlannerTaskSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if _is_admin(self.request.user):
+            return queryset
+        return queryset.filter(member_plan__user=self.request.user)
+
+
+class PlannerCallAssignmentViewSet(viewsets.ModelViewSet):
+    queryset = PlannerCallAssignment.objects.select_related('contact', 'assigned_user', 'member_plan', 'planner_task').all()
+    serializer_class = PlannerCallAssignmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if _is_admin(self.request.user):
+            planner_id = self.request.query_params.get('planner')
+            if planner_id:
+                queryset = queryset.filter(member_plan__planner_id=planner_id)
+            return queryset
+        return queryset.filter(assigned_user=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def my_queue(self, request):
+        today = timezone.now().date()
+        all_user_assignments = self.get_queryset()
+        base = all_user_assignments.filter(status='pending')
+        today_qs = base.filter(scheduled_date=today).order_by('sequence_number', 'id')
+        queue_qs = today_qs if today_qs.exists() else base.order_by('scheduled_date', 'sequence_number', 'id')
+        next_assignment = queue_qs.first()
+
+        today_total = all_user_assignments.filter(scheduled_date=today).count()
+        today_done = all_user_assignments.filter(status='contacted', contacted_at__date=today).count()
+        contacted_today = all_user_assignments.filter(
+            status='contacted',
+            contacted_at__date=today,
+        ).order_by('-contacted_at', '-updated_at', '-id')
+        contacted_history = all_user_assignments.filter(
+            status='contacted',
+        ).order_by('-contacted_at', '-updated_at', '-id')
+
+        return Response({
+            "today": str(today),
+            "today_total": today_total,
+            "today_done": today_done,
+            "today_remaining": max(today_total - today_done, 0),
+            "next_assignment": PlannerCallAssignmentSerializer(next_assignment).data if next_assignment else None,
+            "contacted_today": PlannerCallAssignmentSerializer(contacted_today, many=True).data,
+            "contacted_history": PlannerCallAssignmentSerializer(contacted_history, many=True).data,
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def submit_remark(self, request, pk=None):
+        assignment = self.get_object()
+        if not _is_admin(request.user) and assignment.assigned_user_id != request.user.id:
+            return Response({"detail": "You do not have access to this assignment."}, status=status.HTTP_403_FORBIDDEN)
+
+        remarks = (request.data.get('remarks') or '').strip()
+        status_value = request.data.get('status') or 'contacted'
+        if status_value not in {'contacted', 'skipped'}:
+            return Response({"detail": "Invalid status."}, status=status.HTTP_400_BAD_REQUEST)
+
+        assignment.remarks = remarks
+        assignment.status = status_value
+        assignment.contacted_at = timezone.now() if status_value == 'contacted' else None
+        assignment.save(update_fields=['remarks', 'status', 'contacted_at', 'updated_at'])
+
+        if status_value == 'contacted':
+            contact = assignment.contact
+            if not contact.is_verified:
+                contact.is_verified = True
+                contact.save(update_fields=['is_verified', 'updated_at'])
+
+        planner_task = assignment.planner_task
+        pending_count = planner_task.call_assignments.filter(status='pending').count()
+        if pending_count == 0:
+            planner_task.status = 'done'
+        elif planner_task.call_assignments.filter(status='contacted').exists():
+            planner_task.status = 'in_progress'
+        else:
+            planner_task.status = 'pending'
+        planner_task.save(update_fields=['status', 'updated_at'])
+
+        if status_value == 'contacted' and remarks:
+            linked_lead = Lead.objects.filter(phone=assignment.contact.phone).order_by('-created_at').first()
+            if linked_lead is None:
+                linked_lead = Lead.objects.order_by('id').first()
+            if linked_lead is not None:
+                Activity.objects.create(
+                    lead=linked_lead,
+                    activity_type='note',
+                    summary=f"Planner call remark for {assignment.contact.person_name or assignment.contact.company_name or 'Contact'}",
+                    description=remarks,
+                )
+
+        return Response(PlannerCallAssignmentSerializer(assignment).data, status=status.HTTP_200_OK)
 
 
 import time

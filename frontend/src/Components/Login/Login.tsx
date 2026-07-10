@@ -49,6 +49,16 @@ export const LoginPage: React.FC = () => {
         });
       }
 
+      const meRes = await fetch('/api/auth/me/', {
+        headers: {
+          Authorization: `Bearer ${data.access}`,
+        },
+      });
+      if (meRes.ok) {
+        const me = await meRes.json();
+        authStore.setSession(data.access, data.refresh, me);
+      }
+
       navigate(from, { replace: true });
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');

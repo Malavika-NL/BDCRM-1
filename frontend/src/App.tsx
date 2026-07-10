@@ -29,8 +29,11 @@ import CampaignWorkspaceList from './Components/Target/CampaignWorkspaceList';
 import BDMTargetCreate from './Components/Target/BDMTargetCreate';
 import BDMTargetsList from './Components/Target/BDMTargetList';
 import { ActivityPlannerPage } from './Components/Planner/ActivityPlannerPage';
+import { ActivityPlannerAssignmentsPage } from './Components/Planner/ActivityPlannerAssignmentsPage';
 import { NotificationsPage } from './Components/Notifications/NotificationsPage';
 import { ChangePasswordPage } from './Components/Settings/ChangePasswordPage';
+import { AccountTargetingPage } from './Components/AccountTargeting/AccountTargetingPage';
+import { AccountTargetingOwnersPage } from './Components/AccountTargeting/AccountTargetingOwnersPage';
 
 function App() {
   const RequireAuth = ({ children }: { children: React.ReactNode }) => {
@@ -75,6 +78,8 @@ function App() {
             {/* Tasks */}
             <Route path="/tasks" element={<TasksPage />} />
             <Route path="/activity-planner" element={<ActivityPlannerPage />} />
+            <Route path="/activity-planner/assignments/:plannerId" element={<ActivityPlannerAssignmentsPage />} />
+            <Route path="/activity-planner/assignments" element={<ActivityPlannerAssignmentsPage />} />
 
             {/* Contacts */}
             <Route path="/contacts" element={<Contacts />} />
@@ -99,6 +104,8 @@ function App() {
             <Route path="/bdm-targets" element={<BDMTargetsList />} />
             <Route path="/bdm-targets/new" element={<BDMTargetCreate />} />
             <Route path="/create-user" element={<UserCreationPage />} />
+            <Route path="/account-targetting" element={<AccountTargetingPage />} />
+            <Route path="/account-targetting/owners" element={<AccountTargetingOwnersPage />} />
             <Route path="/settings/change-password" element={<ChangePasswordPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
 

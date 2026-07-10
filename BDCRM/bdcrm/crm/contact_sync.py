@@ -40,6 +40,7 @@ class suppress_contact_sync:
 
 
 def normalize_contact_payload(data):
+    raw_is_verified = data.get("is_verified", False)
     return {
         "name": (data.get("name") or data.get("person_name") or "").strip(),
         "email": (data.get("email") or "").strip().lower(),
@@ -53,6 +54,7 @@ def normalize_contact_payload(data):
         "designation": (data.get("designation") or "").strip(),
         "region": (data.get("region") or "").strip(),
         "location": (data.get("location") or "").strip(),
+        "is_verified": raw_is_verified is True or str(raw_is_verified).strip().lower() in {"1", "true", "yes"},
     }
 
 
@@ -155,6 +157,8 @@ def upsert_contact_from_common_payload(data):
     contact.designation = payload["designation"]
     contact.region = payload["region"]
     contact.location = payload["location"]
+    if payload["is_verified"]:
+        contact.is_verified = True
 
     with suppress_contact_sync():
         contact.save()

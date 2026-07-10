@@ -719,3 +719,105 @@ class PlannerTask(models.Model):
 
     def __str__(self):
         return f"{self.member_plan.member_name} - {self.channel} ({self.period_type})"
+
+
+class PlannerCallAssignment(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('contacted', 'Contacted'),
+        ('skipped', 'Skipped'),
+    ]
+
+    member_plan = models.ForeignKey(PlannerMemberPlan, on_delete=models.CASCADE, related_name='call_assignments')
+    planner_task = models.ForeignKey(
+        PlannerTask,
+        on_delete=models.CASCADE,
+        related_name='call_assignments',
+        limit_choices_to={'period_type': 'daily', 'channel': 'calls'},
+    )
+    contact = models.ForeignKey('Contact', on_delete=models.CASCADE, related_name='planner_call_assignments')
+    assigned_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='planner_call_assignments',
+    )
+    sequence_number = models.PositiveIntegerField(default=1)
+    scheduled_date = models.DateField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    remarks = models.TextField(blank=True, default='')
+    contacted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['scheduled_date', 'sequence_number', 'id']
+        constraints = [
+            models.UniqueConstraint(fields=['planner_task', 'contact'], name='uniq_planner_task_contact_assignment'),
+            models.UniqueConstraint(fields=['member_plan', 'contact'], name='uniq_member_plan_contact_assignment'),
+        ]
+
+    def __str__(self):
+        return f"{self.member_plan.member_name} -> {self.contact} ({self.scheduled_date})"
+
+
+class AccountTargetCompany(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    normalized_name = models.CharField(max_length=255, unique=True, editable=False)
+    location = models.CharField(max_length=255, blank=True, default="")
+    region = models.CharField(max_length=100, blank=True, default="")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_account_target_companies",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def save(self, *args, **kwargs):
+        self.name = (self.name or "").strip()
+        self.normalized_name = self.name.casefold()
+        self.location = (self.location or "").strip()
+        self.region = (self.region or "").strip()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+
+class AccountTargetPIC(models.Model):
+    company = models.ForeignKey(AccountTargetCompany, on_delete=models.CASCADE, related_name="pics")
+    pic_name = models.CharField(max_length=255)
+    phone_number = models.CharField(max_length=50)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="account_target_pics",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["pic_name", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "phone_number"],
+                name="unique_account_target_pic_phone_per_company",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.pic_name = (self.pic_name or "").strip()
+        self.phone_number = (self.phone_number or "").strip()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.company.name} - {self.pic_name}"

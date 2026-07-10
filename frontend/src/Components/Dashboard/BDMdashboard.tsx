@@ -761,7 +761,7 @@ export const BDMDashboard = () => {
             <Target className="text-white" size={24} />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-[26px] font-black text-white leading-tight tracking-tight">BDM Core Intelligence</h1>
+            <h1 className="text-[26px] font-black text-white leading-tight tracking-tight">BD Core Intelligence</h1>
             <p className="text-[13px] text-indigo-200 mt-1 font-medium">
               Live breakdown of Verticals, Regions, and Pipeline Segments.
             </p>
@@ -904,7 +904,7 @@ export const BDMDashboard = () => {
                 </div>
               ) : (
                 <div className="h-52">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={208}>
                     <BarChart data={verticalStats.slice(0,6)} barCategoryGap="30%"
                       margin={{ top:4, right:4, left:-20, bottom:0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -993,7 +993,7 @@ export const BDMDashboard = () => {
               ) : (
                 <>
                   <div className="h-40">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={160}>
                       <PieChart>
                         <Pie data={sourceStats} dataKey="value" innerRadius={42} outerRadius={60}
                           stroke="none" startAngle={90} endAngle={-270} cornerRadius={4}>

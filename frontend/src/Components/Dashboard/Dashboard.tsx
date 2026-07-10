@@ -2341,7 +2341,7 @@ export const Dashboard = () => {
         {/* ── ROW 2: Quick Status Row ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 f2">
           {[
-            { label:'BDM Targets',     value:bdmTargets.length,    icon:Target,      bg:'#eef2ff', border:'#c7d2fe', text:'#4338ca', glow:'rgba(79,70,229,0.2)',   grad:'linear-gradient(135deg,#4f46e5,#7c3aed)' },
+            { label:'BD Targets',      value:bdmTargets.length,    icon:Target,      bg:'#eef2ff', border:'#c7d2fe', text:'#4338ca', glow:'rgba(79,70,229,0.2)',   grad:'linear-gradient(135deg,#4f46e5,#7c3aed)' },
             { label:'Campaigns',       value:campaigns.length,     icon:Zap,         bg:'#ecfdf5', border:'#a7f3d0', text:'#065f46', glow:'rgba(16,185,129,0.2)',  grad:'linear-gradient(135deg,#10b981,#0d9488)' },
             { label:'Open Tasks',      value:tasks.length,         icon:CheckCircle2,bg:'#fffbeb', border:'#fde68a', text:'#b45309', glow:'rgba(245,158,11,0.2)',  grad:'linear-gradient(135deg,#f59e0b,#f97316)' },
             { label:'Overdue Tasks',   value:overdueCount,         icon:AlertTriangle,bg:'#fff1f2',border:'#fecdd3', text:'#be123c', glow:'rgba(239,68,68,0.2)',   grad:'linear-gradient(135deg,#ef4444,#f43f5e)' },
@@ -2370,7 +2370,7 @@ export const Dashboard = () => {
               iconBg="linear-gradient(135deg,#4f46e5,#7c3aed)" iconGlow="rgba(79,70,229,0.35)"
               action={<span className="text-[11px] font-black px-2.5 py-1 rounded-full" style={{ background:'#eef2ff', color:'#4338ca', border:'1px solid #c7d2fe' }}>This Month</span>} />
             <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={208}>
                 <BarChart data={pipelineData} barCategoryGap="35%" margin={{ top:4, right:4, left:-20, bottom:0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill:'#64748b', fontSize:11, fontWeight:600 }} />
@@ -2399,7 +2399,7 @@ export const Dashboard = () => {
             <SectionHeader icon={Activity} title="Conversion Snapshot" subtitle="Leads by current status"
               iconBg="linear-gradient(135deg,#06b6d4,#0284c7)" iconGlow="rgba(6,182,212,0.35)" />
             <div className="h-44 relative">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={176}>
                 <PieChart>
                   <Pie data={pieData} dataKey="value" innerRadius={50} outerRadius={68}
                     stroke="none" startAngle={90} endAngle={-270} cornerRadius={4}>
@@ -2447,7 +2447,7 @@ export const Dashboard = () => {
                 </div>
               } />
             <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={208}>
                 <AreaChart data={weeklyData} margin={{ top:4, right:8, left:-24, bottom:0 }}>
                   <defs>
                     <linearGradient id="leadFill" x1="0" y1="0" x2="0" y2="1">
@@ -2469,10 +2469,10 @@ export const Dashboard = () => {
             </div>
           </div>
 
-          {/* BDM Targets Progress */}
+          {/* BD Targets Progress */}
           <div className="dash-card p-5"
             style={{ border:'1.5px solid #d1fae5', boxShadow:'0 4px 20px rgba(16,185,129,0.07),0 1px 4px rgba(0,0,0,0.04)' }}>
-            <SectionHeader icon={Target} title="BDM Targets Progress" subtitle={`${bdmTargets.length} active plans · avg ${avgBDMProgress}%`}
+            <SectionHeader icon={Target} title="BD Targets Progress" subtitle={`${bdmTargets.length} active plans · avg ${avgBDMProgress}%`}
               iconBg="linear-gradient(135deg,#10b981,#0d9488)" iconGlow="rgba(16,185,129,0.35)"
               action={<span className="text-[11px] font-black px-2.5 py-1 rounded-full" style={{ background:'#ecfdf5', color:'#065f46', border:'1px solid #a7f3d0' }}>{avgBDMProgress}% avg</span>} />
 
@@ -2483,7 +2483,7 @@ export const Dashboard = () => {
                   <Target size={20} className="text-slate-300" />
                 </div>
                 <p className="text-[13px] font-black text-slate-400">No targets set yet</p>
-                <p className="text-[11px] text-slate-300 font-medium mt-0.5">Create your first BDM target plan</p>
+                <p className="text-[11px] text-slate-300 font-medium mt-0.5">Create your first BD target plan</p>
               </div>
             ) : (
               <div className="space-y-3 overflow-y-auto max-h-56 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -2525,7 +2525,7 @@ export const Dashboard = () => {
             ) : (
               <>
                 <div className="h-36">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={144}>
                     <PieChart>
                       <Pie data={campData} dataKey="value" innerRadius={38} outerRadius={54}
                         stroke="none" startAngle={90} endAngle={-270} cornerRadius={4}>

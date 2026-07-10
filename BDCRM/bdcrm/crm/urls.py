@@ -34,6 +34,7 @@ router.register(r'engagement-tools', views.EngagementToolViewSet)
 router.register(r'activity-planners', views.ActivityPlannerViewSet, basename='activity-planners')
 router.register(r'planner-member-plans', views.PlannerMemberPlanViewSet, basename='planner-member-plans')
 router.register(r'planner-tasks', views.PlannerTaskViewSet, basename='planner-tasks')
+router.register(r'planner-call-assignments', views.PlannerCallAssignmentViewSet, basename='planner-call-assignments')
 
 
 

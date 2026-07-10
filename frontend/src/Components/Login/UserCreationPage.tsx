@@ -1158,7 +1158,7 @@ import { authStore, type UserRole } from '../Utils/auth';
 import {
   UserPlus, User, Mail, Phone, Briefcase, Building2,
   MapPin, Lock, ShieldCheck, CheckCircle2, AlertTriangle,
-  Loader2, ChevronDown, X, Search, Users, Shield,
+  Loader2, ChevronDown, X, Search, Users, Shield, Pencil, Trash2,
   UserCheck, Eye, EyeOff, Sparkles,
 } from 'lucide-react';
 
@@ -1244,23 +1244,26 @@ const IconInput = ({
 export const UserCreationPage: React.FC = () => {
   const currentUser = useMemo(() => authStore.getUser(), []);
   const token = authStore.getToken();
+  const [forceLogin, setForceLogin]     = useState(false);
 
   const [users, setUsers]               = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [loadError, setLoadError]       = useState('');
   const [search, setSearch]             = useState('');
   const [modalOpen, setModalOpen]       = useState(false);
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState('');
   const [success, setSuccess]           = useState('');
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
 
   const emptyForm = {
-    username: '', email: '', first_name: '', last_name: '',
+    email: '', first_name: '', last_name: '',
     password: '', phone_number: '', designation: '',
     department: '', address: '', role: 'employee' as UserRole, is_active: true,
   };
   const [form, setForm] = useState(emptyForm);
 
-  if (!token) return <Navigate to="/login" replace />;
+  if (forceLogin || !token) return <Navigate to="/login" replace />;
   if (currentUser?.role !== 'admin') return <Navigate to="/dashboard" replace />;
 
   const update = (key: string, value: any) => setForm(p => ({ ...p, [key]: value }));
@@ -1281,15 +1284,20 @@ export const UserCreationPage: React.FC = () => {
 
   const fetchUsers = async () => {
     setLoadingUsers(true);
+    setLoadError('');
     try {
-      const res = await fetch(USERS_URL, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await authStore.fetchWithAuth(USERS_URL);
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         throw new Error(extractErrorMessage(data, 'Failed to load users.'));
       }
       setUsers(Array.isArray(data) ? data : data?.results || []);
     } catch (err: any) {
-      setError(err.message || 'Failed to load users.');
+      if ((err.message || '').includes('Session expired')) {
+        setForceLogin(true);
+      }
+      setUsers([]);
+      setLoadError(err.message || 'Failed to load users.');
     } finally {
       setLoadingUsers(false);
     }
@@ -1301,25 +1309,88 @@ export const UserCreationPage: React.FC = () => {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(form),
+      const payload = {
+        ...form,
+        email: form.email.trim().toLowerCase(),
+      };
+      const res = await authStore.fetchWithAuth(editingUserId ? `${USERS_URL}${editingUserId}/` : API_URL, {
+        method: editingUserId ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingUserId && !form.password ? { ...payload, password: undefined } : payload),
       });
       const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(extractErrorMessage(data, 'Failed to create user.'));
-      setSuccess(`User "${data?.username || form.username}" created successfully.`);
+      if (!res.ok) {
+        throw new Error(extractErrorMessage(data, editingUserId ? 'Failed to update user.' : 'Failed to create user.'));
+      }
+      setSuccess(
+        editingUserId
+          ? `User "${data?.email || form.email}" updated successfully.`
+          : `User "${data?.email || form.email}" created successfully.`
+      );
       setForm(emptyForm);
+      setEditingUserId(null);
       setModalOpen(false);
       await fetchUsers();
     } catch (err: any) {
+      if ((err.message || '').includes('Session expired')) {
+        setForceLogin(true);
+      }
       setError(err.message || 'Failed to create user.');
     } finally {
       setLoading(false);
     }
   };
 
-  const closeModal = () => { setModalOpen(false); setError(''); setForm(emptyForm); };
+  const openCreateModal = () => {
+    setEditingUserId(null);
+    setError('');
+    setForm(emptyForm);
+    setModalOpen(true);
+  };
+
+  const openEditModal = (user: any) => {
+    setEditingUserId(user.id);
+    setError('');
+    setForm({
+      email: user.email || '',
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      password: '',
+      phone_number: user.phone_number || '',
+      designation: user.designation || '',
+      department: user.department || '',
+      address: user.address || '',
+      role: (user.role || 'employee') as UserRole,
+      is_active: user.is_active !== false,
+    });
+    setModalOpen(true);
+  };
+
+  const handleDelete = async (user: any) => {
+    if (!window.confirm(`Delete user "${user.email || user.username}"?`)) return;
+    setLoadError('');
+    try {
+      const res = await authStore.fetchWithAuth(`${USERS_URL}${user.id}/`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(extractErrorMessage(data, 'Failed to delete user.'));
+      }
+      setSuccess(`User "${user.email || user.username}" deleted successfully.`);
+      await fetchUsers();
+    } catch (err: any) {
+      if ((err.message || '').includes('Session expired')) {
+        setForceLogin(true);
+      }
+      setLoadError(err.message || 'Failed to delete user.');
+    }
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingUserId(null);
+    setError('');
+    setForm(emptyForm);
+  };
 
   const filtered = users.filter(u =>
     `${u.username} ${u.email} ${u.first_name} ${u.last_name} ${u.department} ${u.designation}`
@@ -1349,6 +1420,7 @@ export const UserCreationPage: React.FC = () => {
     { label: 'Designation', color: 'text-emerald-200'},
     { label: 'Role',        color: 'text-pink-200'   },
     { label: 'Status',      color: 'text-amber-200'  },
+    { label: 'Actions',     color: 'text-slate-200'  },
   ];
 
   return (
@@ -1459,7 +1531,7 @@ export const UserCreationPage: React.FC = () => {
                 <ShieldCheck size={14} className="text-indigo-200" />
                 <span className="text-[13px] font-black text-indigo-100">Admin Only</span>
               </div>
-              <button onClick={() => setModalOpen(true)}
+              <button onClick={openCreateModal}
                 className="btn-banner flex items-center gap-2.5 px-6 py-3 rounded-xl text-[14px] font-black text-indigo-700 bg-white">
                 <UserPlus size={16} /> Create User
               </button>
@@ -1534,6 +1606,22 @@ export const UserCreationPage: React.FC = () => {
             </div>
           )}
 
+          {loadError && (
+            <div className="mx-6 mt-4 flex items-center gap-3 text-[14px] font-semibold px-5 py-3.5 rounded-xl shrink-0"
+              style={{ background:'#fff7ed', border:'1.5px solid #fdba74', color:'#9a3412', boxShadow:'0 4px 12px rgba(249,115,22,0.12)' }}>
+              <AlertTriangle size={18} className="shrink-0 text-orange-500" />
+              <span>{loadError}</span>
+              <button
+                type="button"
+                onClick={() => { void fetchUsers(); }}
+                className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-black transition-colors"
+                style={{ background:'#ffffff', border:'1px solid #fdba74', color:'#c2410c' }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
           {/* table body */}
           <div className="flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {loadingUsers ? (
@@ -1588,6 +1676,27 @@ export const UserCreationPage: React.FC = () => {
                       <td className="px-6 py-4 text-[14px] text-slate-600">{u.designation || '—'}</td>
                       <td className="px-6 py-4"><RoleBadge role={u.role || 'employee'} /></td>
                       <td className="px-6 py-4"><StatusBadge active={u.is_active !== false} /></td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(u)}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-black"
+                            style={{ background:'#eef2ff', border:'1px solid #c7d2fe', color:'#4338ca' }}
+                          >
+                            <Pencil size={12} /> Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(u)}
+                            disabled={u.id === currentUser?.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-black disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{ background:'#fff1f2', border:'1px solid #fecdd3', color:'#be123c' }}
+                          >
+                            <Trash2 size={12} /> Delete
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1614,8 +1723,10 @@ export const UserCreationPage: React.FC = () => {
                   <UserPlus size={20} className="text-white" />
                 </div>
                 <div>
-                  <h2 className="text-[20px] font-black text-white tracking-tight">Create New User</h2>
-                  <p className="text-[12px] text-indigo-200 font-medium mt-0.5">Fill in all details and submit</p>
+                  <h2 className="text-[20px] font-black text-white tracking-tight">{editingUserId ? 'Edit User' : 'Create New User'}</h2>
+                  <p className="text-[12px] text-indigo-200 font-medium mt-0.5">
+                    {editingUserId ? 'Update user access and profile details' : 'Fill in all details and submit'}
+                  </p>
                 </div>
               </div>
               <button onClick={closeModal}
@@ -1649,20 +1760,26 @@ export const UserCreationPage: React.FC = () => {
                   <span className="text-[14px] font-black text-indigo-700 uppercase tracking-wider">Account Credentials</span>
                 </div>
                 <div className="p-5 grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={labelCls}>Username <span className="text-red-400 normal-case font-normal">*</span></label>
-                    <IconInput icon={User} placeholder="e.g. john_doe" value={form.username}
-                      onChange={(e: any) => update('username', e.target.value)} required />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Email</label>
+                  <div className="col-span-2">
+                    <label className={labelCls}>Email <span className="text-red-400 normal-case font-normal">*</span></label>
                     <IconInput icon={Mail} type="email" placeholder="john@company.com" value={form.email}
-                      onChange={(e: any) => update('email', e.target.value)} />
+                      onChange={(e: any) => update('email', e.target.value)} required />
+                    <p className="mt-2 text-[12px] font-medium text-slate-400">
+                      Username will be generated automatically from this email.
+                    </p>
                   </div>
                   <div className="col-span-2">
-                    <label className={labelCls}>Password <span className="text-red-400 normal-case font-normal">*</span></label>
+                    <label className={labelCls}>
+                      Password
+                      {!editingUserId && <span className="text-red-400 normal-case font-normal"> *</span>}
+                    </label>
                     <IconInput icon={Lock} showToggle placeholder="Set a strong password" value={form.password}
-                      onChange={(e: any) => update('password', e.target.value)} required />
+                      onChange={(e: any) => update('password', e.target.value)} required={!editingUserId} />
+                    {editingUserId && (
+                      <p className="mt-2 text-[12px] font-medium text-slate-400">
+                        Leave password blank if you do not want to change it.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

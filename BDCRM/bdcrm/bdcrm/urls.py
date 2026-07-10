@@ -34,6 +34,8 @@ router.register(r'engagement-tools', views.EngagementToolViewSet)
 router.register(r'activity-planners', views.ActivityPlannerViewSet, basename='activity-planners')
 router.register(r'planner-member-plans', views.PlannerMemberPlanViewSet, basename='planner-member-plans')
 router.register(r'planner-tasks', views.PlannerTaskViewSet, basename='planner-tasks')
+router.register(r'planner-call-assignments', views.PlannerCallAssignmentViewSet, basename='planner-call-assignments')
+router.register(r'account-targeting', views.AccountTargetCompanyViewSet, basename='account-targeting')
 
 
 
@@ -49,6 +51,7 @@ urlpatterns = [
     path('api/auth/refresh/', views.RefreshAuthTokenView.as_view(), name='auth_refresh_token'),
     path('api/auth/change-password/', views.ChangePasswordView.as_view(), name='auth_change_password'),
     path('api/auth/create-user/', views.CreateUserView.as_view(), name='auth_create_user'),
+    path('api/auth/users/<int:user_id>/', views.UserDetailView.as_view(), name='auth_user_detail'),
     path('api/auth/me/', views.me, name='auth_me'),
     path('api/auth/users/', views.list_users, name='auth_list_users'), 
     path('api/auth/bootstrap-admin/', views.bootstrap_admin_profile, name='auth_bootstrap_admin'),

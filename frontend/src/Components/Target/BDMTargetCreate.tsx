@@ -1210,6 +1210,20 @@ const API_BASE = '/api';
 type OptionItem   = { id: number; name: string };
 type ChoiceOption = { value: string; label: string };
 
+const TARGET_TYPE_OPTIONS: ChoiceOption[] = [
+  { value: 'region', label: 'Region' },
+  { value: 'vertical', label: 'Vertical' },
+  { value: 'product', label: 'Product' },
+  { value: 'customer_category', label: 'Customer Category' },
+  { value: 'sales_channel', label: 'Sales Channel' },
+  { value: 'engagement_tool', label: 'Engagement Tool' },
+];
+
+const STATUS_OPTIONS: ChoiceOption[] = [
+  { value: 'active', label: 'Active' },
+  { value: 'completed', label: 'Completed' },
+];
+
 function getTypeIcon(value: string) {
   const iconMap: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
     region: MapPin, vertical: Briefcase, product: Package,
@@ -1224,6 +1238,17 @@ function extractChoices(optionsData: any, fieldName: string): ChoiceOption[] {
   return choices
     .filter((c) => c?.value !== undefined)
     .map((c) => ({ value: String(c.value), label: String(c.display_name ?? c.label ?? c.value) }));
+}
+
+async function readJsonResponse<T>(response: Response): Promise<T | null> {
+  const text = await response.text();
+  if (!text.trim()) return null;
+  try {
+    return JSON.parse(text) as T;
+  } catch (error) {
+    console.warn('Failed to parse JSON response', error);
+    return null;
+  }
 }
 
 const inputCls =
@@ -1301,14 +1326,14 @@ export const BDMTargetCreate = () => {
   const [categories, setCategories]     = useState<OptionItem[]>([]);
   const [channels, setChannels]         = useState<OptionItem[]>([]);
   const [tools, setTools]               = useState<OptionItem[]>([]);
-  const [targetTypeOptions, setTargetTypeOptions] = useState<ChoiceOption[]>([]);
-  const [statusOptions, setStatusOptions]         = useState<ChoiceOption[]>([]);
+  const [targetTypeOptions, setTargetTypeOptions] = useState<ChoiceOption[]>(TARGET_TYPE_OPTIONS);
+  const [statusOptions, setStatusOptions]         = useState<ChoiceOption[]>(STATUS_OPTIONS);
 
   const [form, setForm] = useState({
-    name: '', target_type: '', target_leads: '', target_revenue: '',
+    name: '', target_type: TARGET_TYPE_OPTIONS[0].value, target_leads: '', target_revenue: '',
     start_date: '', end_date: '', region: '', vertical: '',
     product_line: '', customer_category: '', sales_channel: '',
-    engagement_tool: '', status: '', notes: '', target_owner: '',
+    engagement_tool: '', status: STATUS_OPTIONS[0].value, notes: '', target_owner: '',
     review_cycle: '', success_metric: '', risk_notes: '',
   });
 
@@ -1320,16 +1345,20 @@ export const BDMTargetCreate = () => {
           fetch(`${API_BASE}/product-lines/`), fetch(`${API_BASE}/customer-categories/`),
           fetch(`${API_BASE}/sales-channels/`), fetch(`${API_BASE}/engagement-tools/`),
         ]);
-        setRegions(await regRes.json()); setVerticals(await vertRes.json());
-        setProducts(await prodRes.json()); setCategories(await catRes.json());
-        setChannels(await chanRes.json()); setTools(await toolRes.json());
+        setRegions((await readJsonResponse<OptionItem[]>(regRes)) ?? []);
+        setVerticals((await readJsonResponse<OptionItem[]>(vertRes)) ?? []);
+        setProducts((await readJsonResponse<OptionItem[]>(prodRes)) ?? []);
+        setCategories((await readJsonResponse<OptionItem[]>(catRes)) ?? []);
+        setChannels((await readJsonResponse<OptionItem[]>(chanRes)) ?? []);
+        setTools((await readJsonResponse<OptionItem[]>(toolRes)) ?? []);
+
         const optRes = await fetch(`${API_BASE}/bdm-targets/`, { method: 'OPTIONS' });
         if (optRes.ok) {
-          const od = await optRes.json();
+          const od = await readJsonResponse<any>(optRes);
           const tc = extractChoices(od, 'target_type');
           const sc = extractChoices(od, 'status');
-          setTargetTypeOptions(tc); setStatusOptions(sc);
-          setForm(p => ({ ...p, target_type: p.target_type || tc[0]?.value || '', status: p.status || sc[0]?.value || '' }));
+          if (tc.length > 0) setTargetTypeOptions(tc);
+          if (sc.length > 0) setStatusOptions(sc);
         }
       } catch(e) { console.error('Error loading dropdowns', e); }
     };
@@ -1339,10 +1368,10 @@ export const BDMTargetCreate = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setIsSubmitting(true);
     const payload: any = {
-      name: form.name, target_type: form.target_type,
+      name: form.name, target_type: form.target_type || TARGET_TYPE_OPTIONS[0].value,
       target_leads: parseInt(form.target_leads, 10) || 0,
       target_revenue: parseFloat(form.target_revenue) || 0,
-      start_date: form.start_date, end_date: form.end_date, status: form.status,
+      start_date: form.start_date, end_date: form.end_date, status: form.status || STATUS_OPTIONS[0].value,
       notes: [form.notes, `Owner: ${form.target_owner}`, `Review Cycle: ${form.review_cycle}`,
               `Success Metric: ${form.success_metric}`, `Risks: ${form.risk_notes}`].filter(Boolean).join(' | '),
     };
@@ -1357,7 +1386,10 @@ export const BDMTargetCreate = () => {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
       });
       if (res.ok) navigate('/bdm-targets');
-      else { const err = await res.json(); alert(`Error: ${JSON.stringify(err)}`); }
+      else {
+        const err = await readJsonResponse<Record<string, unknown>>(res);
+        alert(`Error: ${JSON.stringify(err ?? { status: res.status, detail: res.statusText || 'Request failed' })}`);
+      }
     } catch(e) { console.error(e); alert('Failed to connect to server.'); }
     finally { setIsSubmitting(false); }
   };
@@ -1439,7 +1471,7 @@ export const BDMTargetCreate = () => {
             <Target className="text-white" size={24} />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-[26px] font-black text-white leading-tight tracking-tight">Create BDM Target Plan</h1>
+            <h1 className="text-[26px] font-black text-white leading-tight tracking-tight">Create BD Target Plan</h1>
             <p className="text-[13px] text-indigo-200 mt-1 font-medium">
               Build clear objectives with measurable KPIs and execution timeline.
             </p>
@@ -1557,7 +1589,7 @@ export const BDMTargetCreate = () => {
                 <div className="space-y-4">
 
                   <FieldWithIcon label="Target Owner" icon={Building2} type="text"
-                    placeholder="e.g. Regional BDM Team A" value={form.target_owner}
+                    placeholder="e.g. Regional BD Team A" value={form.target_owner}
                     onChange={v => setForm({...form, target_owner:v})}
                     focusBorder="#3b82f6" focusGlow="rgba(59,130,246,0.12)" />
 

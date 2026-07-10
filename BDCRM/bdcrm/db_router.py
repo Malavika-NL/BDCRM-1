@@ -14,6 +14,17 @@ class ContactRouter:
             return 'contacts_db'
         return None
 
+    def allow_relation(self, obj1, obj2, **hints):
+        model_1_is_contact = self._is_contact_model(obj1._meta.model)
+        model_2_is_contact = self._is_contact_model(obj2._meta.model)
+
+        # Contacts live behind a dedicated DB alias, but in this project both aliases
+        # point to the same physical database. Allow relations so CRM planner models
+        # can reference Contact rows without Django blocking the assignment.
+        if model_1_is_contact or model_2_is_contact:
+            return True
+        return None
+
     def allow_migrate(self, db, app_label, model_name=None, **hints):
         if hints.get('model') and self._is_contact_model(hints['model']):
             return db == 'contacts_db'
