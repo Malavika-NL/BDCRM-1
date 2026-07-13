@@ -35,6 +35,7 @@ router.register(r'activity-planners', views.ActivityPlannerViewSet, basename='ac
 router.register(r'planner-member-plans', views.PlannerMemberPlanViewSet, basename='planner-member-plans')
 router.register(r'planner-tasks', views.PlannerTaskViewSet, basename='planner-tasks')
 router.register(r'planner-call-assignments', views.PlannerCallAssignmentViewSet, basename='planner-call-assignments')
+router.register(r'wishlist', views.WishlistEntryViewSet, basename='wishlist')
 
 
 

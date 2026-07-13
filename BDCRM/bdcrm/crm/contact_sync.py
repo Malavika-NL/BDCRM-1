@@ -8,7 +8,9 @@ from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 
-from .models import Contact
+from django.utils import timezone
+
+from .models import Contact, PlannerCallAssignment
 
 logger = logging.getLogger(__name__)
 _sync_state = threading.local()
@@ -41,6 +43,25 @@ class suppress_contact_sync:
 
 def normalize_contact_payload(data):
     raw_is_verified = data.get("is_verified", False)
+    raw_status = (
+        data.get("status")
+        or data.get("contact_status")
+        or data.get("call_status")
+        or data.get("verification_status")
+        or data.get("response_type")
+        or ""
+    )
+    normalized_status = str(raw_status).strip().lower()
+    inferred_verified = normalized_status in {
+        "1",
+        "true",
+        "yes",
+        "verified",
+        "contacted",
+        "completed",
+        "done",
+        "called",
+    }
     return {
         "name": (data.get("name") or data.get("person_name") or "").strip(),
         "email": (data.get("email") or "").strip().lower(),
@@ -54,7 +75,18 @@ def normalize_contact_payload(data):
         "designation": (data.get("designation") or "").strip(),
         "region": (data.get("region") or "").strip(),
         "location": (data.get("location") or "").strip(),
-        "is_verified": raw_is_verified is True or str(raw_is_verified).strip().lower() in {"1", "true", "yes"},
+        "remarks": (
+            data.get("remarks")
+            or data.get("remark")
+            or data.get("notes")
+            or data.get("description")
+            or ""
+        ).strip(),
+        "is_verified": (
+            raw_is_verified is True
+            or str(raw_is_verified).strip().lower() in {"1", "true", "yes"}
+            or inferred_verified
+        ),
     }
 
 
@@ -74,6 +106,8 @@ def contact_to_common_payload(contact):
         "designation": contact.designation or "",
         "region": contact.region or "",
         "location": contact.location or "",
+        "is_verified": bool(contact.is_verified),
+        "status": "contacted" if contact.is_verified else "pending",
     }
 
 
@@ -163,7 +197,36 @@ def upsert_contact_from_common_payload(data):
     with suppress_contact_sync():
         contact.save()
 
+    if payload["is_verified"]:
+        _mark_latest_assignment_contacted(contact, payload.get("remarks", ""))
+
     return contact, created
+
+
+def _mark_latest_assignment_contacted(contact, remarks=""):
+    assignment = (
+        PlannerCallAssignment.objects.select_related('planner_task')
+        .filter(contact=contact, status__in=['pending', 'skipped'])
+        .order_by('scheduled_date', 'sequence_number', 'id')
+        .first()
+    )
+    if not assignment:
+        return
+
+    assignment.status = 'contacted'
+    assignment.contacted_at = timezone.now()
+    assignment.remarks = remarks or assignment.remarks or 'Synced as contacted from peer CRM.'
+    assignment.save(update_fields=['status', 'contacted_at', 'remarks', 'updated_at'])
+
+    planner_task = assignment.planner_task
+    pending_count = planner_task.call_assignments.filter(status='pending').count()
+    if pending_count == 0:
+        planner_task.status = 'done'
+    elif planner_task.call_assignments.filter(status='contacted').exists():
+        planner_task.status = 'in_progress'
+    else:
+        planner_task.status = 'pending'
+    planner_task.save(update_fields=['status', 'updated_at'])
 
 
 def send_contact_to_peer(contact):

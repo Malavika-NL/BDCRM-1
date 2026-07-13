@@ -34,11 +34,11 @@ from .serializers import (
     CampaignWorkspaceSerializer, CampaignResponseSerializer,
     CampaignWorkspaceGenerateSerializer, ActivityPlannerSerializer,
     PlannerMemberPlanSerializer, PlannerTaskSerializer, PlannerCallAssignmentSerializer, AccountTargetCompanySerializer,
-    AccountTargetRegistrationSerializer
+    AccountTargetRegistrationSerializer, WishlistEntrySerializer
 )
 from .models import (AILeadProfile, Lead, Contact, Course, Activity, Task, Tag, Company, Vertical, Region, Industry, Campaign, AIInteractionLog,
                      ConsumptionPattern, ProductCategory, Enrollment, AILeadProfile, AIScoreSnapshot, AIActivityAnalysis,
-    AIAlert, AIChatSession, AIDocument)
+    AIAlert, AIChatSession, AIDocument, WishlistEntry)
 from .serializers import (
     LeadSerializer, CourseSerializer, ActivitySerializer,    AILeadProfileSerializer, AIScoreSnapshotSerializer, AIActivityAnalysisSerializer,
     AIAlertSerializer, AIDocumentSerializer, AIChatInputSerializer,
@@ -76,6 +76,19 @@ def _token_payload_for_user(user: User):
 def _is_admin(user):
     request_role = getattr(getattr(user, "profile", None), "role", None)
     return bool(user and (user.is_superuser or user.is_staff or request_role == "admin"))
+
+
+def _is_telemarketing_user(user):
+    if not user or not getattr(user, "is_active", False):
+        return False
+    profile = getattr(user, "profile", None)
+    if not profile:
+        return False
+    searchable = f"{profile.designation or ''} {profile.department or ''}".lower()
+    keywords = ("telemarketing", "tele-calling", "telecalling", "tele caller", "telecaller")
+    if any(keyword in searchable for keyword in keywords):
+        return True
+    return getattr(profile, "role", "") == "employee" and not searchable.strip()
 
 
 class LoginView(APIView):
@@ -649,6 +662,76 @@ class CompanyViewSet(viewsets.ModelViewSet):
     serializer_class = CompanySerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'industry']
+
+
+class WishlistEntryViewSet(viewsets.ModelViewSet):
+    queryset = WishlistEntry.objects.select_related("created_by").all()
+    serializer_class = WishlistEntrySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["get", "post", "head", "options"]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["company_name", "location", "created_by__username", "created_by__email"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+
+        if not _is_admin(user):
+            queryset = queryset.filter(created_by=user)
+
+        created_by = (self.request.query_params.get("created_by") or "").strip()
+        if created_by and _is_admin(user):
+            queryset = queryset.filter(created_by_id=created_by)
+
+        company_name = (self.request.query_params.get("company_name") or "").strip()
+        if company_name:
+            queryset = queryset.filter(company_name__icontains=company_name)
+
+        region = (self.request.query_params.get("region") or "").strip()
+        if region:
+            queryset = queryset.filter(location__icontains=region)
+
+        date_from = (self.request.query_params.get("date_from") or "").strip()
+        if date_from:
+            queryset = queryset.filter(created_at__date__gte=date_from)
+
+        date_to = (self.request.query_params.get("date_to") or "").strip()
+        if date_to:
+            queryset = queryset.filter(created_at__date__lte=date_to)
+
+        return queryset
+
+    def perform_create(self, serializer):
+        user = self.request.user if getattr(self.request.user, "is_authenticated", False) else None
+        serializer.save(created_by=user)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        company_name = serializer.validated_data["company_name"]
+        location = serializer.validated_data["location"]
+        force_create = str(request.data.get("force_create", "")).strip().lower() in {"1", "true", "yes", "y"}
+
+        duplicates = WishlistEntry.objects.select_related("created_by").filter(
+            company_name__iexact=company_name,
+            location__iexact=location,
+        ).order_by("-created_at", "-id")
+
+        if duplicates.exists() and not force_create:
+            preview = duplicates[:3]
+            return Response(
+                {
+                    "detail": "This company name and location already exist in the wishlist.",
+                    "duplicate_count": duplicates.count(),
+                    "duplicates": WishlistEntrySerializer(preview, many=True).data,
+                    "requires_confirmation": True,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class AccountTargetCompanyViewSet(viewsets.ModelViewSet):
@@ -1646,6 +1729,27 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Only admin can assign planner members."}, status=status.HTTP_403_FORBIDDEN)
         planner = self.get_object()
         member_data = request.data.get('members', [])
+        requested_user_ids = [item.get('user') for item in member_data if item.get('user')]
+        eligible_users = {
+            user.id: user
+            for user in User.objects.filter(id__in=requested_user_ids, is_active=True).select_related('profile')
+        }
+        invalid_user_names = []
+        for item in member_data:
+            user_id = item.get('user')
+            if not user_id:
+                continue
+            user = eligible_users.get(user_id)
+            if not user or not _is_telemarketing_user(user):
+                invalid_user_names.append(item.get('member_name') or f"User {user_id}")
+        if invalid_user_names:
+            return Response(
+                {
+                    "detail": "Only active telemarketing users can receive planner contacts.",
+                    "invalid_users": invalid_user_names,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         planner.member_plans.all().delete()
         for item in member_data:
             member_plan = PlannerMemberPlan.objects.create(
@@ -1703,6 +1807,9 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                 return Response({"detail": "You do not have access to this planner."}, status=status.HTTP_403_FORBIDDEN)
 
         today = timezone.now().date()
+        planner_user_ids = list(
+            planner.member_plans.exclude(user_id__isnull=True).values_list('user_id', flat=True)
+        )
         overview = []
         for member in planner.member_plans.select_related('user').all():
             assignments = member.call_assignments.select_related('contact', 'planner_task').all()
@@ -1757,7 +1864,9 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
             "month": planner.month,
             "year": planner.year,
             "members": overview,
-            "available_contacts": Contact.objects.count(),
+            "available_contacts": Contact.objects.filter(
+                Q(telemarketing_owner__isnull=True) | Q(telemarketing_owner_id__in=planner_user_ids)
+            ).count(),
         }, status=status.HTTP_200_OK)
 
     def _channel_distribution(self, total, weight, slots):
@@ -1832,35 +1941,113 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                     )
 
     def _rebuild_contact_assignments(self, planner):
-        assigned_elsewhere = PlannerCallAssignment.objects.exclude(
-            member_plan__planner=planner
-        ).values_list('contact_id', flat=True)
-        PlannerCallAssignment.objects.filter(member_plan__planner=planner).delete()
-
-        contacts = list(
-            Contact.objects.exclude(id__in=assigned_elsewhere)
-            .distinct()
-            .order_by('created_at', 'id')
+        existing_assignments = list(
+            PlannerCallAssignment.objects.filter(member_plan__planner=planner)
+            .select_related('contact', 'assigned_user')
+            .order_by('scheduled_date', 'sequence_number', 'id')
         )
-        contact_index = 0
+        existing_contacts_by_user = {}
+        for assignment in existing_assignments:
+            if assignment.assigned_user_id:
+                existing_contacts_by_user.setdefault(assignment.assigned_user_id, [])
+                if assignment.contact_id not in existing_contacts_by_user[assignment.assigned_user_id]:
+                    existing_contacts_by_user[assignment.assigned_user_id].append(assignment.contact_id)
+
+        PlannerCallAssignment.objects.filter(member_plan__planner=planner).delete()
         assigned_total = 0
         member_summaries = []
         assigned_in_planner = set()
 
-        member_plans = planner.member_plans.select_related('user').all().order_by('member_name', 'id')
-        for member in member_plans:
-            daily_call_tasks = member.tasks.filter(
-                period_type='daily',
-                channel='calls',
-                target_count__gt=0,
-            ).order_by('task_date', 'id')
+        member_plans = list(planner.member_plans.select_related('user').all().order_by('member_name', 'id'))
+        planner_user_ids = [member.user_id for member in member_plans if member.user_id]
 
+        owned_contacts_by_user = {}
+        if planner_user_ids:
+            owned_contacts = list(
+                Contact.objects.filter(telemarketing_owner_id__in=planner_user_ids)
+                .order_by('telemarketing_assigned_at', 'created_at', 'id')
+            )
+            for contact in owned_contacts:
+                owned_contacts_by_user.setdefault(contact.telemarketing_owner_id, []).append(contact)
+
+        member_required_counts = {}
+        reserved_contacts_by_user = {}
+        surplus_contacts = []
+        for member in member_plans:
+            daily_call_tasks = list(
+                member.tasks.filter(
+                    period_type='daily',
+                    channel='calls',
+                    target_count__gt=0,
+                ).order_by('task_date', 'id')
+            )
+            required_contacts = sum(task.target_count for task in daily_call_tasks)
+            member_required_counts[member.id] = {
+                'required_contacts': required_contacts,
+                'daily_call_tasks': daily_call_tasks,
+            }
+            if not member.user_id:
+                reserved_contacts_by_user[member.user_id] = []
+                continue
+            owned_for_member = owned_contacts_by_user.get(member.user_id, [])
+            reserved_contacts_by_user[member.user_id] = owned_for_member[:required_contacts]
+            surplus_contacts.extend(owned_for_member[required_contacts:])
+
+        unowned_contacts = list(
+            Contact.objects.filter(telemarketing_owner__isnull=True)
+            .distinct()
+            .order_by('created_at', 'id')
+        )
+
+        for member in member_plans:
+            daily_call_tasks = member_required_counts[member.id]['daily_call_tasks']
+            required_contacts = member_required_counts[member.id]['required_contacts']
+            preferred_contact_ids = existing_contacts_by_user.get(member.user_id, [])
+            reserved_contacts = list(reserved_contacts_by_user.get(member.user_id, []))
+            reserved_by_id = {contact.id: contact for contact in reserved_contacts}
+            preferred_contacts = [
+                reserved_by_id[contact_id]
+                for contact_id in preferred_contact_ids
+                if contact_id in reserved_by_id
+            ]
+            preferred_contacts.extend(
+                contact for contact in reserved_contacts
+                if contact.id not in preferred_contact_ids
+            )
+
+            needed_contacts = max(required_contacts - len(preferred_contacts), 0)
+            fresh_contacts = []
+            if needed_contacts > 0:
+                take_unowned = unowned_contacts[:needed_contacts]
+                unowned_contacts = unowned_contacts[len(take_unowned):]
+                fresh_contacts.extend(take_unowned)
+                needed_contacts -= len(take_unowned)
+
+            if needed_contacts > 0:
+                take_surplus = surplus_contacts[:needed_contacts]
+                surplus_contacts = surplus_contacts[len(take_surplus):]
+                fresh_contacts.extend(take_surplus)
+
+            if member.user_id and fresh_contacts:
+                now = timezone.now()
+                fresh_contact_ids = [contact.id for contact in fresh_contacts]
+                Contact.objects.filter(id__in=fresh_contact_ids).update(
+                    telemarketing_owner=member.user,
+                    telemarketing_assigned_at=now,
+                    updated_at=now,
+                )
+                fresh_contacts = list(
+                    Contact.objects.filter(id__in=fresh_contact_ids).order_by('telemarketing_assigned_at', 'id')
+                )
+
+            member_contacts = preferred_contacts + fresh_contacts
+            contact_index = 0
             member_assigned = 0
             for task in daily_call_tasks:
                 for seq in range(1, task.target_count + 1):
-                    if contact_index >= len(contacts):
+                    if contact_index >= len(member_contacts):
                         break
-                    contact = contacts[contact_index]
+                    contact = member_contacts[contact_index]
                     contact_index += 1
                     if contact.id in assigned_in_planner:
                         continue
@@ -1875,7 +2062,7 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                     assigned_in_planner.add(contact.id)
                     assigned_total += 1
                     member_assigned += 1
-                if contact_index >= len(contacts):
+                if contact_index >= len(member_contacts):
                     break
 
             member_summaries.append({
@@ -1888,7 +2075,7 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
         return {
             "planner_id": planner.id,
             "assigned_contacts": assigned_total,
-            "remaining_unassigned_contacts": max(len(contacts) - contact_index, 0),
+            "remaining_unassigned_contacts": Contact.objects.filter(telemarketing_owner__isnull=True).count(),
             "members": member_summaries,
         }
 

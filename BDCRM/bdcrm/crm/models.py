@@ -588,6 +588,14 @@ class Contact(models.Model):
     phone = models.CharField(max_length=50, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
     is_verified = models.BooleanField(default=False)
+    telemarketing_owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='telemarketing_assigned_contacts',
+    )
+    telemarketing_assigned_at = models.DateTimeField(null=True, blank=True)
     created_by_name = models.CharField(max_length=150, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -821,3 +829,28 @@ class AccountTargetPIC(models.Model):
 
     def __str__(self):
         return f"{self.company.name} - {self.pic_name}"
+
+
+class WishlistEntry(models.Model):
+    company_name = models.CharField(max_length=255)
+    location = models.CharField(max_length=255)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="wishlist_entries",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+
+    def save(self, *args, **kwargs):
+        self.company_name = (self.company_name or "").strip()
+        self.location = (self.location or "").strip()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.company_name} ({self.location})"

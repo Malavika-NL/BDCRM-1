@@ -102,6 +102,25 @@ export interface AccountTargetRegistrationInput {
   phone_number: string;
 }
 
+export interface WishlistEntry {
+  id: number;
+  company_name: string;
+  location: string;
+  created_at: string;
+  updated_at?: string;
+  created_by_info?: {
+    id: number;
+    name: string;
+    username?: string;
+    email?: string;
+  } | null;
+}
+
+export interface WishlistEntryInput {
+  company_name: string;
+  location: string;
+}
+
 export interface AccountTargetOwnershipSummaryItem {
   user: {
     id: number | null;

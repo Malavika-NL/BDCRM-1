@@ -10,6 +10,8 @@ import type {
   ActivityPlanner,
   PlannerMemberPlan,
   PlannerTask,
+  WishlistEntry,
+  WishlistEntryInput,
 } from './types';
 
 // Change this if you deploy to AWS/Heroku
@@ -637,6 +639,22 @@ export const api = {
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error('Failed to update task');
+    return res.json();
+  },
+
+  getWishlistEntries: async (): Promise<WishlistEntry[]> => {
+    const res = await fetch(`${API_BASE_URL}/wishlist/`);
+    if (!res.ok) return [];
+    return res.json();
+  },
+
+  createWishlistEntry: async (data: WishlistEntryInput): Promise<WishlistEntry> => {
+    const res = await fetch(`${API_BASE_URL}/wishlist/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create wishlist entry');
     return res.json();
   },
 

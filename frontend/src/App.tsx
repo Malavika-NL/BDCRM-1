@@ -34,6 +34,7 @@ import { NotificationsPage } from './Components/Notifications/NotificationsPage'
 import { ChangePasswordPage } from './Components/Settings/ChangePasswordPage';
 import { AccountTargetingPage } from './Components/AccountTargeting/AccountTargetingPage';
 import { AccountTargetingOwnersPage } from './Components/AccountTargeting/AccountTargetingOwnersPage';
+import { WishlistPage } from './Components/Wishlist/WishlistPage';
 
 function App() {
   const RequireAuth = ({ children }: { children: React.ReactNode }) => {
@@ -83,6 +84,7 @@ function App() {
 
             {/* Contacts */}
             <Route path="/contacts" element={<Contacts />} />
+            <Route path="/wishlist" element={<WishlistPage />} />
 
             {/* Playbooks / LMS */}
             <Route path="/playbooks" element={<CourseWorkflows />} />

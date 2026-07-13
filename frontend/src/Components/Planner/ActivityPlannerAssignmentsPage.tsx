@@ -83,6 +83,7 @@ export function ActivityPlannerAssignmentsPage() {
 
   const [forceLogin, setForceLogin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [planners, setPlanners] = useState<PlannerOption[]>([]);
@@ -98,9 +99,14 @@ export function ActivityPlannerAssignmentsPage() {
     return <Navigate to="/activity-planner" replace />;
   }
 
-  const load = async (targetPlannerId?: string) => {
-    setLoading(true);
-    setError('');
+  const load = async (targetPlannerId?: string, options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+      setError('');
+    }
     try {
       const plannersRes = await authStore.fetchWithAuth(PLANNERS_URL);
       const plannersData = await plannersRes.json().catch(() => null);
@@ -129,10 +135,16 @@ export function ActivityPlannerAssignmentsPage() {
       if ((err.message || '').includes('Session expired')) {
         setForceLogin(true);
       }
-      setOverview(null);
+      if (!silent) {
+        setOverview(null);
+      }
       setError(err.message || 'Failed to load assigned contacts page.');
     } finally {
-      setLoading(false);
+      if (silent) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -143,7 +155,7 @@ export function ActivityPlannerAssignmentsPage() {
   useEffect(() => {
     if (!plannerId) return;
     const intervalId = window.setInterval(() => {
-      void load(plannerId);
+      void load(plannerId, { silent: true });
     }, 10000);
     return () => window.clearInterval(intervalId);
   }, [plannerId]);
@@ -232,8 +244,8 @@ export function ActivityPlannerAssignmentsPage() {
               className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl text-[13px] font-black text-white"
               style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.16)' }}
             >
-              <RefreshCcw size={14} />
-              Refresh
+              <RefreshCcw size={14} className={refreshing ? 'animate-spin' : ''} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
             </button>
             <button
               type="button"

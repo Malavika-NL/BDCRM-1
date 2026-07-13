@@ -19,6 +19,7 @@ import {
   ChevronDown,
   Settings,
   Building2,
+  Heart,
 } from 'lucide-react';
 import { api } from '../Utils/api';
 import { authStore } from '../Utils/auth';
@@ -49,6 +50,7 @@ const bottomNavItems: NavItem[] = [
   { path: '/workflows', label: 'Workflows', icon: Workflow, bg: 'bg-gradient-to-br from-yellow-400 to-amber-600' },
   { path: '/tasks', label: 'Tasks', icon: CheckSquare, bg: 'bg-gradient-to-br from-green-400 to-green-600' },
   { path: '/contacts', label: 'Contacts', icon: Users, bg: 'bg-gradient-to-br from-cyan-400 to-cyan-700' },
+  { path: '/wishlist', label: 'Wishlist', icon: Heart, bg: 'bg-gradient-to-br from-rose-400 to-pink-600' },
   { path: '/playbooks', label: 'Playbooks', icon: BookOpen, bg: 'bg-gradient-to-br from-orange-400 to-orange-600' },
   { path: '/bdm-core', label: 'BD Dashboard', icon: BarChart3, bg: 'bg-gradient-to-br from-indigo-400 to-blue-700' },
 ];

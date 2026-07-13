@@ -4,7 +4,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from .models import AIActivityAnalysis, AIAlert, AIDocument, AILeadProfile, AIScoreSnapshot, ConsumptionPattern, Lead, Contact, Course, Module, Lesson, Activity, Region, Task, Tag, Company, Vertical, UserProfile, AccountTargetCompany, AccountTargetPIC
+from .models import AIActivityAnalysis, AIAlert, AIDocument, AILeadProfile, AIScoreSnapshot, ConsumptionPattern, Lead, Contact, Course, Module, Lesson, Activity, Region, Task, Tag, Company, Vertical, UserProfile, AccountTargetCompany, AccountTargetPIC, WishlistEntry
 
 # --- NEW SERIALIZERS ---
 
@@ -61,12 +61,21 @@ class ContactSerializer(serializers.ModelSerializer):
             "location",
             "vertical",
             "is_verified",
+            "telemarketing_owner",
+            "telemarketing_assigned_at",
             "created_by_name",
             "created_by_info",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["created_by_name", "created_by_info", "created_at", "updated_at"]
+        read_only_fields = [
+            "telemarketing_owner",
+            "telemarketing_assigned_at",
+            "created_by_name",
+            "created_by_info",
+            "created_at",
+            "updated_at",
+        ]
 
     def get_name(self, obj):
         return obj.person_name or obj.company_name or ""
@@ -795,3 +804,42 @@ class AccountTargetRegistrationSerializer(serializers.Serializer):
         self.context["pic_instance"] = pic
         self.context["created_company"] = created
         return {"company": company, "pic": pic, "created_company": created}
+
+
+class WishlistEntrySerializer(serializers.ModelSerializer):
+    created_by_info = serializers.SerializerMethodField()
+
+    class Meta:
+        model = WishlistEntry
+        fields = [
+            "id",
+            "company_name",
+            "location",
+            "created_at",
+            "updated_at",
+            "created_by_info",
+        ]
+        read_only_fields = ["created_at", "updated_at", "created_by_info"]
+
+    def get_created_by_info(self, obj):
+        user = getattr(obj, "created_by", None)
+        if not user:
+            return None
+        return {
+            "id": user.id,
+            "name": user.get_full_name() or user.username,
+            "username": user.username,
+            "email": user.email,
+        }
+
+    def validate_company_name(self, value):
+        cleaned = value.strip()
+        if not cleaned:
+            raise serializers.ValidationError("Company name is required.")
+        return cleaned
+
+    def validate_location(self, value):
+        cleaned = value.strip()
+        if not cleaned:
+            raise serializers.ValidationError("Location is required.")
+        return cleaned

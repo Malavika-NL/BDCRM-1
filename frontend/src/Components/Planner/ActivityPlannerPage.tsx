@@ -25,6 +25,8 @@ type PlannerUser = {
   username: string;
   role?: string;
   is_active?: boolean;
+  designation?: string;
+  department?: string;
 };
 
 const PLANNERS_URL = '/api/activity-planners/';
@@ -66,6 +68,18 @@ const getAssignmentStatusStyle = (status: 'pending' | 'contacted' | 'skipped') =
     color: '#1d4ed8',
     border: '1px solid #bfdbfe',
   };
+};
+
+const isTelemarketingUser = (user: PlannerUser) => {
+  const searchable = `${user.designation || ''} ${user.department || ''}`.toLowerCase();
+  if (
+    ['telemarketing', 'tele-calling', 'telecalling', 'tele caller', 'telecaller'].some((keyword) =>
+      searchable.includes(keyword)
+    )
+  ) {
+    return true;
+  }
+  return user.role === 'employee' && !searchable.trim();
 };
 
 const toYmd = (date: Date) => {
@@ -162,7 +176,7 @@ export function ActivityPlannerPage() {
         const usersData = await usersRes.json().catch(() => null);
         if (!usersRes.ok) throw new Error(extractErrorMessage(usersData, 'Failed to load users.'));
         const employeeUsers = (Array.isArray(usersData) ? usersData : []).filter(
-          (user) => user.role !== 'admin' && user.is_active !== false
+          (user) => user.role !== 'admin' && user.is_active !== false && isTelemarketingUser(user)
         );
         setUsers(employeeUsers);
 
@@ -692,7 +706,7 @@ export function ActivityPlannerPage() {
                       <div className="min-w-0">
                         <p className="text-[16px] font-black text-slate-800">Contact Assignment Sheet</p>
                         <p className="text-[13px] text-slate-500 font-medium mt-1">
-                          Enter the number of contacts for each registered user. Saving will auto-assign unique contacts.
+                          Enter the number of contacts for each telemarketing user. Saving will auto-assign unique contacts only once.
                         </p>
                       </div>
                     </div>
@@ -720,7 +734,7 @@ export function ActivityPlannerPage() {
                         className={`${inputCls} pl-10`}
                         value={assignmentSearch}
                         onChange={(e) => setAssignmentSearch(e.target.value)}
-                        placeholder="Search registered users by name, email, or username"
+                        placeholder="Search telemarketing users by name, email, or username"
                       />
                     </div>
                     <input
@@ -756,7 +770,7 @@ export function ActivityPlannerPage() {
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200">
                         <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400 w-[70px]">No.</th>
-                        <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Registered User</th>
+                        <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Telemarketing User</th>
                         <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Email</th>
                         <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400 w-[210px]">Contacts To Assign</th>
                         <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400 w-[160px]">Estimated Daily</th>
@@ -767,8 +781,8 @@ export function ActivityPlannerPage() {
                         <tr>
                           <td colSpan={5} className="px-5 py-10 text-center">
                             <Users size={24} className="mx-auto text-slate-300" />
-                            <p className="text-[14px] font-black text-slate-600 mt-3">No registered users found</p>
-                            <p className="text-[12px] text-slate-400 font-medium mt-1">Try a different search or add active users first.</p>
+                            <p className="text-[14px] font-black text-slate-600 mt-3">No telemarketing users found</p>
+                            <p className="text-[12px] text-slate-400 font-medium mt-1">Add active users with telemarketing in their designation or department.</p>
                           </td>
                         </tr>
                       ) : (
@@ -1055,6 +1069,12 @@ export function ActivityPlannerPage() {
                                               {assignment.contact_detail?.person_name || assignment.contact_detail?.company_name || 'Contact'}
                                             </p>
                                             <p className="text-[12px] text-slate-500 font-medium mt-1">{assignment.scheduled_date}</p>
+                                            <span
+                                              className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-black uppercase mt-2"
+                                              style={getAssignmentStatusStyle(assignment.status)}
+                                            >
+                                              {assignment.status}
+                                            </span>
                                           </div>
                                         ))}
                                       </div>

@@ -3,7 +3,7 @@ from django.contrib import admin
 from .models import (Activity, Industry, Lead, Industry, Course,AIScoreSnapshot,AIActivityAnalysis,AIAlert,AIChatSession,
 Campaign, Task, Tag, Company, WhatsAppCampaign, ProductCategory,ConsumptionPattern,Enrollment,AILeadProfile,AIDocument,ProductLine,
 CustomerCategory,
-AIInteractionLog, Vertical, Region, AIDocument, ProductLine, BDMTarget, CampaignWorkspace, UserProfile)
+AIInteractionLog, Vertical, Region, AIDocument, ProductLine, BDMTarget, CampaignWorkspace, UserProfile, WishlistEntry)
 
 # Register your models here.
 admin.site.register(Lead)
@@ -24,3 +24,4 @@ admin.site.register(ProductLine)
 admin.site.register(BDMTarget)
 admin.site.register(CampaignWorkspace)
 admin.site.register(UserProfile)
+admin.site.register(WishlistEntry)
