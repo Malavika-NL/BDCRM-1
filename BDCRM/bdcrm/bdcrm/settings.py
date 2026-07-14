@@ -118,19 +118,19 @@ WSGI_APPLICATION = 'bdcrm.wsgi.application'
 DATABASES = {
     "default": {
         "ENGINE": os.getenv("DATABASE_ENGINE", "django.db.backends.postgresql"),
-        "NAME": os.getenv("DATABASE_NAME", "BDCRM_DB"),
+        "NAME": os.getenv("DATABASE_NAME", "BDCRM"),
         "USER": os.getenv("DATABASE_USER", "postgres"),
-        "PASSWORD": os.getenv("DATABASE_PASSWORD", "Mbits123#@"),
+        "PASSWORD": os.getenv("DATABASE_PASSWORD", "admin"),
         "HOST": os.getenv("DATABASE_HOST", "127.0.0.1"),
-        "PORT": os.getenv("DATABASE_PORT", "5433"),
+        "PORT": os.getenv("DATABASE_PORT", "5432"),
     },
     "contacts_db": {
         "ENGINE": os.getenv("CONTACTS_DATABASE_ENGINE", os.getenv("DATABASE_ENGINE", "django.db.backends.postgresql")),
         "NAME": os.getenv("CONTACTS_DATABASE_NAME", os.getenv("DATABASE_NAME", "BDCRM_DB")),
         "USER": os.getenv("CONTACTS_DATABASE_USER", os.getenv("DATABASE_USER", "postgres")),
-        "PASSWORD": os.getenv("CONTACTS_DATABASE_PASSWORD", os.getenv("DATABASE_PASSWORD", "Mbits123#@")),
+        "PASSWORD": os.getenv("CONTACTS_DATABASE_PASSWORD", os.getenv("DATABASE_PASSWORD", "admin")),
         "HOST": os.getenv("CONTACTS_DATABASE_HOST", os.getenv("DATABASE_HOST", "127.0.0.1")),
-        "PORT": os.getenv("CONTACTS_DATABASE_PORT", os.getenv("DATABASE_PORT", "5433")),
+        "PORT": os.getenv("CONTACTS_DATABASE_PORT", os.getenv("DATABASE_PORT", "5432")),
     },
 }
 
