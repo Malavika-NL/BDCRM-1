@@ -211,6 +211,11 @@ export interface Contact {
   vertical?: string | null;
   created_by?: number | null;
   created_by_name?: string;
+  source_project?: string;
+  source_contact_id?: string;
+  source_owner_name?: string;
+  source_owner_email?: string;
+  is_verified?: boolean;
   created_by_info?: {
     id: number | null;
     name: string;
@@ -440,6 +445,7 @@ export interface ActivityPlanner {
   name: string;
   month: number;
   year: number;
+  source_project: 'all' | 'marketing_crm' | 'salespie' | 'both';
   status: 'draft' | 'active' | 'completed';
   notes: string;
   member_plans: PlannerMemberPlan[];

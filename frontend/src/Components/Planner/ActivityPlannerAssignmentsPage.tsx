@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Building2, CheckCircle2, Loader2, RefreshCcw, ShieldCheck, Users } from 'lucide-react';
+import { Building2, CheckCircle2, Loader2, RefreshCcw, ShieldCheck, Users, Filter } from 'lucide-react';
 import { authStore } from '../Utils/auth';
 
 type AdminOverviewMember = {
@@ -22,6 +22,8 @@ type AdminOverviewMember = {
     company_name: string;
     phone: string;
     region: string;
+    vertical?: string;
+    location?: string;
     scheduled_date: string;
     contacted_at: string | null;
     remarks: string;
@@ -33,6 +35,8 @@ type AdminOverviewMember = {
     company_name: string;
     phone: string;
     region: string;
+    vertical?: string;
+    location?: string;
     scheduled_date: string;
     status: 'pending' | 'contacted' | 'skipped';
     contacted_at: string | null;
@@ -90,6 +94,7 @@ export function ActivityPlannerAssignmentsPage() {
   const [selectedMemberId, setSelectedMemberId] = useState<string>('all');
   const [showContactedList, setShowContactedList] = useState(false);
   const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
+  const [contactFilters, setContactFilters] = useState({ vertical: '', region: '', location: '' });
 
   if (forceLogin || !authStore.getToken() || !currentUser) {
     return <Navigate to="/login" replace />;
@@ -98,6 +103,11 @@ export function ActivityPlannerAssignmentsPage() {
   if (currentUser.role !== 'admin') {
     return <Navigate to="/activity-planner" replace />;
   }
+
+  const matchesContactFilters = (assignment: AdminOverviewMember['assignments'][number]) =>
+    (!contactFilters.vertical || assignment.vertical?.toLowerCase().includes(contactFilters.vertical.toLowerCase())) &&
+    (!contactFilters.region || assignment.region?.toLowerCase().includes(contactFilters.region.toLowerCase())) &&
+    (!contactFilters.location || assignment.location?.toLowerCase().includes(contactFilters.location.toLowerCase()));
 
   const load = async (targetPlannerId?: string, options?: { silent?: boolean }) => {
     const silent = options?.silent === true;
@@ -108,7 +118,7 @@ export function ActivityPlannerAssignmentsPage() {
       setError('');
     }
     try {
-      const plannersRes = await authStore.fetchWithAuth(PLANNERS_URL);
+      const plannersRes = await authStore.fetchWithAuth(`${PLANNERS_URL}?summary=true`);
       const plannersData = await plannersRes.json().catch(() => null);
       if (!plannersRes.ok) throw new Error(extractErrorMessage(plannersData, 'Failed to load planners.'));
       const plannerList = Array.isArray(plannersData) ? plannersData : [];
@@ -287,6 +297,20 @@ export function ActivityPlannerAssignmentsPage() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-2">
+              {(['vertical', 'region', 'location'] as const).map((key) => (
+                <div key={key} className="relative">
+                  <Filter size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    className="w-full pl-8 pr-3 py-3 text-[13px] bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:bg-white focus:border-sky-400"
+                    placeholder={`Filter ${key}`}
+                    value={contactFilters[key]}
+                    onChange={(e) => setContactFilters((prev) => ({ ...prev, [key]: e.target.value }))}
+                  />
+                </div>
+              ))}
             </div>
 
             <div className="w-full max-w-sm">
@@ -517,7 +541,7 @@ export function ActivityPlannerAssignmentsPage() {
                         </div>
                       ) : (
                         <div className="space-y-3">
-                          {member.assignments.map((assignment) => (
+                          {member.assignments.filter(matchesContactFilters).map((assignment) => (
                             <article key={assignment.assignment_id} className="rounded-2xl px-4 py-4 bg-slate-50 border border-slate-200">
                               <div className="flex items-start justify-between gap-3 flex-wrap">
                                 <div className="flex items-start gap-3">

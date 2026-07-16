@@ -33,7 +33,7 @@ from .serializers import (
     BDMTargetSerializer, BDMReviewSerializer,
     CampaignWorkspaceSerializer, CampaignResponseSerializer,
     CampaignWorkspaceGenerateSerializer, ActivityPlannerSerializer,
-    PlannerMemberPlanSerializer, PlannerTaskSerializer, PlannerCallAssignmentSerializer, AccountTargetCompanySerializer,
+    PlannerMemberPlanSerializer, PlannerTaskSerializer, PlannerCallAssignmentSerializer, AccountTargetCompanySerializer, ActivityPlannerOptionSerializer,
     AccountTargetRegistrationSerializer, WishlistEntrySerializer
 )
 from .models import (AILeadProfile, Lead, Contact, Course, Activity, Task, Tag, Company, Vertical, Region, Industry, Campaign, AIInteractionLog,
@@ -57,6 +57,8 @@ from .contact_sync import (
     normalize_contact_payload,
     upsert_contact_from_common_payload,
     validate_sync_token,
+    send_assignment_to_peer,
+    delete_assignment_from_peer,
 )
 from django.conf import settings
 
@@ -240,6 +242,18 @@ class ContactViewSet(viewsets.ModelViewSet):
     search_fields = ["person_name", "company_name", "email", "phone", "address", "region", "vertical"]
     ordering_fields = ["created_at", "updated_at", "person_name", "company_name"]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        project = (self.request.query_params.get("project") or "all").strip().lower()
+        project_sources = {
+            "marketing_crm": ["marketing_crm", "both"],
+            "salespie": ["salespie", "both"],
+            "both": ["both"],
+        }
+        if project in project_sources:
+            queryset = queryset.filter(source_project__in=project_sources[project])
+        return queryset
+
     def perform_create(self, serializer):
         user = self.request.user
         if getattr(user, "is_authenticated", False):
@@ -284,7 +298,27 @@ class ContactSyncView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        payload = normalize_contact_payload(request.data)
+        origin_project = (
+            request.data.get("origin_project")
+            or request.data.get("source_project")
+            or request.headers.get("X-Contact-Sync-Source", "")
+        )
+        # Accept legacy peer keys, while persisting one source vocabulary for
+        # the Contacts page filters and badges.
+        origin_project = {
+            "marketing": "marketing_crm",
+            "marketingcrm": "marketing_crm",
+            "sales_pie": "salespie",
+        }.get(str(origin_project).strip().lower(), str(origin_project).strip().lower())
+        payload = normalize_contact_payload({
+            **request.data,
+            "source_project": origin_project,
+            "source_contact_id": request.data.get("origin_contact_id") or request.data.get("source_contact_id"),
+        })
+        # Keep planner metadata that is not part of the common contact
+        # schema. It identifies the exact BDCRM call assignment to mark
+        # contacted after a Marketing CRM verification.
+        payload["bdcrm_assignment_id"] = request.data.get("bdcrm_assignment_id")
         if not payload["email"] and not payload["mobile_number"]:
             return Response(
                 {"error": "Either email or mobile_number is required."},
@@ -1693,6 +1727,14 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'member_plans__member_name', 'member_plans__workspace_name']
 
+    def get_serializer_class(self):
+        # The list is only used to populate the planner selector. Returning
+        # nested member plans/contacts here made every page load serialize the
+        # entire planner history before the overview request could start.
+        if self.action == 'list' and self.request.query_params.get('summary') == 'true':
+            return ActivityPlannerOptionSerializer
+        return super().get_serializer_class()
+
     def get_queryset(self):
         queryset = super().get_queryset()
         if _is_admin(self.request.user):
@@ -1708,6 +1750,37 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
         if not _is_admin(self.request.user):
             raise PermissionDenied("Only admin can update activity planners.")
         serializer.save()
+
+    def perform_destroy(self, instance):
+        if not _is_admin(self.request.user):
+            raise PermissionDenied("Only admin can delete activity planners.")
+
+        # Deleting a planner must also release its contacts.  Otherwise they
+        # retain a telemarketing owner and cannot be allocated by the next plan.
+        assignment_contact_ids = list(
+            PlannerCallAssignment.objects.filter(member_plan__planner=instance)
+            .values_list('contact_id', flat=True)
+            .distinct()
+        )
+        planner_assignments = PlannerCallAssignment.objects.filter(member_plan__planner=instance).select_related('contact')
+        for assignment in planner_assignments:
+            delete_assignment_from_peer(
+                assignment.id,
+                assignment.contact,
+                planner_name=instance.name,
+                purge_legacy=True,
+            )
+        # Also purge when the planner has no current local assignments but
+        # Marketing CRM still contains legacy mirrored rows.
+        if not planner_assignments.exists():
+            delete_assignment_from_peer(0, planner_name=instance.name, purge_legacy=True)
+        if assignment_contact_ids:
+            Contact.objects.filter(id__in=assignment_contact_ids).update(
+                telemarketing_owner=None,
+                telemarketing_assigned_at=None,
+                is_verified=False,
+            )
+        instance.delete()
 
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
@@ -1834,6 +1907,8 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                         "company_name": assignment.contact.company_name or "",
                         "phone": assignment.contact.phone or "",
                         "region": assignment.contact.region or "",
+                        "vertical": assignment.contact.vertical or "",
+                        "location": assignment.contact.location or "",
                         "scheduled_date": assignment.scheduled_date,
                         "status": assignment.status,
                         "contacted_at": assignment.contacted_at,
@@ -1864,10 +1939,24 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
             "month": planner.month,
             "year": planner.year,
             "members": overview,
-            "available_contacts": Contact.objects.filter(
+            "available_contacts": self._planner_contacts(planner).filter(
                 Q(telemarketing_owner__isnull=True) | Q(telemarketing_owner_id__in=planner_user_ids)
             ).count(),
         }, status=status.HTTP_200_OK)
+
+    def _planner_contacts(self, planner):
+        """Return only the source selected for this planner.
+
+        Contacts shared by both systems remain available in either source queue,
+        but only once within a planner.
+        """
+        source_project = (planner.source_project or 'all').lower()
+        sources = {
+            'marketing_crm': ['marketing_crm', 'both'],
+            'salespie': ['salespie', 'both'],
+            'both': ['both'],
+        }.get(source_project)
+        return Contact.objects.filter(source_project__in=sources) if sources else Contact.objects.all()
 
     def _channel_distribution(self, total, weight, slots):
         if total <= 0 or weight <= 0 or slots <= 0:
@@ -1964,7 +2053,7 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
         owned_contacts_by_user = {}
         if planner_user_ids:
             owned_contacts = list(
-                Contact.objects.filter(telemarketing_owner_id__in=planner_user_ids)
+                self._planner_contacts(planner).filter(telemarketing_owner_id__in=planner_user_ids)
                 .order_by('telemarketing_assigned_at', 'created_at', 'id')
             )
             for contact in owned_contacts:
@@ -1994,7 +2083,7 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
             surplus_contacts.extend(owned_for_member[required_contacts:])
 
         unowned_contacts = list(
-            Contact.objects.filter(telemarketing_owner__isnull=True)
+            self._planner_contacts(planner).filter(telemarketing_owner__isnull=True)
             .distinct()
             .order_by('created_at', 'id')
         )
@@ -2051,7 +2140,7 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                     contact_index += 1
                     if contact.id in assigned_in_planner:
                         continue
-                    PlannerCallAssignment.objects.create(
+                    planner_assignment = PlannerCallAssignment.objects.create(
                         member_plan=member,
                         planner_task=task,
                         contact=contact,
@@ -2059,6 +2148,7 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                         sequence_number=seq,
                         scheduled_date=task.task_date,
                     )
+                    send_assignment_to_peer(contact, member.user, planner_assignment, planner.name)
                     assigned_in_planner.add(contact.id)
                     assigned_total += 1
                     member_assigned += 1
@@ -2075,7 +2165,7 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
         return {
             "planner_id": planner.id,
             "assigned_contacts": assigned_total,
-            "remaining_unassigned_contacts": Contact.objects.filter(telemarketing_owner__isnull=True).count(),
+            "remaining_unassigned_contacts": self._planner_contacts(planner).filter(telemarketing_owner__isnull=True).count(),
             "members": member_summaries,
         }
 

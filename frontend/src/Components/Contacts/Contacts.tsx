@@ -370,6 +370,9 @@ import { Search, Users, Mail, Building2, Plus, X, Pencil, Trash2, MapPin } from 
 export const Contacts = () => {
   const [contacts, setContacts]   = useState<Contact[]>([]);
   const [search, setSearch] = useState('');
+  const [projectFilter, setProjectFilter] = useState('all');
+  const [picFilter, setPicFilter] = useState('all');
+  const [verificationFilter, setVerificationFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -387,14 +390,45 @@ export const Contacts = () => {
   });
 
   const fetchContacts = async () => {
-    const data = await api.getContacts(search);
+    const data = await api.getContacts(search, projectFilter);
     setContacts(data);
   };
 
   useEffect(() => {
     const timer = setTimeout(() => fetchContacts(), 300);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, projectFilter]);
+
+  const getCreatorName = (contact: Contact) => {
+    const owner = contact.created_by_info?.name || contact.created_by_name || contact.source_owner_name || '';
+    return /\bsync\b/i.test(owner) ? 'Unassigned' : owner || 'Unassigned';
+  };
+
+  const normalizedPhone = (phone?: string | null) => (phone || '').replace(/\D/g, '').slice(-10);
+  const uniqueContacts = Array.from(contacts.reduce((unique, contact) => {
+    const identity = (contact.email || '').trim().toLowerCase() || normalizedPhone(contact.phone) || `id-${contact.id}`;
+    const existing = unique.get(identity);
+    // Prefer the verified and most recently updated copy when a peer retry
+    // sends the same person more than once.
+    if (!existing || (!existing.is_verified && contact.is_verified) ||
+      ((existing.is_verified === contact.is_verified) && (contact.updated_at || contact.created_at) > (existing.updated_at || existing.created_at))) {
+      unique.set(identity, contact);
+    }
+    return unique;
+  }, new Map<string, Contact>()).values());
+
+  const picOptions = Array.from(new Set(
+    uniqueContacts.map(getCreatorName).filter(name => name && name !== 'Unassigned')
+  )).sort((a, b) => a.localeCompare(b));
+
+  const visibleContacts = uniqueContacts.filter(contact => {
+    const projectMatches = projectFilter === 'all' || contact.source_project === projectFilter;
+    const picMatches = picFilter === 'all' || getCreatorName(contact) === picFilter;
+    const verificationMatches = verificationFilter === 'all'
+      || (verificationFilter === 'verified' && contact.is_verified)
+      || (verificationFilter === 'unverified' && !contact.is_verified);
+    return projectMatches && picMatches && verificationMatches;
+  });
 
   const resetForm = () => {
     setForm({
@@ -495,6 +529,16 @@ export const Contacts = () => {
 
   const getInitials = (name: string) =>
     name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
+  const getSourceLabel = (source?: string) => ({
+    marketing_crm: 'Marketing CRM',
+    salespie: 'SalesPie',
+  }[source || ''] || 'BDCRM');
+
+  const getSourceBadgeClass = (source?: string) => ({
+    marketing_crm: 'bg-violet-50 text-violet-700 border-violet-200',
+    salespie: 'bg-sky-50 text-sky-700 border-sky-200',
+  }[source || ''] || 'bg-slate-50 text-slate-600 border-slate-200');
 
   const avatarColors = [
     'from-blue-500 to-indigo-600',
@@ -636,13 +680,44 @@ export const Contacts = () => {
               <div>
                 <h2 className="text-[17px] font-black text-slate-800 leading-tight">Contact Directory</h2>
                 <p className="text-[12px] text-slate-400 font-medium mt-0.5">
-                  {contacts.length} contact{contacts.length !== 1 ? 's' : ''} found
+                  {visibleContacts.length} contact{visibleContacts.length !== 1 ? 's' : ''} found
                 </p>
               </div>
             </div>
 
             {/* search */}
             <div className="flex items-center gap-3">
+            <select
+              value={projectFilter}
+              onChange={e => setProjectFilter(e.target.value)}
+              className="px-3 py-2.5 text-[13px] font-bold text-slate-600 bg-slate-50 rounded-xl"
+              style={{ border:'1.5px solid #e2e8f0' }}
+            >
+              <option value="all">All projects</option>
+              <option value="marketing_crm">Marketing CRM contacts</option>
+              <option value="salespie">SalesPie contacts</option>
+            </select>
+            <select
+              value={picFilter}
+              onChange={e => setPicFilter(e.target.value)}
+              className="max-w-[180px] px-3 py-2.5 text-[13px] font-bold text-slate-600 bg-slate-50 rounded-xl"
+              style={{ border:'1.5px solid #e2e8f0' }}
+              aria-label="Filter contacts by PIC"
+            >
+              <option value="all">All PICs</option>
+              {picOptions.map(pic => <option key={pic} value={pic}>{pic}</option>)}
+            </select>
+            <select
+              value={verificationFilter}
+              onChange={e => setVerificationFilter(e.target.value)}
+              className="px-3 py-2.5 text-[13px] font-bold text-slate-600 bg-slate-50 rounded-xl"
+              style={{ border:'1.5px solid #e2e8f0' }}
+              aria-label="Filter contacts by verification status"
+            >
+              <option value="all">All statuses</option>
+              <option value="verified">Verified</option>
+              <option value="unverified">Unverified</option>
+            </select>
             <button
               type="button"
               onClick={openAddModal}
@@ -672,7 +747,7 @@ export const Contacts = () => {
           </div>
 
           {/* empty state */}
-          {contacts.length === 0 ? (
+          {visibleContacts.length === 0 ? (
             <div className="py-20 flex flex-col items-center gap-4">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
                 style={{ background:'linear-gradient(145deg,#f8fafc,#f1f5f9)', border:'1.5px dashed #e2e8f0' }}>
@@ -698,7 +773,7 @@ export const Contacts = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {contacts.map((contact, index) => (
+                  {visibleContacts.map((contact, index) => (
                     <tr key={contact.id}
                       className={`trow group border-l-[4px] ${ROW_ACCENTS[index % ROW_ACCENTS.length]} cursor-pointer`}
                       style={{ borderBottom:'1px solid #f1f5f9' }}>
@@ -714,6 +789,16 @@ export const Contacts = () => {
                           <div className="min-w-0">
                             <div className="text-[14px] font-black text-slate-800 group-hover:text-indigo-700 transition-colors leading-snug">
                               {contact.name || contact.person_name || contact.company_name}
+                            </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                              <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide ${getSourceBadgeClass(contact.source_project)}`}>
+                                From {getSourceLabel(contact.source_project)}
+                              </span>
+                              {contact.is_verified && (
+                                <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-emerald-700">
+                                  Verified
+                                </span>
+                              )}
                             </div>
                             <div className="text-[12px] text-slate-400 flex items-center gap-1.5 mt-0.5 font-medium">
                               <Mail size={11} /> {contact.email || '-'}
@@ -760,9 +845,12 @@ export const Contacts = () => {
 
                       {/* Created By */}
                       <td className="px-6 py-4">
-                        <span className="text-[13px] font-semibold text-slate-600">
-                          {contact.created_by_info?.name || '-'}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[13px] font-semibold text-slate-600">
+                            {getCreatorName(contact)}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-400">Created by</span>
+                        </div>
                       </td>
 
                       <td className="px-6 py-4">

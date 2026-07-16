@@ -6,11 +6,13 @@ import {
   ClipboardList,
   Loader2,
   Phone,
+  Pencil,
   RotateCcw,
   Search,
   Shield,
   ShieldCheck,
   Target,
+  Trash2,
   Users,
   Wand2,
 } from 'lucide-react';
@@ -113,7 +115,7 @@ const extractErrorMessage = (data: any, fallback: string) => {
   return fallback;
 };
 
-export function ActivityPlannerPage() {
+export function ActivityPlannerPage({ assignedContactsOnly = false }: { assignedContactsOnly?: boolean }) {
   const currentUser = useMemo(() => authStore.getUser(), []);
   const isAdmin = currentUser?.role === 'admin';
   const navigate = useNavigate();
@@ -130,10 +132,12 @@ export function ActivityPlannerPage() {
   const [queue, setQueue] = useState<PlannerQueueResponse | null>(null);
   const [remarks, setRemarks] = useState('');
   const [userView, setUserView] = useState<'queue' | 'contacted'>('queue');
+  const [nextContactPopup, setNextContactPopup] = useState<PlannerCallAssignment | null>(null);
 
   const [planName, setPlanName] = useState('Monthly Call Planner');
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
+  const [sourceProject, setSourceProject] = useState<'all' | 'marketing_crm' | 'salespie' | 'both'>('all');
   const [targets, setTargets] = useState<Record<number, number>>({});
   const [assignmentSearch, setAssignmentSearch] = useState('');
   const [quickFillCount, setQuickFillCount] = useState('');
@@ -145,18 +149,20 @@ export function ActivityPlannerPage() {
     return <Navigate to="/login" replace />;
   }
 
-  const loadQueue = async () => {
+  const loadQueue = async (): Promise<PlannerQueueResponse | null> => {
     try {
       const res = await authStore.fetchWithAuth(QUEUE_URL);
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(extractErrorMessage(data, 'Failed to load your call queue.'));
       setQueue(data);
+      return data;
     } catch (err: any) {
       if ((err.message || '').includes('Session expired')) {
         setForceLogin(true);
       }
       setQueue(null);
       setError(err.message || 'Failed to load your call queue.');
+      return null;
     }
   };
 
@@ -221,6 +227,7 @@ export function ActivityPlannerPage() {
     setPlanName(selectedPlanner.name);
     setMonth(selectedPlanner.month);
     setYear(selectedPlanner.year);
+    setSourceProject(selectedPlanner.source_project || 'all');
     setWorkingWeekendDates(getPlannerWeekendDates(selectedPlanner.notes));
     setTargets((prev) => {
       const next = { ...prev };
@@ -392,6 +399,7 @@ export function ActivityPlannerPage() {
             year,
             status: 'active',
             role_mode: 'admin',
+            source_project: sourceProject,
             notes: plannerNotes,
           }),
         });
@@ -407,6 +415,7 @@ export function ActivityPlannerPage() {
             month,
             year,
             status: 'active',
+            source_project: sourceProject,
             notes: plannerNotes,
           }),
         });
@@ -454,6 +463,30 @@ export function ActivityPlannerPage() {
     }
   };
 
+  const handleDeletePlanner = async () => {
+    if (!selectedPlannerId || !selectedPlanner) return;
+    if (!window.confirm(`Delete "${selectedPlanner.name}"? Its assigned contacts will be released for future planners.`)) return;
+
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      const res = await authStore.fetchWithAuth(`${PLANNERS_URL}${selectedPlannerId}/`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(extractErrorMessage(data, 'Failed to delete activity planner.'));
+      }
+      setSelectedPlannerId(null);
+      setTargets({});
+      setSuccess(`Planner "${selectedPlanner.name}" was deleted and its contacts were released.`);
+      await load();
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete activity planner.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const submitRemark = async (status: 'contacted' | 'skipped') => {
     if (!queue?.next_assignment) return;
     setSaving(true);
@@ -471,8 +504,11 @@ export function ActivityPlannerPage() {
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(extractErrorMessage(data, 'Failed to submit remark.'));
       setRemarks('');
-      await loadQueue();
-      setSuccess(status === 'contacted' ? 'Remark saved. Next contact is ready.' : 'Contact skipped. Next contact loaded.');
+      const refreshedQueue = await loadQueue();
+      if (refreshedQueue?.next_assignment) setNextContactPopup(refreshedQueue.next_assignment);
+      setSuccess(status === 'contacted'
+        ? 'Verified successfully. The admin can now see this completed contact.'
+        : 'Contact skipped. The next assigned contact is ready.');
     } catch (err: any) {
       if ((err.message || '').includes('Session expired')) {
         setForceLogin(true);
@@ -513,7 +549,9 @@ export function ActivityPlannerPage() {
               <ShieldCheck size={12} />
               {isAdmin ? 'Admin Planning Console' : 'My Daily Call Queue'}
             </div>
-            <h1 className="text-[30px] font-black text-white leading-tight tracking-tight mt-3">Activity Planner</h1>
+            <h1 className="text-[30px] font-black text-white leading-tight tracking-tight mt-3">
+              {!isAdmin && assignedContactsOnly ? 'Assigned Contacts' : 'Activity Planner'}
+            </h1>
             <p className="text-[14px] text-blue-50/90 mt-2 max-w-3xl font-medium">
               {isAdmin
                 ? 'Set a monthly call target for each user, then let the system split it week-wise and day-wise while assigning unique contacts automatically.'
@@ -583,7 +621,7 @@ export function ActivityPlannerPage() {
             </div>
 
             <div className="p-7 md:p-8 space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-5 gap-5">
                 <div>
                   <label className="block text-[12px] font-black text-slate-500 uppercase tracking-[0.16em] mb-2">Planner Name</label>
                   <input className={inputCls} value={planName} onChange={(e) => setPlanName(e.target.value)} />
@@ -616,6 +654,38 @@ export function ActivityPlannerPage() {
                 <div>
                   <label className="block text-[12px] font-black text-slate-500 uppercase tracking-[0.16em] mb-2">Year</label>
                   <input className={inputCls} type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-black text-slate-500 uppercase tracking-[0.16em] mb-2">Contact Source</label>
+                  <select
+                    className={inputCls}
+                    value={sourceProject}
+                    onChange={(e) => setSourceProject(e.target.value as typeof sourceProject)}
+                  >
+                    <option value="all">All contacts</option>
+                    <option value="marketing_crm">Marketing CRM</option>
+                    <option value="salespie">SalesPie</option>
+                    <option value="both">Shared by both CRMs</option>
+                  </select>
+                  {selectedPlanner ? (
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPlannerId(selectedPlanner.id)}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-black text-sky-700 bg-sky-50 border border-sky-200"
+                      >
+                        <Pencil size={12} /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeletePlanner}
+                        disabled={saving}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-black text-rose-700 bg-rose-50 border border-rose-200 disabled:opacity-60"
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -717,7 +787,7 @@ export function ActivityPlannerPage() {
                         <p className="text-[22px] font-black text-slate-800 mt-1">{assignedUserCount}/{users.length}</p>
                       </div>
                       <div className="rounded-2xl px-4 py-3 bg-slate-50 border border-slate-200 min-w-[120px]">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Contacts</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Monthly target</p>
                         <p className="text-[22px] font-black text-slate-800 mt-1">{totalMonthlyCalls}</p>
                       </div>
                       <div className="rounded-2xl px-4 py-3 bg-slate-50 border border-slate-200 min-w-[120px]">
@@ -856,7 +926,7 @@ export function ActivityPlannerPage() {
                         style={{ background: 'linear-gradient(135deg,#0ea5e9,#0f766e)', boxShadow: '0 8px 20px rgba(14,116,144,0.18)' }}
                       >
                         {saving ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                        {saving ? 'Saving Planner...' : 'Save And Auto Assign'}
+                        {saving ? 'Saving Planner...' : selectedPlannerId ? 'Update And Auto Assign' : 'Save And Auto Assign'}
                       </button>
                     </div>
                   </div>
@@ -1455,6 +1525,19 @@ export function ActivityPlannerPage() {
           </section>
         </div>
       )}
+      {nextContactPopup ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] bg-white p-7 shadow-2xl border border-sky-100">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-100 text-emerald-700"><CheckCircle2 size={24} /></div>
+            <p className="mt-5 text-[12px] font-black uppercase tracking-[0.16em] text-emerald-600">Verified and sent to admin</p>
+            <h2 className="mt-2 text-[23px] font-black text-slate-800">Next contact is ready</h2>
+            <p className="mt-2 text-[14px] font-semibold text-slate-600">{nextContactPopup.contact_detail?.person_name || nextContactPopup.contact_detail?.company_name || 'Assigned contact'}</p>
+            <p className="mt-1 text-[13px] text-slate-500">{nextContactPopup.contact_detail?.company_name || 'Company not available'}</p>
+            <a href={`tel:${nextContactPopup.contact_detail?.phone || ''}`} className="mt-5 flex items-center gap-2 rounded-xl bg-sky-50 px-4 py-3 text-[15px] font-black text-sky-700 border border-sky-100"><Phone size={16} /> {nextContactPopup.contact_detail?.phone || 'Phone not available'}</a>
+            <button type="button" onClick={() => setNextContactPopup(null)} className="mt-5 w-full rounded-xl px-5 py-3 text-[14px] font-black text-white" style={{ background: 'linear-gradient(135deg,#0ea5e9,#0f766e)' }}>Open next contact</button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

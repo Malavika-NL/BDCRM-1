@@ -79,6 +79,7 @@ function App() {
             {/* Tasks */}
             <Route path="/tasks" element={<TasksPage />} />
             <Route path="/activity-planner" element={<ActivityPlannerPage />} />
+            <Route path="/telemarketing/assigned-contacts" element={<ActivityPlannerPage assignedContactsOnly />} />
             <Route path="/activity-planner/assignments/:plannerId" element={<ActivityPlannerAssignmentsPage />} />
             <Route path="/activity-planner/assignments" element={<ActivityPlannerAssignmentsPage />} />
 

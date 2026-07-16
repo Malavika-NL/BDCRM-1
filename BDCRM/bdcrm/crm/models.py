@@ -597,6 +597,10 @@ class Contact(models.Model):
     )
     telemarketing_assigned_at = models.DateTimeField(null=True, blank=True)
     created_by_name = models.CharField(max_length=150, blank=True, default="")
+    source_project = models.CharField(max_length=30, blank=True, default="")
+    source_contact_id = models.CharField(max_length=100, blank=True, default="")
+    source_owner_name = models.CharField(max_length=150, blank=True, default="")
+    source_owner_email = models.EmailField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -642,6 +646,10 @@ class ActivityPlanner(models.Model):
         related_name='created_activity_plans',
     )
     role_mode = models.CharField(max_length=20, choices=ROLE_CHOICES, default='admin')
+    # Limits the contacts this planner is allowed to allocate.  Keeping this on
+    # the planner (rather than only in the UI) prevents a later rebuild from
+    # silently mixing contacts from the two source CRMs.
+    source_project = models.CharField(max_length=30, default='all')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

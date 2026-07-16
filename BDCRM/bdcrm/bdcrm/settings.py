@@ -194,6 +194,20 @@ CONTACT_SYNC_TARGET_URL = os.getenv(
     "CONTACT_SYNC_TARGET_URL",
     "http://192.168.1.94:8000/api/integrations/sync/contact/",
 )
-CONTACT_SYNC_TARGET_URLS = os.getenv("CONTACT_SYNC_TARGET_URLS", "")
-CONTACT_SYNC_API_TOKEN = os.getenv("CONTACT_SYNC_API_TOKEN", "")
+CONTACT_SYNC_TARGET_URLS = os.getenv(
+    "CONTACT_SYNC_TARGET_URLS",
+    "http://192.168.1.94:8000/api/integrations/sync/contact/,"
+    "http://192.168.1.94:8001/api/integrations/sync/contact/",
+)
+# Planner assignments are consumed only by Marketing CRM.  Keep this separate
+# from contact sync: the latter can have multiple peer CRMs, while an
+# assignment must never be posted to a frontend/non-Marketing endpoint.
+CONTACT_ASSIGNMENT_SYNC_TARGET_URLS = os.getenv(
+    "CONTACT_ASSIGNMENT_SYNC_TARGET_URLS",
+    "http://192.168.1.94:8000/api/integrations/sync/tele-assignment/",
+)
+CONTACT_SYNC_API_TOKEN = os.getenv(
+    "CONTACT_SYNC_API_TOKEN",
+    "bdcrm-contact-sync-local",
+)
 CONTACT_SYNC_TIMEOUT_SECONDS = float(os.getenv("CONTACT_SYNC_TIMEOUT_SECONDS", "5"))

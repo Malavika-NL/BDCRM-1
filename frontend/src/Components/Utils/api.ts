@@ -18,9 +18,10 @@ import type {
 const API_BASE_URL = '/api';
 
 export const api = {
-  getContacts: async (search: string = ''): Promise<Contact[]> => {
+  getContacts: async (search: string = '', project: string = 'all'): Promise<Contact[]> => {
     const url = new URL(`${API_BASE_URL}/contacts/`, window.location.origin);
     if (search) url.searchParams.append('search', search);
+    if (project !== 'all') url.searchParams.append('project', project);
     const res = await fetch(url.toString());
     if (!res.ok) throw new Error('Failed to fetch contacts');
     return res.json();

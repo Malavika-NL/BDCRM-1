@@ -64,6 +64,10 @@ class ContactSerializer(serializers.ModelSerializer):
             "telemarketing_owner",
             "telemarketing_assigned_at",
             "created_by_name",
+            "source_project",
+            "source_contact_id",
+            "source_owner_name",
+            "source_owner_email",
             "created_by_info",
             "created_at",
             "updated_at",
@@ -72,6 +76,10 @@ class ContactSerializer(serializers.ModelSerializer):
             "telemarketing_owner",
             "telemarketing_assigned_at",
             "created_by_name",
+            "source_project",
+            "source_contact_id",
+            "source_owner_name",
+            "source_owner_email",
             "created_by_info",
             "created_at",
             "updated_at",
@@ -438,6 +446,12 @@ class ActivityPlannerSerializer(serializers.ModelSerializer):
     class Meta:
         model = ActivityPlanner
         fields = '__all__'
+
+class ActivityPlannerOptionSerializer(serializers.ModelSerializer):
+    """Small planner payload used by dropdowns and overview pages."""
+    class Meta:
+        model = ActivityPlanner
+        fields = ('id', 'name', 'month', 'year')
 
 
 class LoginSerializer(serializers.Serializer):
