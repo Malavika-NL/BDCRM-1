@@ -255,12 +255,67 @@ def upsert_contact_from_common_payload(data):
     with suppress_contact_sync():
         contact.save()
 
-    if payload["is_verified"]:
-        _mark_latest_assignment_contacted(
-            contact, payload.get("remarks", ""), assignment_id
-        )
+    # Every Marketing CRM activity is reflected in the BDCRM planner.  A
+    # contact can be Not Connected or Follow Up without being verified, and
+    # those outcomes, notes and lead details are still vital to the admin.
+    if assignment_id or data.get("contact_status"):
+        _record_marketing_assignment_update(contact, data, assignment_id)
 
     return contact, created
+
+
+def _record_marketing_assignment_update(contact, data, assignment_id=None):
+    assignment = (
+        PlannerCallAssignment.objects.select_related('planner_task')
+        .filter(id=assignment_id).first()
+        if assignment_id else None
+    )
+    if not assignment:
+        assignment = (
+            PlannerCallAssignment.objects.select_related('planner_task')
+            .filter(contact=contact, status__in=['pending', 'skipped'])
+            .order_by('scheduled_date', 'sequence_number', 'id')
+            .first()
+        )
+    if not assignment:
+        return
+
+    status = str(data.get('contact_status') or '').strip().lower()
+    lead_status = str(data.get('lead_status') or '').strip().replace('_', ' ')
+    lead_type = str(data.get('lead_type') or '').strip().title()
+    categories = ', '.join(str(item) for item in (data.get('interested_categories') or []) if item)
+    updated_by = (data.get('updated_by_name') or data.get('updated_by_email') or 'Marketing CRM user').strip()
+    lines = [f'Marketing CRM update by {updated_by}.']
+    if status:
+        lines.append(f'Call outcome: {status.replace("_", " ").title()}')
+    if lead_status:
+        lines.append(f'Lead status: {lead_status.title()}{f" ({lead_type})" if lead_type else ""}')
+    if categories:
+        lines.append(f'Interested in: {categories}')
+    if data.get('next_action'):
+        lines.append(f'Next action: {data["next_action"]}')
+    if data.get('next_follow_up_at'):
+        lines.append(f'Follow-up: {data["next_follow_up_at"]}')
+    if data.get('remarks'):
+        lines.append(f'Notes: {data["remarks"]}')
+    assignment.remarks = '\n'.join(lines)
+
+    # BDCRM's planner has only pending/contacted/skipped. Non-final call
+    # outcomes remain pending but their complete outcome is visible in remarks.
+    if status == 'contacted':
+        assignment.status = 'contacted'
+        assignment.contacted_at = timezone.now()
+    assignment.save(update_fields=['status', 'contacted_at', 'remarks', 'updated_at'])
+
+    planner_task = assignment.planner_task
+    pending_count = planner_task.call_assignments.filter(status='pending').count()
+    if pending_count == 0:
+        planner_task.status = 'done'
+    elif planner_task.call_assignments.filter(status='contacted').exists():
+        planner_task.status = 'in_progress'
+    else:
+        planner_task.status = 'pending'
+    planner_task.save(update_fields=['status', 'updated_at'])
 
 
 def _mark_latest_assignment_contacted(contact, remarks="", assignment_id=None):

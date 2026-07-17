@@ -319,6 +319,17 @@ class ContactSyncView(APIView):
         # schema. It identifies the exact BDCRM call assignment to mark
         # contacted after a Marketing CRM verification.
         payload["bdcrm_assignment_id"] = request.data.get("bdcrm_assignment_id")
+        payload.update({
+            "contact_status": request.data.get("contact_status") or request.data.get("status"),
+            "lead_status": request.data.get("lead_status"),
+            "lead_type": request.data.get("lead_type"),
+            "interested_categories": request.data.get("interested_categories") or [],
+            "next_action": request.data.get("next_action") or "",
+            "next_follow_up_at": request.data.get("next_follow_up_at"),
+            "updated_by_name": request.data.get("updated_by_name") or "",
+            "updated_by_email": request.data.get("updated_by_email") or "",
+            "remarks": request.data.get("remarks") or "",
+        })
         if not payload["email"] and not payload["mobile_number"]:
             return Response(
                 {"error": "Either email or mobile_number is required."},
@@ -1887,6 +1898,22 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
         for member in planner.member_plans.select_related('user').all():
             assignments = member.call_assignments.select_related('contact', 'planner_task').all()
             contacted_history = assignments.filter(status='contacted').order_by('-contacted_at', '-updated_at', '-id')
+            # A Marketing CRM response can be Follow Up or Not Connected, so
+            # it must be visible to the BDCRM admin even though it is not a
+            # completed call yet.
+            response_history = assignments.filter(
+                Q(status='contacted') | Q(remarks__startswith='Marketing CRM update by ')
+            ).order_by('-updated_at', '-id')
+            # A call is counted once per planner assignment when the Marketing
+            # CRM user has submitted any outcome.  Not Connected responses keep
+            # the assignment pending for follow-up, but they are still calls
+            # made and must be counted separately for the administrator.
+            responded_assignments = assignments.filter(
+                Q(status='contacted') | Q(remarks__startswith='Marketing CRM update by ')
+            )
+            not_connected_assignments = responded_assignments.filter(
+                remarks__icontains='Call outcome: Not Connected'
+            )
             overview.append({
                 "member_plan_id": member.id,
                 "user_id": member.user_id,
@@ -1895,8 +1922,13 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                 "monthly_calls_target": member.monthly_calls_target,
                 "assigned_contacts": assignments.count(),
                 "contacted_contacts": contacted_history.count(),
+                "calls_made": responded_assignments.count(),
+                "not_connected_calls": not_connected_assignments.count(),
+                "marketing_response_count": response_history.count(),
                 "today_assigned": assignments.filter(scheduled_date=today).count(),
                 "today_done": assignments.filter(status='contacted', contacted_at__date=today).count(),
+                "today_calls_made": responded_assignments.filter(updated_at__date=today).count(),
+                "today_not_connected_calls": not_connected_assignments.filter(updated_at__date=today).count(),
                 "today_pending": assignments.filter(scheduled_date=today, status='pending').count(),
                 "next_scheduled_date": assignments.filter(status='pending').order_by('scheduled_date', 'sequence_number').values_list('scheduled_date', flat=True).first(),
                 "assignments": [
@@ -1930,6 +1962,22 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                         "remarks": assignment.remarks,
                     }
                     for assignment in contacted_history
+                ],
+                "response_history": [
+                    {
+                        "assignment_id": assignment.id,
+                        "contact_id": assignment.contact_id,
+                        "person_name": assignment.contact.person_name or assignment.contact.company_name or "",
+                        "company_name": assignment.contact.company_name or "",
+                        "phone": assignment.contact.phone or "",
+                        "region": assignment.contact.region or "",
+                        "scheduled_date": assignment.scheduled_date,
+                        "status": assignment.status,
+                        "contacted_at": assignment.contacted_at,
+                        "updated_at": assignment.updated_at,
+                        "remarks": assignment.remarks,
+                    }
+                    for assignment in response_history
                 ],
             })
 
@@ -2042,6 +2090,15 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                 if assignment.contact_id not in existing_contacts_by_user[assignment.assigned_user_id]:
                     existing_contacts_by_user[assignment.assigned_user_id].append(assignment.contact_id)
 
+        # Rebuilding creates new planner-assignment IDs. Remove every old
+        # mirror from Marketing CRM first; otherwise the new IDs would create
+        # duplicate call-queue rows for the same contact after a regenerate.
+        for assignment in existing_assignments:
+            delete_assignment_from_peer(
+                assignment.id,
+                assignment.contact,
+                planner_name=planner.name,
+            )
         PlannerCallAssignment.objects.filter(member_plan__planner=planner).delete()
         assigned_total = 0
         member_summaries = []
@@ -2061,7 +2118,6 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
 
         member_required_counts = {}
         reserved_contacts_by_user = {}
-        surplus_contacts = []
         for member in member_plans:
             daily_call_tasks = list(
                 member.tasks.filter(
@@ -2080,7 +2136,6 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                 continue
             owned_for_member = owned_contacts_by_user.get(member.user_id, [])
             reserved_contacts_by_user[member.user_id] = owned_for_member[:required_contacts]
-            surplus_contacts.extend(owned_for_member[required_contacts:])
 
         unowned_contacts = list(
             self._planner_contacts(planner).filter(telemarketing_owner__isnull=True)
@@ -2111,11 +2166,6 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                 unowned_contacts = unowned_contacts[len(take_unowned):]
                 fresh_contacts.extend(take_unowned)
                 needed_contacts -= len(take_unowned)
-
-            if needed_contacts > 0:
-                take_surplus = surplus_contacts[:needed_contacts]
-                surplus_contacts = surplus_contacts[len(take_surplus):]
-                fresh_contacts.extend(take_surplus)
 
             if member.user_id and fresh_contacts:
                 now = timezone.now()

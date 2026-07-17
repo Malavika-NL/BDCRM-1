@@ -11,8 +11,13 @@ type AdminOverviewMember = {
   monthly_calls_target: number;
   assigned_contacts: number;
   contacted_contacts: number;
+  calls_made: number;
+  not_connected_calls: number;
+  marketing_response_count: number;
   today_assigned: number;
   today_done: number;
+  today_calls_made: number;
+  today_not_connected_calls: number;
   today_pending: number;
   next_scheduled_date: string | null;
   contacted_history: Array<{
@@ -26,6 +31,19 @@ type AdminOverviewMember = {
     location?: string;
     scheduled_date: string;
     contacted_at: string | null;
+    remarks: string;
+  }>;
+  response_history: Array<{
+    assignment_id: number;
+    contact_id: number;
+    person_name: string;
+    company_name: string;
+    phone: string;
+    region: string;
+    scheduled_date: string;
+    status: 'pending' | 'contacted' | 'skipped';
+    contacted_at: string | null;
+    updated_at: string;
     remarks: string;
   }>;
   assignments: Array<{
@@ -170,18 +188,19 @@ export function ActivityPlannerAssignmentsPage() {
     return () => window.clearInterval(intervalId);
   }, [plannerId]);
 
-  const totalCallsDone = overview?.members.reduce((sum, member) => sum + member.contacted_contacts, 0) ?? 0;
+  const totalCallsDone = overview?.members.reduce((sum, member) => sum + member.calls_made, 0) ?? 0;
+  const totalNotConnected = overview?.members.reduce((sum, member) => sum + member.not_connected_calls, 0) ?? 0;
   const totalTasksAssigned = overview?.members.reduce((sum, member) => sum + member.assignments.length, 0) ?? 0;
   const filteredMembers = useMemo(() => {
     if (!overview) return [];
     if (selectedMemberId === 'all') return overview.members;
     return overview.members.filter((member) => String(member.member_plan_id) === selectedMemberId);
   }, [overview, selectedMemberId]);
-  const totalContactedHistory = filteredMembers.reduce((sum, member) => sum + member.contacted_history.length, 0);
-  const contactedListTitle =
+  const totalMarketingResponses = filteredMembers.reduce((sum, member) => sum + member.response_history.length, 0);
+  const responseListTitle =
     selectedMemberId === 'all'
-      ? 'Contacted list user-wise'
-      : `${filteredMembers[0]?.member_name || 'Selected user'} contacted list`;
+      ? 'Marketing CRM responses user-wise'
+      : `${filteredMembers[0]?.member_name || 'Selected user'} responses`;
 
   useEffect(() => {
     if (!overview?.members.length) {
@@ -374,8 +393,12 @@ export function ActivityPlannerAssignmentsPage() {
                         <p className="text-[22px] font-black text-slate-800 mt-1">{totalTasksAssigned}</p>
                       </div>
                       <div className="rounded-2xl px-4 py-3 bg-white border border-slate-200 min-w-[140px]">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Total Calls Done</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Total Calls Made</p>
                         <p className="text-[22px] font-black text-emerald-700 mt-1">{totalCallsDone}</p>
+                      </div>
+                      <div className="rounded-2xl px-4 py-3 bg-white border border-slate-200 min-w-[140px]">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Not Connected</p>
+                        <p className="text-[22px] font-black text-orange-600 mt-1">{totalNotConnected}</p>
                       </div>
                       <button
                         type="button"
@@ -384,7 +407,7 @@ export function ActivityPlannerAssignmentsPage() {
                         style={{ background: 'linear-gradient(135deg,#0ea5e9,#0f766e)', boxShadow: '0 8px 20px rgba(14,116,144,0.18)' }}
                       >
                         <CheckCircle2 size={15} />
-                        {showContactedList ? 'Hide Contacted List' : `View Contacted List (${totalContactedHistory})`}
+                        {showContactedList ? 'Hide Responses' : `View Responses (${totalMarketingResponses})`}
                       </button>
                     </div>
                   </div>
@@ -392,7 +415,7 @@ export function ActivityPlannerAssignmentsPage() {
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mt-5">
                     {filteredMembers.map((member) => {
                       const assignedTasks = member.assignments.length;
-                      const completedTasks = member.contacted_contacts;
+                      const completedTasks = member.calls_made;
                       const remainingTasks = Math.max(assignedTasks - completedTasks, 0);
                       const completionPercent = assignedTasks > 0 ? Math.round((completedTasks / assignedTasks) * 100) : 0;
 
@@ -437,22 +460,26 @@ export function ActivityPlannerAssignmentsPage() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
                             <div className="rounded-xl px-3 py-3 bg-slate-50 border border-slate-200">
                               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Assigned Tasks</p>
                               <p className="text-[18px] font-black text-slate-800 mt-1">{assignedTasks}</p>
                             </div>
                             <div className="rounded-xl px-3 py-3 bg-slate-50 border border-slate-200">
-                              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Calls Done</p>
+                              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Calls Made</p>
                               <p className="text-[18px] font-black text-emerald-700 mt-1">{completedTasks}</p>
+                            </div>
+                            <div className="rounded-xl px-3 py-3 bg-slate-50 border border-slate-200">
+                              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Not Connected</p>
+                              <p className="text-[18px] font-black text-orange-600 mt-1">{member.not_connected_calls}</p>
                             </div>
                             <div className="rounded-xl px-3 py-3 bg-slate-50 border border-slate-200">
                               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Remaining</p>
                               <p className="text-[18px] font-black text-amber-600 mt-1">{remainingTasks}</p>
                             </div>
                             <div className="rounded-xl px-3 py-3 bg-slate-50 border border-slate-200">
-                              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Today Done</p>
-                              <p className="text-[18px] font-black text-slate-800 mt-1">{member.today_done}</p>
+                              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Today Calls</p>
+                              <p className="text-[18px] font-black text-slate-800 mt-1">{member.today_calls_made}</p>
                             </div>
                           </div>
 
@@ -499,7 +526,7 @@ export function ActivityPlannerAssignmentsPage() {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-3 mt-4">
                       <div className="rounded-xl px-3 py-3 bg-white border border-slate-200">
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Monthly Target</p>
                         <p className="text-[18px] font-black text-slate-800 mt-1">{member.monthly_calls_target}</p>
@@ -513,8 +540,12 @@ export function ActivityPlannerAssignmentsPage() {
                         <p className="text-[18px] font-black text-slate-800 mt-1">{member.contacted_contacts}</p>
                       </div>
                       <div className="rounded-xl px-3 py-3 bg-white border border-slate-200">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Today Done</p>
-                        <p className="text-[18px] font-black text-slate-800 mt-1">{member.today_done} / {member.today_assigned}</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Not Connected</p>
+                        <p className="text-[18px] font-black text-orange-600 mt-1">{member.not_connected_calls}</p>
+                      </div>
+                      <div className="rounded-xl px-3 py-3 bg-white border border-slate-200">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Today Calls</p>
+                        <p className="text-[18px] font-black text-slate-800 mt-1">{member.today_calls_made} / {member.today_assigned}</p>
                       </div>
                       <div className="rounded-xl px-3 py-3 bg-white border border-slate-200">
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Today Pending</p>
@@ -624,25 +655,25 @@ export function ActivityPlannerAssignmentsPage() {
                   <section className="rounded-[24px] px-5 py-5 bg-white border border-slate-200">
                     <div className="flex items-start justify-between gap-4 flex-wrap">
                       <div>
-                        <p className="text-[12px] font-black uppercase tracking-[0.16em] text-sky-600">Calls Made</p>
+                        <p className="text-[12px] font-black uppercase tracking-[0.16em] text-sky-600">Marketing CRM Responses</p>
                         <h3 className="text-[22px] font-black text-slate-800 mt-1">
-                          {contactedListTitle}
+                          {responseListTitle}
                         </h3>
                         <p className="text-[13px] text-slate-500 font-medium mt-1">
-                          These are only the contacts marked verified by the selected user after completing the call.
+                          Includes contacted, not connected, and follow-up outcomes with the Marketing CRM user&apos;s notes.
                         </p>
                       </div>
                       <span
                         className="px-3 py-1.5 rounded-full text-[11px] font-black"
                         style={{ background: '#ecfeff', color: '#0f766e', border: '1px solid #99f6e4' }}
                       >
-                        {totalContactedHistory} calls made
+                        {totalMarketingResponses} responses
                       </span>
                     </div>
 
-                    {totalContactedHistory === 0 ? (
+                    {totalMarketingResponses === 0 ? (
                       <div className="rounded-2xl px-4 py-8 mt-4 text-center bg-slate-50 border border-slate-200">
-                        No completed calls are available yet.
+                        No Marketing CRM responses are available yet.
                       </div>
                     ) : (
                       <div className="space-y-3 mt-4">
@@ -657,17 +688,17 @@ export function ActivityPlannerAssignmentsPage() {
                                 className="px-3 py-1 rounded-full text-[11px] font-black"
                                 style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}
                               >
-                                {member.contacted_history.length} called
+                          {member.marketing_response_count} responses
                               </span>
                             </div>
 
-                            {member.contacted_history.length === 0 ? (
+                            {member.response_history.length === 0 ? (
                               <div className="rounded-xl px-3 py-5 mt-3 text-center bg-white border border-slate-200 text-[13px] font-semibold text-slate-400">
                                 No calls completed by this user yet.
                               </div>
                             ) : (
                               <div className="space-y-3 mt-4">
-                                {member.contacted_history.map((assignment) => (
+                                {member.response_history.map((assignment) => (
                                   <article key={`history-${assignment.assignment_id}`} className="rounded-2xl px-4 py-4 bg-white border border-slate-200">
                                     <div className="flex items-start justify-between gap-3 flex-wrap">
                                       <div>
@@ -680,9 +711,11 @@ export function ActivityPlannerAssignmentsPage() {
                                       </div>
                                       <span
                                         className="px-3 py-1 rounded-full text-[11px] font-black"
-                                        style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }}
+                                        style={assignment.status === 'contacted'
+                                          ? { background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }
+                                          : { background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba74' }}
                                       >
-                                        Called
+                                        {assignment.status === 'contacted' ? 'Contacted' : 'Response received'}
                                       </span>
                                     </div>
 
