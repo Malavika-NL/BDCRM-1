@@ -5,12 +5,15 @@ import {
   Building2,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
+  Pencil,
   Filter,
   Heart,
   Loader2,
   MapPin,
   Plus,
   Sparkles,
+  Trash2,
 } from 'lucide-react';
 import { authStore, type AuthUser } from '../Utils/auth';
 import type { WishlistEntry } from '../Utils/types';
@@ -53,6 +56,10 @@ export const WishlistPage: React.FC = () => {
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [actionEntryId, setActionEntryId] = useState<number | null>(null);
+  const [expandedEntryIds, setExpandedEntryIds] = useState<Set<number>>(new Set());
+  const [editingEntry, setEditingEntry] = useState<WishlistEntry | null>(null);
+  const [editForm, setEditForm] = useState({ company_name: '', location: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [form, setForm] = useState({
@@ -193,6 +200,77 @@ export const WishlistPage: React.FC = () => {
       setError(err.message || 'Failed to save wishlist entry.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const toggleEntry = (entryId: number) => {
+    setExpandedEntryIds((current) => {
+      const next = new Set(current);
+      if (next.has(entryId)) {
+        next.delete(entryId);
+      } else {
+        next.add(entryId);
+      }
+      return next;
+    });
+  };
+
+  const startEditing = (entry: WishlistEntry) => {
+    setEditingEntry(entry);
+    setEditForm({ company_name: entry.company_name, location: entry.location });
+    setExpandedEntryIds((current) => new Set(current).add(entry.id));
+    setError('');
+    setSuccess('');
+  };
+
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEntry) return;
+
+    setActionEntryId(editingEntry.id);
+    setError('');
+    try {
+      const res = await authStore.fetchWithAuth(`${WISHLIST_URL}${editingEntry.id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company_name: editForm.company_name.trim(), location: editForm.location.trim() }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(extractErrorMessage(data, 'Failed to update wishlist entry.'));
+      setEntries((current) => current.map((entry) => (entry.id === data.id ? data : entry)));
+      setEditingEntry(null);
+      setSuccess(`Wishlist updated for "${data.company_name}".`);
+    } catch (err: any) {
+      if ((err.message || '').includes('Session expired')) setForceLogin(true);
+      setError(err.message || 'Failed to update wishlist entry.');
+    } finally {
+      setActionEntryId(null);
+    }
+  };
+
+  const deleteEntry = async (entry: WishlistEntry) => {
+    if (!window.confirm(`Delete "${entry.company_name}" from the wishlist? This cannot be undone.`)) return;
+
+    setActionEntryId(entry.id);
+    setError('');
+    try {
+      const res = await authStore.fetchWithAuth(`${WISHLIST_URL}${entry.id}/`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(extractErrorMessage(data, 'Failed to delete wishlist entry.'));
+      }
+      setEntries((current) => current.filter((item) => item.id !== entry.id));
+      setExpandedEntryIds((current) => {
+        const next = new Set(current);
+        next.delete(entry.id);
+        return next;
+      });
+      setSuccess(`Wishlist entry "${entry.company_name}" was deleted.`);
+    } catch (err: any) {
+      if ((err.message || '').includes('Session expired')) setForceLogin(true);
+      setError(err.message || 'Failed to delete wishlist entry.');
+    } finally {
+      setActionEntryId(null);
     }
   };
 
@@ -527,40 +605,77 @@ export const WishlistPage: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-3">
-                  {entries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="rounded-[24px] p-5"
-                      style={{ background: 'linear-gradient(145deg,#ffffff,#fff7f9)', border: '1px solid #fbcfe8', boxShadow: '0 6px 18px rgba(225,29,72,0.05)' }}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-[18px] font-black text-slate-800 leading-tight">{entry.company_name}</p>
-                          <div className="flex items-center gap-2 text-slate-500 mt-3">
-                            <MapPin size={14} className="text-rose-500" />
-                            <span className="text-[13px] font-semibold">{entry.location}</span>
-                          </div>
+                <div className="overflow-hidden rounded-2xl border border-rose-100 divide-y divide-rose-100 bg-white">
+                  {entries.map((entry) => {
+                    const isExpanded = expandedEntryIds.has(entry.id);
+                    const isEditing = editingEntry?.id === entry.id;
+                    const isBusy = actionEntryId === entry.id;
+                    return (
+                      <div key={entry.id} className="bg-white">
+                        <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-rose-50/50 transition-colors">
+                          <button
+                            type="button"
+                            onClick={() => toggleEntry(entry.id)}
+                            aria-expanded={isExpanded}
+                            aria-label={`${isExpanded ? 'Hide' : 'Show'} details for ${entry.company_name}`}
+                            className="w-9 h-9 rounded-xl border border-rose-100 bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 hover:bg-rose-100"
+                          >
+                            <ChevronRight size={18} className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                          </button>
+                          <button type="button" onClick={() => toggleEntry(entry.id)} className="min-w-0 flex-1 text-left">
+                            <p className="text-[15px] font-black text-slate-800 truncate">{entry.company_name}</p>
+                            <p className="text-[12px] font-semibold text-slate-500 truncate mt-0.5">{entry.location}</p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => startEditing(entry)}
+                            disabled={isBusy}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-black text-rose-700 bg-white border border-rose-200 hover:bg-rose-50 disabled:opacity-50"
+                          >
+                            <Pencil size={13} /> Edit
+                          </button>
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => void deleteEntry(entry)}
+                              disabled={isBusy}
+                              aria-label={`Delete ${entry.company_name}`}
+                              className="w-9 h-9 rounded-xl text-red-600 bg-red-50 border border-red-100 flex items-center justify-center hover:bg-red-100 disabled:opacity-50"
+                            >
+                              {isBusy ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                            </button>
+                          )}
                         </div>
-                        <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0">
-                          <Heart size={16} className="text-rose-500" />
-                        </div>
-                      </div>
 
-                      <div className="mt-5 pt-4 border-t border-rose-100 flex items-center justify-between gap-3 flex-wrap">
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Saved By</p>
-                          <p className="text-[13px] font-bold text-slate-700 mt-1">
-                            {entry.created_by_info?.name || entry.created_by_info?.username || 'Unknown user'}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Saved On</p>
-                          <p className="text-[13px] font-bold text-slate-700 mt-1">{formatDate(entry.created_at)}</p>
-                        </div>
+                        {isExpanded && (
+                          <div className="px-5 pb-4 pt-1 bg-rose-50/40 border-t border-rose-100">
+                            {isEditing ? (
+                              <form onSubmit={saveEdit} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
+                                <div>
+                                  <label className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Company</label>
+                                  <input required value={editForm.company_name} onChange={(e) => setEditForm((current) => ({ ...current, company_name: e.target.value }))} className={`${inputCls} mt-1 py-2`} />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Location</label>
+                                  <input required value={editForm.location} onChange={(e) => setEditForm((current) => ({ ...current, location: e.target.value }))} className={`${inputCls} mt-1 py-2`} />
+                                </div>
+                                <div className="flex gap-2">
+                                  <button type="submit" disabled={isBusy} className="px-3 py-2.5 rounded-xl text-[12px] font-black text-white bg-rose-600 disabled:opacity-50">{isBusy ? 'Saving...' : 'Save'}</button>
+                                  <button type="button" onClick={() => setEditingEntry(null)} className="px-3 py-2.5 rounded-xl text-[12px] font-black text-slate-600 bg-white border border-slate-200">Cancel</button>
+                                </div>
+                              </form>
+                            ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                                <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Location</p><p className="text-[13px] font-bold text-slate-700 mt-1 flex gap-1.5 items-center"><MapPin size={13} className="text-rose-500" />{entry.location}</p></div>
+                                <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Saved By</p><p className="text-[13px] font-bold text-slate-700 mt-1">{getDisplayUserName(entry)}</p></div>
+                                <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Saved On</p><p className="text-[13px] font-bold text-slate-700 mt-1">{formatDate(entry.created_at)}</p></div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

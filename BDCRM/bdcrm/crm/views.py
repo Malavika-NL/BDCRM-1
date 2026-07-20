@@ -713,7 +713,7 @@ class WishlistEntryViewSet(viewsets.ModelViewSet):
     queryset = WishlistEntry.objects.select_related("created_by").all()
     serializer_class = WishlistEntrySerializer
     permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ["get", "post", "head", "options"]
+    http_method_names = ["get", "post", "patch", "put", "delete", "head", "options"]
     filter_backends = [filters.SearchFilter]
     search_fields = ["company_name", "location", "created_by__username", "created_by__email"]
 
@@ -749,6 +749,19 @@ class WishlistEntryViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user if getattr(self.request.user, "is_authenticated", False) else None
         serializer.save(created_by=user)
+
+    def get_object(self):
+        """Allow an owner to update their entry and reserve deletion for admins."""
+        obj = super().get_object()
+        user = self.request.user
+
+        if self.action == "destroy" and not _is_admin(user):
+            raise PermissionDenied("Only administrators can delete wishlist entries.")
+
+        if self.action in {"update", "partial_update"} and not (_is_admin(user) or obj.created_by_id == user.id):
+            raise PermissionDenied("You can only edit your own wishlist entries.")
+
+        return obj
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
