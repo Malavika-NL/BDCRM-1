@@ -1,11 +1,11 @@
 // src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import type React from 'react';
 import { authStore } from './Components/Utils/auth';
 
 // --- Layout ---
 import MainLayout from './Components/Layout/MainLayout';
-import { LoginPage } from './Components/Login/Login';
 import { UserCreationPage } from './Components/Login/UserCreationPage';
 
 // --- Page Components ---
@@ -36,10 +36,20 @@ import { AccountTargetingPage } from './Components/AccountTargeting/AccountTarge
 import { AccountTargetingOwnersPage } from './Components/AccountTargeting/AccountTargetingOwnersPage';
 import { WishlistPage } from './Components/Wishlist/WishlistPage';
 
+const portalUrl = import.meta.env.VITE_COMPANY_PORTAL_URL || 'http://127.0.0.1:5176';
+
+const PortalRedirect = () => {
+  useEffect(() => {
+    window.location.replace(portalUrl);
+  }, []);
+
+  return <div className="min-h-screen grid place-items-center">Returning to Company Portal...</div>;
+};
+
 function App() {
   const RequireAuth = ({ children }: { children: React.ReactNode }) => {
     if (!authStore.isAuthenticated()) {
-      return <Navigate to="/login" replace />;
+      return <PortalRedirect />;
     }
     return children;
   };
@@ -48,8 +58,8 @@ function App() {
     <BrowserRouter>
       <Routes>
 
-        {/* ============ 1. PUBLIC ROUTES ============ */}
-        <Route path="/login" element={<LoginPage />} />
+        {/* Company Portal is the only interactive sign-in page. */}
+        <Route path="/login" element={<PortalRedirect />} />
 
         {/* ============ 2. PROTECTED ROUTES ============ */}
         {/* <Route element={<RequireAuth />}> */}
@@ -124,8 +134,7 @@ function App() {
 
         {/* </Route> */}
 
-        {/* ============ 3. 404 ROUTE ============ */}
-        {/* <Route path="*" element={<NotFound />} /> */}
+        <Route path="*" element={<PortalRedirect />} />
 
       </Routes>
     </BrowserRouter>

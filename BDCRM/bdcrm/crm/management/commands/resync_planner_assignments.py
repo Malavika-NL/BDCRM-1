@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from crm.contact_sync import send_assignment_to_peer
+from crm.contact_sync import sync_assignment_to_peer
 from crm.models import ActivityPlanner, PlannerCallAssignment
 
 
@@ -30,22 +30,27 @@ class Command(BaseCommand):
             self.stdout.write(f"Would sync {len(assignments)} planner assignments.")
             return
 
-        synced = 0
+        delivered = 0
+        failed = 0
         skipped = 0
         for assignment in assignments:
             if not assignment.assigned_user_id or not assignment.assigned_user.email:
                 skipped += 1
                 continue
-            send_assignment_to_peer(
+            sent, errors, ignored = sync_assignment_to_peer(
                 assignment.contact,
                 assignment.assigned_user,
                 assignment,
                 assignment.member_plan.planner.name,
             )
-            synced += 1
+            delivered += sent
+            failed += errors
+            skipped += ignored
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Queued {synced} planner assignments for Marketing CRM; skipped {skipped} without a user email."
-            )
+        message = (
+            f"Delivered {delivered} planner assignments to Marketing CRM; "
+            f"failed {failed}; skipped {skipped} without a valid user/email or target."
         )
+        self.stdout.write(self.style.SUCCESS(message) if not failed else self.style.ERROR(message))
+        if failed:
+            raise CommandError("One or more planner assignments were not delivered.")

@@ -46,6 +46,7 @@ urlpatterns = [
     path('api/agent-status/', views.agent_status, name='agent_status'),
     path('api/run-free-campaign/', views.run_free_campaign, name='run_free_campaign'),
     path('api/integrations/sync/contact/', views.ContactSyncView.as_view(), name='contact_sync'),
+    path('api/integrations/planner-daily-summary/', views.PlannerDailySummaryView.as_view(), name='planner_daily_summary'),
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
 ]

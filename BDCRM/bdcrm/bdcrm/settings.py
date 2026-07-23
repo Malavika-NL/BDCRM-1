@@ -83,6 +83,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'crm.tenancy.CompanyContextMiddleware',
     'corsheaders.middleware.CorsMiddleware',
 
     'django.middleware.security.SecurityMiddleware',
@@ -118,7 +119,7 @@ WSGI_APPLICATION = 'bdcrm.wsgi.application'
 DATABASES = {
     "default": {
         "ENGINE": os.getenv("DATABASE_ENGINE", "django.db.backends.postgresql"),
-        "NAME": os.getenv("DATABASE_NAME", "BDCRM"),
+        "NAME": os.getenv("DATABASE_NAME", "BDRM"),
         "USER": os.getenv("DATABASE_USER", "postgres"),
         "PASSWORD": os.getenv("DATABASE_PASSWORD", "admin"),
         "HOST": os.getenv("DATABASE_HOST", "127.0.0.1"),
@@ -172,7 +173,7 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'crm.tenancy.CompanyJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
@@ -211,3 +212,12 @@ CONTACT_SYNC_API_TOKEN = os.getenv(
     "bdcrm-contact-sync-local",
 )
 CONTACT_SYNC_TIMEOUT_SECONDS = float(os.getenv("CONTACT_SYNC_TIMEOUT_SECONDS", "5"))
+
+# Company Portal launch destinations. ``or`` is intentional: an empty value
+# must not disable a launcher card when a process supplies a blank variable.
+# Docker Compose supplies the shared-LAN URLs; these are the local Vite apps.
+MARKETING_CRM_URL = os.getenv("MARKETING_CRM_URL") or "http://localhost:5173"
+SALESPIE_CRM_URL = os.getenv("SALESPIE_CRM_URL") or "http://localhost:5174"
+BDCRM_PORTAL_URL = os.getenv("BDCRM_PORTAL_URL") or "http://localhost:5175"
+COMPANY_PORTAL_EXCHANGE_URL = os.getenv("COMPANY_PORTAL_EXCHANGE_URL", "http://127.0.0.1:8004/api/portal/sso/exchange/")
+COMPANY_PORTAL_SSO_SECRET = os.getenv("COMPANY_PORTAL_SSO_SECRET", "change-this-local-shared-secret")

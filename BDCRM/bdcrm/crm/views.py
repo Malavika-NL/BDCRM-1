@@ -14,7 +14,9 @@ import os
 import requests
 import re
 import json
+import hmac
 from django.conf import settings
+from .tenancy import get_current_company_id
 from django.utils import timezone
 import requests # Make sure this is at the top of views.py
 from datetime import date
@@ -67,6 +69,7 @@ def _token_payload_for_user(user: User):
     profile = getattr(user, "profile", None)
     role = profile.role if profile else ("admin" if user.is_staff else "employee")
     refresh = RefreshToken.for_user(user)
+    refresh['company_id'] = profile.tenant_company_id if profile else 1
     return {
         "access": str(refresh.access_token),
         "refresh": str(refresh),
@@ -140,6 +143,59 @@ class LoginView(APIView):
         return Response(_token_payload_for_user(user), status=status.HTTP_200_OK)
 
 
+class CompanyPortalAccountView(APIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        if not hmac.compare_digest(request.headers.get('X-Portal-SSO-Secret', ''), settings.COMPANY_PORTAL_SSO_SECRET):
+            return Response({'detail': 'Invalid portal credentials.'}, status=status.HTTP_403_FORBIDDEN)
+        from .tenancy import set_current_company_id
+        try:
+            company_id = set_current_company_id(request.data.get('company_id') or request.headers.get('X-Company-ID'))
+        except Exception:
+            return Response({'detail': 'Invalid company context.'}, status=status.HTTP_400_BAD_REQUEST)
+        user = User.objects.filter(
+            email__iexact=str(request.data.get('email') or '').strip(),
+            is_active=True,
+            profile__tenant_company_id=company_id,
+        ).order_by('id').first()
+        if not user:
+            return Response({'detail': 'No BDCRM account found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'external_user_id': str(user.pk)})
+
+
+class CompanyPortalLoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        code = str(request.data.get('code') or '').strip()
+        if not code:
+            return Response({'detail': 'Missing portal sign-in code.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            exchange = requests.post(
+                settings.COMPANY_PORTAL_EXCHANGE_URL, json={'application': 'bdcrm', 'code': code},
+                headers={'X-Portal-SSO-Secret': settings.COMPANY_PORTAL_SSO_SECRET}, timeout=10,
+            )
+            payload = exchange.json()
+        except (requests.RequestException, ValueError):
+            return Response({'detail': 'Unable to verify Company Portal login.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        if not exchange.ok:
+            return Response({'detail': payload.get('detail', 'Company Portal login was rejected.')}, status=exchange.status_code)
+        from .tenancy import set_current_company_id
+        company = payload.get('company') if isinstance(payload, dict) else None
+        try:
+            company_id = set_current_company_id(company.get('id') if isinstance(company, dict) else None)
+            user = User.objects.get(pk=payload['external_user_id'], is_active=True, profile__tenant_company_id=company_id)
+        except (User.DoesNotExist, KeyError):
+            return Response({'detail': 'The linked BDCRM account was not found.'}, status=status.HTTP_403_FORBIDDEN)
+        refresh = RefreshToken.for_user(user)
+        refresh['company_id'] = company_id
+        refresh['company_code'] = company['code']
+        return Response({'access': str(refresh.access_token), 'refresh': str(refresh), 'user': UserMeSerializer(user).data, 'company': company})
+
+
 class RefreshAuthTokenView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -194,7 +250,7 @@ def bootstrap_admin_profile(request):
 def list_users(request):
     if not _is_admin(request.user):
         return Response({"detail": "Only admin can view users."}, status=status.HTTP_403_FORBIDDEN)
-    users = User.objects.all().order_by('-date_joined')
+    users = User.objects.filter(profile__tenant_company_id=get_current_company_id()).order_by('-date_joined')
     return Response(UserMeSerializer(users, many=True).data)
 
 
@@ -206,7 +262,7 @@ class UserDetailView(APIView):
             return Response({"detail": "Only admin can edit users."}, status=status.HTTP_403_FORBIDDEN)
 
         try:
-            user = User.objects.get(pk=user_id)
+            user = User.objects.get(pk=user_id, profile__tenant_company_id=get_current_company_id())
         except User.DoesNotExist:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -224,7 +280,7 @@ class UserDetailView(APIView):
             return Response({"detail": "Only admin can delete users."}, status=status.HTTP_403_FORBIDDEN)
 
         try:
-            user = User.objects.get(pk=user_id)
+            user = User.objects.get(pk=user_id, profile__tenant_company_id=get_current_company_id())
         except User.DoesNotExist:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -377,6 +433,48 @@ class LeadViewSet(viewsets.ModelViewSet):
             "win_rate": round(win_rate, 1),
             "status_distribution": status_counts,
             "recent_activities": activity_data
+        })
+
+
+class PlannerDailySummaryView(APIView):
+    """Authoritative daily planner totals for a Marketing CRM user."""
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        if not validate_sync_token(request):
+            return Response({'error': 'Invalid or missing contact sync token.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        email = (request.query_params.get('email') or '').strip().lower()
+        if not email:
+            return Response({'error': 'email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        target_date = request.query_params.get('date') or timezone.localdate().isoformat()
+        try:
+            target_date = date.fromisoformat(target_date)
+        except ValueError:
+            return Response({'error': 'date must use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        assignments = PlannerCallAssignment.objects.filter(
+            assigned_user__email__iexact=email,
+            scheduled_date=target_date,
+        )
+        daily_target = sum(
+            task.target_count
+            for task in PlannerTask.objects.filter(
+                member_plan__user__email__iexact=email,
+                period_type='daily', channel='calls', task_date=target_date,
+            )
+        )
+        return Response({
+            'status': 'success',
+            'data': {
+                'date': target_date.isoformat(),
+                'daily_target': daily_target,
+                'completed': assignments.filter(status='contacted').count(),
+                'pending': assignments.filter(status='pending').count(),
+                'skipped': assignments.filter(status='skipped').count(),
+            },
         })
 
     @action(detail=True, methods=["post"])
@@ -1805,7 +1903,11 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
         requested_user_ids = [item.get('user') for item in member_data if item.get('user')]
         eligible_users = {
             user.id: user
-            for user in User.objects.filter(id__in=requested_user_ids, is_active=True).select_related('profile')
+            for user in User.objects.filter(
+                id__in=requested_user_ids,
+                is_active=True,
+                profile__tenant_company_id=get_current_company_id(),
+            ).select_related('profile')
         }
         invalid_user_names = []
         for item in member_data:

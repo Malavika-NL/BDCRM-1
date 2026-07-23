@@ -4,6 +4,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardList,
+  ExternalLink,
   Loader2,
   Phone,
   Pencil,
@@ -142,6 +143,10 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
   const [assignmentSearch, setAssignmentSearch] = useState('');
   const [quickFillCount, setQuickFillCount] = useState('');
   const [workingWeekendDates, setWorkingWeekendDates] = useState<string[]>([]);
+  // The planner generates one real task per working calendar day.  Keep the
+  // date selected here so the assignment sheet can show that exact task,
+  // rather than presenting a rounded monthly average as a daily target.
+  const [dailyTargetDate, setDailyTargetDate] = useState(() => toYmd(new Date()));
   const [selectedAdminMemberId, setSelectedAdminMemberId] = useState<number | null>(null);
   const [adminPlanView, setAdminPlanView] = useState<'monthly' | 'weekly' | 'daily'>('monthly');
 
@@ -295,7 +300,36 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
     () => calendarDays.days.filter((day) => day.isWorking).length,
     [calendarDays]
   );
-  const averageDailyCalls = workingDayCount > 0 ? Math.ceil(totalMonthlyCalls / workingDayCount) : 0;
+  // This is an average, not a daily quota.  Rounding it up made the planner
+  // advertise "3/day" for a 50-contact / 23-day plan even on days whose
+  // actual queue contains two calls.  The exact per-day quota is generated
+  // by the backend and shown in the Marketing CRM workspace.
+  const averageDailyCalls = workingDayCount > 0
+    ? Math.round((totalMonthlyCalls / workingDayCount) * 10) / 10
+    : 0;
+
+  const dailyTargetByUser = useMemo(() => {
+    const targetsByUser = new Map<number, number>();
+    selectedPlanner?.member_plans.forEach((memberPlan) => {
+      if (!memberPlan.user) return;
+      const task = memberPlan.tasks.find(
+        (candidate) => (
+          candidate.period_type === 'daily'
+          && candidate.channel === 'calls'
+          && candidate.task_date === dailyTargetDate
+        )
+      );
+      if (task) targetsByUser.set(memberPlan.user, task.target_count);
+    });
+    return targetsByUser;
+  }, [dailyTargetDate, selectedPlanner]);
+
+  const dailyTargetDateLabel = useMemo(
+    () => new Date(`${dailyTargetDate}T00:00:00`).toLocaleDateString('en-IN', {
+      day: 'numeric', month: 'short', year: 'numeric', weekday: 'short',
+    }),
+    [dailyTargetDate]
+  );
 
   const selectedAdminMemberPlan = useMemo(() => {
     if (!selectedPlanner || !selectedAdminMemberId) return null;
@@ -372,6 +406,20 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
       return next;
     });
     setQuickFillCount('');
+  };
+
+  const openMemberDailyPlan = (userId: number) => {
+    const memberPlan = selectedPlanner?.member_plans.find((member) => member.user === userId);
+    if (!memberPlan) {
+      setError('Save and auto-assign this user\'s target before opening their daily plan.');
+      return;
+    }
+    setError('');
+    setSelectedAdminMemberId(memberPlan.id);
+    setAdminPlanView('daily');
+    window.setTimeout(() => {
+      document.getElementById('planner-member-details')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
   };
 
   const toggleWeekendDate = (ymd: string) => {
@@ -791,7 +839,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                         <p className="text-[22px] font-black text-slate-800 mt-1">{totalMonthlyCalls}</p>
                       </div>
                       <div className="rounded-2xl px-4 py-3 bg-slate-50 border border-slate-200 min-w-[120px]">
-                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Daily Avg</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Monthly Avg</p>
                         <p className="text-[22px] font-black text-slate-800 mt-1">{averageDailyCalls}</p>
                       </div>
                     </div>
@@ -833,23 +881,43 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                       Clear
                     </button>
                   </div>
+
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-teal-100 bg-teal-50/60 px-4 py-3">
+                    <div>
+                      <p className="text-[12px] font-black text-teal-800">Exact planned calls by date</p>
+                      <p className="text-[11px] font-medium text-teal-700 mt-0.5">
+                        These values come from the saved daily planner tasks, not from a monthly average.
+                      </p>
+                    </div>
+                    <label className="flex items-center gap-3 text-[12px] font-black text-slate-700">
+                      <span>{dailyTargetDateLabel}</span>
+                      <input
+                        className="rounded-xl border border-teal-200 bg-white px-3 py-2 text-[13px] font-bold text-slate-700 outline-none focus:ring-4 focus:ring-teal-500/10"
+                        type="date"
+                        value={dailyTargetDate}
+                        onChange={(event) => setDailyTargetDate(event.target.value)}
+                        aria-label="View planned calls for date"
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[860px] border-collapse">
+                  <table className="w-full min-w-[990px] border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200">
                         <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400 w-[70px]">No.</th>
                         <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Telemarketing User</th>
                         <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Email</th>
                         <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400 w-[210px]">Contacts To Assign</th>
-                        <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400 w-[160px]">Estimated Daily</th>
+                        <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400 w-[160px]">Calls On {dailyTargetDateLabel}</th>
+                        <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400 w-[155px]">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 bg-white">
                       {filteredUsers.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-5 py-10 text-center">
+                          <td colSpan={6} className="px-5 py-10 text-center">
                             <Users size={24} className="mx-auto text-slate-300" />
                             <p className="text-[14px] font-black text-slate-600 mt-3">No telemarketing users found</p>
                             <p className="text-[12px] text-slate-400 font-medium mt-1">Add active users with telemarketing in their designation or department.</p>
@@ -858,8 +926,9 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                       ) : (
                         filteredUsers.map((user, index) => {
                           const rawMonthlyTarget = targets[user.id];
-                          const monthlyTarget = Number.isFinite(rawMonthlyTarget) ? rawMonthlyTarget : 0;
                           const monthlyTargetValue = Number.isFinite(rawMonthlyTarget) && rawMonthlyTarget > 0 ? String(rawMonthlyTarget) : '';
+                          const dailyTarget = dailyTargetByUser.get(user.id);
+                          const hasSavedPlan = selectedPlanner?.member_plans.some((member) => member.user === user.id) || false;
                           return (
                             <tr key={user.id} className="hover:bg-sky-50/40 transition-colors duration-150">
                               <td className="px-5 py-4 align-middle">
@@ -887,8 +956,20 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                               </td>
                               <td className="px-5 py-4 align-middle">
                                 <span className="inline-flex min-w-[88px] justify-center rounded-xl px-3 py-2 text-[13px] font-black text-teal-700 bg-teal-50 border border-teal-100">
-                                  {monthlyTarget > 0 && workingDayCount > 0 ? Math.ceil(monthlyTarget / workingDayCount) : 0} / day
+                                  {typeof dailyTarget === 'number' ? `${dailyTarget} calls` : '—'}
                                 </span>
+                              </td>
+                              <td className="px-5 py-4 align-middle">
+                                <button
+                                  type="button"
+                                  onClick={() => openMemberDailyPlan(user.id)}
+                                  disabled={!hasSavedPlan}
+                                  title={hasSavedPlan ? `Open ${getDisplayName(user)}'s daily plan` : 'Save and auto-assign this user first'}
+                                  className="inline-flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-[12px] font-black text-white disabled:cursor-not-allowed disabled:opacity-45"
+                                  style={{ background: 'linear-gradient(135deg,#2563eb,#0f766e)', boxShadow: '0 6px 14px rgba(14,116,144,0.16)' }}
+                                >
+                                  <ExternalLink size={14} /> Open plan
+                                </button>
                               </td>
                             </tr>
                           );
@@ -992,7 +1073,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                     </div>
 
                     {selectedAdminMemberPlan ? (
-                      <div className="space-y-5">
+                      <div id="planner-member-details" className="space-y-5">
                         <div className="rounded-[24px] p-5 bg-white border border-slate-200">
                           <div className="flex items-start justify-between gap-4 flex-wrap">
                             <div>
