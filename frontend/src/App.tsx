@@ -5,7 +5,6 @@ import { authStore } from './Components/Utils/auth';
 
 // --- Layout ---
 import MainLayout from './Components/Layout/MainLayout';
-import { LoginPage } from './Components/Login/Login';
 import { UserCreationPage } from './Components/Login/UserCreationPage';
 
 // --- Page Components ---
@@ -36,10 +35,15 @@ import { AccountTargetingPage } from './Components/AccountTargeting/AccountTarge
 import { AccountTargetingOwnersPage } from './Components/AccountTargeting/AccountTargetingOwnersPage';
 import { WishlistPage } from './Components/Wishlist/WishlistPage';
 
+function PortalRedirect() {
+  window.location.replace(import.meta.env.VITE_COMPANY_PORTAL_URL || 'http://192.168.1.56:8002');
+  return null;
+}
+
 function App() {
   const RequireAuth = ({ children }: { children: React.ReactNode }) => {
     if (!authStore.isAuthenticated()) {
-      return <Navigate to="/login" replace />;
+      return <PortalRedirect />;
     }
     return children;
   };
@@ -49,7 +53,7 @@ function App() {
       <Routes>
 
         {/* ============ 1. PUBLIC ROUTES ============ */}
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<PortalRedirect />} />
 
         {/* ============ 2. PROTECTED ROUTES ============ */}
         {/* <Route element={<RequireAuth />}> */}

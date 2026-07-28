@@ -5,15 +5,18 @@ from rest_framework import permissions, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.views import APIView
 from django.db.models import Sum, Count, Q
-from django.db import OperationalError
+from django.db import OperationalError, transaction
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 import os
+import hmac
 import requests
 import re
 import json
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 from django.conf import settings
 from django.utils import timezone
 import requests # Make sure this is at the top of views.py
@@ -147,6 +150,78 @@ class RefreshAuthTokenView(APIView):
         serializer = TokenRefreshSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+
+class CompanyPortalLoginView(APIView):
+    """Exchange a one-time Company Portal handoff for a BDCRM JWT session."""
+
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        code = str(request.data.get('code') or '').strip()
+        if not code:
+            return Response({'detail': 'Missing portal sign-in code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        portal_request = Request(
+            settings.PORTAL_SSO_EXCHANGE_URL,
+            data=json.dumps({'application': 'bdcrm', 'code': code}).encode(),
+            headers={
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Portal-SSO-Secret': settings.PORTAL_SSO_SHARED_SECRET,
+            },
+            method='POST',
+        )
+        try:
+            with urlopen(portal_request, timeout=settings.PORTAL_SSO_TIMEOUT_SECONDS) as response:
+                payload = json.loads(response.read().decode())
+        except (HTTPError, URLError, TimeoutError, json.JSONDecodeError, ValueError):
+            return Response({'detail': 'Portal sign-in link is invalid or expired.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        external_user_id = payload.get('external_user_id') if isinstance(payload, dict) else None
+        company = payload.get('company') if isinstance(payload, dict) else None
+        user = User.objects.filter(pk=external_user_id, is_active=True).first()
+        if not user or not isinstance(company, dict) or not company.get('id'):
+            return Response({'detail': 'The linked BDCRM account was not found.'}, status=status.HTTP_403_FORBIDDEN)
+
+        token_payload = _token_payload_for_user(user)
+        refresh = RefreshToken(token_payload['refresh'])
+        refresh['company_id'] = company['id']
+        refresh['company_code'] = company.get('code', '')
+        token_payload['access'] = str(refresh.access_token)
+        token_payload['refresh'] = str(refresh)
+        token_payload['company'] = company
+        return Response(token_payload)
+
+
+class CompanyPortalAccountView(APIView):
+    """Resolve or provision a passwordless BDCRM account for Portal SSO."""
+
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        if not hmac.compare_digest(
+            request.headers.get('X-Portal-SSO-Secret', ''), settings.PORTAL_SSO_SHARED_SECRET
+        ):
+            return Response({'detail': 'Invalid portal credentials.'}, status=status.HTTP_403_FORBIDDEN)
+        if not (request.data.get('company_id') or request.headers.get('X-Company-ID')):
+            return Response({'detail': 'Missing company context.'}, status=status.HTTP_400_BAD_REQUEST)
+        email = str(request.data.get('email') or '').strip()
+        user = User.objects.filter(email__iexact=email, is_active=True).order_by('id').first()
+        if not user and request.data.get('provision') and email:
+            from .models import UserProfile
+            portal_username = str(request.data.get('portal_username') or '').strip()
+            username = f"portal-{portal_username or email.split('@', 1)[0]}"
+            role = 'admin' if str(request.data.get('role') or '').lower() in {'admin', 'platform_admin'} else 'employee'
+            user = User.objects.create_user(username=username[:150], email=email, password=None, is_active=True)
+            user.set_unusable_password()
+            user.save(update_fields=['password'])
+            UserProfile.objects.get_or_create(user=user, defaults={'role': role})
+        if not user:
+            return Response({'detail': 'No BDCRM account found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'external_user_id': str(user.pk)})
 
 
 class CreateUserView(APIView):
@@ -1826,7 +1901,17 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Only admin can assign planner members."}, status=status.HTTP_403_FORBIDDEN)
         planner = self.get_object()
         member_data = request.data.get('members', [])
+        if not isinstance(member_data, list) or any(not isinstance(item, dict) for item in member_data):
+            return Response(
+                {"detail": "Members must be supplied as a list of user assignments."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         requested_user_ids = [item.get('user') for item in member_data if item.get('user')]
+        if len(requested_user_ids) != len(set(requested_user_ids)):
+            return Response(
+                {"detail": "A user can be assigned to this planner only once."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         eligible_users = {
             user.id: user
             for user in User.objects.filter(id__in=requested_user_ids, is_active=True).select_related('profile')
@@ -1847,25 +1932,50 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        planner.member_plans.all().delete()
-        for item in member_data:
-            member_plan = PlannerMemberPlan.objects.create(
-                planner=planner,
-                user_id=item.get('user'),
-                member_name=item.get('member_name', 'Member'),
-                workspace_name=item.get('workspace_name', f"{item.get('member_name', 'Member')} Workspace"),
-                monthly_calls_target=item.get('monthly_calls_target', 0),
-                monthly_whatsapp_target=item.get('monthly_whatsapp_target', 0),
-                monthly_email_target=item.get('monthly_email_target', 0),
-                monthly_linkedin_target=item.get('monthly_linkedin_target', 0),
-                calls_weightage=item.get('calls_weightage', 25),
-                whatsapp_weightage=item.get('whatsapp_weightage', 25),
-                email_weightage=item.get('email_weightage', 25),
-                linkedin_weightage=item.get('linkedin_weightage', 25),
-                assigned_by=request.user if request.user and request.user.is_authenticated else None,
+        # Replacing a planner is all-or-nothing.  Earlier code deleted member
+        # plans first, which could leave contacts owned by removed users if a
+        # later task/allocation step failed.  That made them invisible to the
+        # next valid planner run.
+        with transaction.atomic():
+            current_assignments = list(
+                PlannerCallAssignment.objects.filter(member_plan__planner=planner)
+                .select_related('contact', 'assigned_user')
             )
-            self._generate_member_tasks(member_plan)
-        assignment_summary = self._rebuild_contact_assignments(planner)
+            removed_contact_ids = [
+                assignment.contact_id
+                for assignment in current_assignments
+                if assignment.assigned_user_id not in requested_user_ids
+            ]
+            for assignment in current_assignments:
+                delete_assignment_from_peer(
+                    assignment.id,
+                    assignment.contact,
+                    planner_name=planner.name,
+                )
+            planner.member_plans.all().delete()
+            if removed_contact_ids:
+                Contact.objects.filter(id__in=removed_contact_ids).update(
+                    telemarketing_owner=None,
+                    telemarketing_assigned_at=None,
+                )
+            for item in member_data:
+                member_plan = PlannerMemberPlan.objects.create(
+                    planner=planner,
+                    user_id=item.get('user'),
+                    member_name=item.get('member_name', 'Member'),
+                    workspace_name=item.get('workspace_name', f"{item.get('member_name', 'Member')} Workspace"),
+                    monthly_calls_target=item.get('monthly_calls_target', 0),
+                    monthly_whatsapp_target=item.get('monthly_whatsapp_target', 0),
+                    monthly_email_target=item.get('monthly_email_target', 0),
+                    monthly_linkedin_target=item.get('monthly_linkedin_target', 0),
+                    calls_weightage=item.get('calls_weightage', 25),
+                    whatsapp_weightage=item.get('whatsapp_weightage', 25),
+                    email_weightage=item.get('email_weightage', 25),
+                    linkedin_weightage=item.get('linkedin_weightage', 25),
+                    assigned_by=request.user if request.user and request.user.is_authenticated else None,
+                )
+                self._generate_member_tasks(member_plan)
+            assignment_summary = self._rebuild_contact_assignments(planner)
         return Response(
             {
                 "planner_id": planner.id,
@@ -2210,6 +2320,7 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                         assigned_user=member.user,
                         sequence_number=seq,
                         scheduled_date=task.task_date,
+                        scheduled_time=task.scheduled_time,
                     )
                     send_assignment_to_peer(contact, member.user, planner_assignment, planner.name)
                     assigned_in_planner.add(contact.id)
@@ -2270,6 +2381,24 @@ class PlannerTaskViewSet(viewsets.ModelViewSet):
             return queryset
         return queryset.filter(member_plan__user=self.request.user)
 
+    def perform_update(self, serializer):
+        """Keep Marketing CRM targets aligned after an admin changes a plan."""
+        if not _is_admin(self.request.user):
+            raise PermissionDenied("Only admin can update planner tasks.")
+        task = serializer.save()
+        if task.channel != 'calls' or task.period_type != 'daily':
+            return
+        for assignment in task.call_assignments.select_related(
+            'contact', 'assigned_user', 'member_plan__planner', 'planner_task'
+        ):
+            if assignment.assigned_user_id:
+                send_assignment_to_peer(
+                    assignment.contact,
+                    assignment.assigned_user,
+                    assignment,
+                    assignment.member_plan.planner.name,
+                )
+
 
 class PlannerCallAssignmentViewSet(viewsets.ModelViewSet):
     queryset = PlannerCallAssignment.objects.select_related('contact', 'assigned_user', 'member_plan', 'planner_task').all()
@@ -2285,6 +2414,32 @@ class PlannerCallAssignmentViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(member_plan__planner_id=planner_id)
             return queryset
         return queryset.filter(assigned_user=self.request.user)
+
+    @staticmethod
+    def _sync_assignment_to_marketing(assignment):
+        """Publish a new or changed planner assignment to its CRM user."""
+        assignment = PlannerCallAssignment.objects.select_related(
+            'contact', 'assigned_user', 'member_plan__planner', 'planner_task'
+        ).get(pk=assignment.pk)
+        if assignment.assigned_user_id:
+            send_assignment_to_peer(
+                assignment.contact,
+                assignment.assigned_user,
+                assignment,
+                assignment.member_plan.planner.name,
+            )
+
+    def perform_create(self, serializer):
+        if not _is_admin(self.request.user):
+            raise PermissionDenied("Only admin can assign planner calls.")
+        assignment = serializer.save()
+        self._sync_assignment_to_marketing(assignment)
+
+    def perform_update(self, serializer):
+        if not _is_admin(self.request.user):
+            raise PermissionDenied("Only admin can change planner call assignments.")
+        assignment = serializer.save()
+        self._sync_assignment_to_marketing(assignment)
 
     @action(detail=False, methods=['get'])
     def my_queue(self, request):

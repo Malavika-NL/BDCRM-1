@@ -408,6 +408,13 @@ def send_assignment_to_peer(contact, assigned_user, assignment=None, planner_nam
             getattr(assignment, "scheduled_date", None).isoformat()
             if getattr(assignment, "scheduled_date", None) else None
         ),
+        "scheduled_time": (
+            getattr(assignment, "scheduled_time", None).isoformat()
+            if getattr(assignment, "scheduled_time", None) else None
+        ),
+        # This is the BDCRM Activity Planner's daily call target.  Marketing
+        # CRM uses it for the Daily Target summary card.
+        "daily_target": getattr(getattr(assignment, "planner_task", None), "target_count", 0),
     }
 
     def _post_assignment():
