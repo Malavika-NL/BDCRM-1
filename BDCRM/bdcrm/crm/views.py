@@ -198,8 +198,22 @@ class CompanyPortalLoginView(APIView):
         return Response(token_payload)
 
 
+PORTAL_PROVISION_ROLES = {'admin', 'employee'}
+
+
+def _dedupe_username(base: str) -> str:
+    """Same collision-suffix convention as UserCreateSerializer._generate_username_from_email."""
+    candidate = base[:150]
+    suffix = 1
+    while User.objects.filter(username__iexact=candidate).exists():
+        suffix_str = str(suffix)
+        candidate = f"{base[: max(1, 150 - len(suffix_str) - 1)]}_{suffix_str}"
+        suffix += 1
+    return candidate
+
+
 class CompanyPortalAccountView(APIView):
-    """Resolve or provision a passwordless BDCRM account for Portal SSO."""
+    """Resolve, provision, reactivate, or revoke a passwordless BDCRM account for Portal SSO."""
 
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
@@ -209,22 +223,156 @@ class CompanyPortalAccountView(APIView):
             request.headers.get('X-Portal-SSO-Secret', ''), settings.PORTAL_SSO_SHARED_SECRET
         ):
             return Response({'detail': 'Invalid portal credentials.'}, status=status.HTTP_403_FORBIDDEN)
-        if not (request.data.get('company_id') or request.headers.get('X-Company-ID')):
+
+        body_company_id = request.data.get('company_id')
+        header_company_id = request.headers.get('X-Company-ID')
+        if not (body_company_id or header_company_id):
             return Response({'detail': 'Missing company context.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        def _as_int(value):
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return None
+
+        body_company_int = _as_int(body_company_id) if body_company_id not in (None, '') else None
+        header_company_int = _as_int(header_company_id) if header_company_id not in (None, '') else None
+        if (
+            body_company_int is not None
+            and header_company_int is not None
+            and body_company_int != header_company_int
+        ):
+            return Response(
+                {'detail': 'company_id and X-Company-ID disagree.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        resolved_company_id = body_company_int if body_company_int is not None else header_company_int
+
+        from .models import UserProfile
+
         email = str(request.data.get('email') or '').strip()
-        user = User.objects.filter(email__iexact=email, is_active=True).order_by('id').first()
-        if not user and request.data.get('provision') and email:
-            from .models import UserProfile
-            portal_username = str(request.data.get('portal_username') or '').strip()
-            username = f"portal-{portal_username or email.split('@', 1)[0]}"
-            role = 'admin' if str(request.data.get('role') or '').lower() in {'admin', 'platform_admin'} else 'employee'
-            user = User.objects.create_user(username=username[:150], email=email, password=None, is_active=True)
-            user.set_unusable_password()
-            user.save(update_fields=['password'])
-            UserProfile.objects.get_or_create(user=user, defaults={'role': role})
-        if not user:
+        provision = bool(request.data.get('provision'))
+        deactivate = request.data.get('active') is False
+        raw_role = str(request.data.get('role') or '').strip().lower()
+        first_name = str(request.data.get('first_name') or '').strip()
+        last_name = str(request.data.get('last_name') or '').strip()
+        phone = str(request.data.get('phone') or '').strip()
+
+        user = User.objects.filter(email__iexact=email).order_by('id').first()
+
+        # A revoke must win over a grant arriving in the same call, so this is
+        # checked before provision and never falls through to the update branch.
+        # A superuser's is_active is never flipped this way - only the account
+        # state is reported back, so a secret-only call can never lock out /admin/.
+        if user and deactivate:
+            if not user.is_superuser:
+                user.is_active = False
+                user.save(update_fields=['is_active'])
+            return Response({
+                'external_user_id': str(user.pk),
+                'created': False,
+                'username': user.username,
+                'is_active': user.is_active,
+            })
+
+        # A deactivation signal must never create an account, regardless of
+        # what provision says.
+        if not user and deactivate:
             return Response({'detail': 'No BDCRM account found.'}, status=status.HTTP_404_NOT_FOUND)
-        return Response({'external_user_id': str(user.pk)})
+
+        if user and provision:
+            if raw_role not in PORTAL_PROVISION_ROLES:
+                return Response(
+                    {'detail': f"role must be one of: {', '.join(sorted(PORTAL_PROVISION_ROLES))}."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user.is_active = True
+            update_fields = ['is_active']
+            if first_name and user.first_name != first_name:
+                user.first_name = first_name
+                update_fields.append('first_name')
+            if last_name and user.last_name != last_name:
+                user.last_name = last_name
+                update_fields.append('last_name')
+            # is_staff mirrors role on every call so promote/demote always
+            # takes effect, but a superuser's staff flag is never touched here.
+            if not user.is_superuser:
+                desired_staff = raw_role == 'admin'
+                if user.is_staff != desired_staff:
+                    user.is_staff = desired_staff
+                    update_fields.append('is_staff')
+            user.save(update_fields=update_fields)
+
+            profile, _ = UserProfile.objects.get_or_create(user=user, defaults={'role': raw_role})
+            profile_fields = []
+            if profile.role != raw_role:
+                profile.role = raw_role
+                profile_fields.append('role')
+            if phone and profile.phone_number != phone:
+                profile.phone_number = phone
+                profile_fields.append('phone_number')
+            if profile_fields:
+                profile.save(update_fields=profile_fields)
+
+            return Response({
+                'external_user_id': str(user.pk),
+                'created': False,
+                'username': user.username,
+                'is_active': user.is_active,
+            })
+
+        if not user and provision and email:
+            if raw_role not in PORTAL_PROVISION_ROLES:
+                return Response(
+                    {'detail': f"role must be one of: {', '.join(sorted(PORTAL_PROVISION_ROLES))}."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            local_part = email.split('@', 1)[0]
+            sanitized_local = re.sub(r'[^A-Za-z0-9._-]+', '', local_part).strip('._-')
+            if sanitized_local:
+                # Reuse the same email -> username derivation (sanitise + dedup)
+                # already used for admin-created accounts, for one convention.
+                username = UserCreateSerializer()._generate_username_from_email(email)
+            else:
+                portal_username = str(request.data.get('portal_username') or '').strip()
+                fallback_base = re.sub(
+                    r'[^A-Za-z0-9._-]+', '', f"portal-{resolved_company_id}-{portal_username}"
+                ).strip('._-') or 'portal-user'
+                username = _dedupe_username(fallback_base)
+
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=None,
+                is_active=True,
+                first_name=first_name,
+                last_name=last_name,
+            )
+            user.set_unusable_password()
+            update_fields = ['password']
+            if raw_role == 'admin':
+                user.is_staff = True
+                update_fields.append('is_staff')
+            user.save(update_fields=update_fields)
+            UserProfile.objects.create(user=user, role=raw_role, phone_number=phone)
+
+            return Response({
+                'external_user_id': str(user.pk),
+                'created': True,
+                'username': user.username,
+                'is_active': user.is_active,
+            })
+
+        if user:
+            # Resolve-only call: no provision/active signal, report current state.
+            return Response({
+                'external_user_id': str(user.pk),
+                'created': False,
+                'username': user.username,
+                'is_active': user.is_active,
+            })
+
+        return Response({'detail': 'No BDCRM account found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class CreateUserView(APIView):
