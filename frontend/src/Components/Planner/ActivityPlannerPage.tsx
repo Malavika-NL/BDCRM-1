@@ -182,7 +182,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
         const usersData = await usersRes.json().catch(() => null);
         if (!usersRes.ok) throw new Error(extractErrorMessage(usersData, 'Failed to load users.'));
         const employeeUsers = (Array.isArray(usersData) ? usersData : []).filter(
-          (user) => user.role !== 'admin' && user.is_active !== false && isTelemarketingUser(user)
+          (user) => user.is_active !== false && (user.role === 'admin' || isTelemarketingUser(user))
         );
         setUsers(employeeUsers);
 
@@ -869,7 +869,6 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                               </td>
                               <td className="px-5 py-4 align-middle">
                                 <p className="text-[15px] font-black text-slate-800">{getDisplayName(user)}</p>
-                                <p className="text-[12px] text-slate-400 font-semibold mt-1">{user.username}</p>
                               </td>
                               <td className="px-5 py-4 align-middle">
                                 <p className="text-[13px] font-semibold text-slate-600">{user.email}</p>

@@ -596,6 +596,16 @@ class Contact(models.Model):
         related_name='telemarketing_assigned_contacts',
     )
     telemarketing_assigned_at = models.DateTimeField(null=True, blank=True)
+    # The actual BDCRM account that manually created this contact.  Keep the
+    # existing name snapshot for legacy/imported rows, but use this relation
+    # for accurate creator attribution going forward.
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='created_contacts',
+    )
     created_by_name = models.CharField(max_length=150, blank=True, default="")
     source_project = models.CharField(max_length=30, blank=True, default="")
     source_contact_id = models.CharField(max_length=100, blank=True, default="")

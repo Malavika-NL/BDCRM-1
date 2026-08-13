@@ -26,6 +26,10 @@ class ContactRouter:
         return None
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
-        if hints.get('model') and self._is_contact_model(hints['model']):
+        # Django supplies `model_name` during normal migrations rather than a
+        # model object in `hints`. Route the Contact schema to contacts_db so
+        # fields such as Contact.created_by are created on the table used by
+        # the Contact API.
+        if model_name == 'contact' or (hints.get('model') and self._is_contact_model(hints['model'])):
             return db == 'contacts_db'
         return None

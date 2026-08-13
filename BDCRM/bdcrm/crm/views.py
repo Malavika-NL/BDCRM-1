@@ -86,6 +86,9 @@ def _is_admin(user):
 def _is_telemarketing_user(user):
     if not user or not getattr(user, "is_active", False):
         return False
+    # Administrators can set and complete their own monthly calling target.
+    if _is_admin(user):
+        return True
     profile = getattr(user, "profile", None)
     if not profile:
         return False
@@ -313,6 +316,7 @@ class UserDetailView(APIView):
 class ContactViewSet(viewsets.ModelViewSet):
     queryset = Contact.objects.all().order_by("-created_at")
     serializer_class = ContactSerializer
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["person_name", "company_name", "email", "phone", "address", "region", "vertical"]
     ordering_fields = ["created_at", "updated_at", "person_name", "company_name"]
@@ -332,7 +336,13 @@ class ContactViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         if getattr(user, "is_authenticated", False):
-            serializer.save(created_by_name=user.get_full_name() or user.username)
+            # Use the registered person's name. The username may be a legacy
+            # system identifier such as `portal-marketing-6`.
+            registered_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
+            serializer.save(
+                created_by=user,
+                created_by_name=registered_name or user.email or user.username,
+            )
         else:
             serializer.save()
 
@@ -352,8 +362,12 @@ class ContactViewSet(viewsets.ModelViewSet):
         if contact:
             update_serializer = self.get_serializer(contact, data=validated, partial=True)
             update_serializer.is_valid(raise_exception=True)
-            if not contact.created_by_name and getattr(request.user, "is_authenticated", False):
-                update_serializer.save(created_by_name=request.user.get_full_name() or request.user.username)
+            if not contact.created_by_id and getattr(request.user, "is_authenticated", False):
+                registered_name = f"{request.user.first_name or ''} {request.user.last_name or ''}".strip()
+                update_serializer.save(
+                    created_by=request.user,
+                    created_by_name=registered_name or request.user.email or request.user.username,
+                )
             else:
                 self.perform_update(update_serializer)
             return Response(update_serializer.data, status=status.HTTP_200_OK)
@@ -1927,7 +1941,7 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
         if invalid_user_names:
             return Response(
                 {
-                    "detail": "Only active telemarketing users can receive planner contacts.",
+                    "detail": "Only active telemarketing users or administrators can receive planner contacts.",
                     "invalid_users": invalid_user_names,
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -1991,10 +2005,11 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
         if not _is_admin(request.user):
             return Response({"detail": "Only admin can regenerate planner tasks."}, status=status.HTTP_403_FORBIDDEN)
         planner = self.get_object()
-        for member in planner.member_plans.all():
-            member.tasks.all().delete()
-            self._generate_member_tasks(member)
-        self._rebuild_contact_assignments(planner)
+        with transaction.atomic():
+            for member in planner.member_plans.all():
+                member.tasks.all().delete()
+                self._generate_member_tasks(member)
+            self._rebuild_contact_assignments(planner)
         return Response({"success": True, "message": "Planner tasks regenerated"})
 
     @action(detail=True, methods=['post'])
@@ -2002,7 +2017,8 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
         if not _is_admin(request.user):
             return Response({"detail": "Only admin can assign contacts."}, status=status.HTTP_403_FORBIDDEN)
         planner = self.get_object()
-        summary = self._rebuild_contact_assignments(planner)
+        with transaction.atomic():
+            summary = self._rebuild_contact_assignments(planner)
         return Response(summary, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['get'])
@@ -2233,7 +2249,7 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
         owned_contacts_by_user = {}
         if planner_user_ids:
             owned_contacts = list(
-                self._planner_contacts(planner).filter(telemarketing_owner_id__in=planner_user_ids)
+                self._planner_contacts(planner).select_for_update().filter(telemarketing_owner_id__in=planner_user_ids)
                 .order_by('telemarketing_assigned_at', 'created_at', 'id')
             )
             for contact in owned_contacts:
@@ -2261,7 +2277,7 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
             reserved_contacts_by_user[member.user_id] = owned_for_member[:required_contacts]
 
         unowned_contacts = list(
-            self._planner_contacts(planner).filter(telemarketing_owner__isnull=True)
+            self._planner_contacts(planner).select_for_update().filter(telemarketing_owner__isnull=True)
             .distinct()
             .order_by('created_at', 'id')
         )
@@ -2293,7 +2309,13 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
             if member.user_id and fresh_contacts:
                 now = timezone.now()
                 fresh_contact_ids = [contact.id for contact in fresh_contacts]
-                Contact.objects.filter(id__in=fresh_contact_ids).update(
+                # A contact can be claimed only while it has no owner. This
+                # protects an existing assignment from being moved to another
+                # user when planners are saved concurrently.
+                Contact.objects.filter(
+                    id__in=fresh_contact_ids,
+                    telemarketing_owner__isnull=True,
+                ).update(
                     telemarketing_owner=member.user,
                     telemarketing_assigned_at=now,
                     updated_at=now,

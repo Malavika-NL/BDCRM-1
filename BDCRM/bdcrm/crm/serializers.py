@@ -63,6 +63,7 @@ class ContactSerializer(serializers.ModelSerializer):
             "is_verified",
             "telemarketing_owner",
             "telemarketing_assigned_at",
+            "created_by",
             "created_by_name",
             "source_project",
             "source_contact_id",
@@ -75,6 +76,7 @@ class ContactSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "telemarketing_owner",
             "telemarketing_assigned_at",
+            "created_by",
             "created_by_name",
             "source_project",
             "source_contact_id",
@@ -89,6 +91,14 @@ class ContactSerializer(serializers.ModelSerializer):
         return obj.person_name or obj.company_name or ""
 
     def get_created_by_info(self, obj):
+        user = getattr(obj, "created_by", None)
+        if user:
+            return {
+                "id": user.id,
+                "name": user.get_full_name() or user.email or user.username,
+                "username": user.username,
+                "email": user.email,
+            }
         name = getattr(obj, "created_by_name", "")
         if not name:
             return None
