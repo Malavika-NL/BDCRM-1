@@ -211,3 +211,5 @@ CONTACT_SYNC_API_TOKEN = os.getenv(
     "bdcrm-contact-sync-local",
 )
 CONTACT_SYNC_TIMEOUT_SECONDS = float(os.getenv("CONTACT_SYNC_TIMEOUT_SECONDS", "5"))
+
+WISHLIST_SYNC_API_TOKEN = os.getenv("WISHLIST_SYNC_API_TOKEN", "")

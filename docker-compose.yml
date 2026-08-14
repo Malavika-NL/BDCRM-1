@@ -30,6 +30,7 @@ services:
       # Use the same value in Marketing CRM and SalesPie.
       CONTACT_SYNC_API_TOKEN: ${CONTACT_SYNC_API_TOKEN:-bdcrm-contact-sync-local}
       CONTACT_SYNC_TIMEOUT_SECONDS: ${CONTACT_SYNC_TIMEOUT_SECONDS:-5}
+      WISHLIST_SYNC_API_TOKEN: ${WISHLIST_SYNC_API_TOKEN}
     restart: unless-stopped
     networks:
       - bdcrm_net
