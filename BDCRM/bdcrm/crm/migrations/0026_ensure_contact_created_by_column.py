@@ -2,7 +2,7 @@ from django.db import migrations
 
 
 def ensure_contact_created_by_column(apps, schema_editor):
-    """Repair databases where migration history was recorded without this column."""
+    """Repair installations that already recorded migration 0025 as applied."""
     Contact = apps.get_model('crm', 'Contact')
     table_name = Contact._meta.db_table
     existing_columns = {
@@ -15,9 +15,8 @@ def ensure_contact_created_by_column(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('crm', '0024_planner_scheduled_time'),
+        ('crm', '0025_contact_created_by'),
     ]
 
     operations = [

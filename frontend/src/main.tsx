@@ -2,10 +2,12 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { authStore } from './Components/Utils/auth'
+import { authStore, installAuthenticatedFetch } from './Components/Utils/auth'
+
+installAuthenticatedFetch()
 
 const root = createRoot(document.getElementById('root')!)
-const portalUrl = import.meta.env.VITE_COMPANY_PORTAL_URL || 'http://192.168.1.56:8002'
+const portalUrl = import.meta.env.VITE_COMPANY_PORTAL_URL || 'http://192.168.1.94:8002'
 
 const renderApp = () => root.render(
   <StrictMode>

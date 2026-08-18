@@ -63,6 +63,7 @@ from .contact_sync import (
     send_assignment_to_peer,
     delete_assignment_from_peer,
 )
+from .tenancy import set_current_company_id
 from django.conf import settings
 
 
@@ -249,6 +250,12 @@ class CompanyPortalAccountView(APIView):
         resolved_company_id = body_company_int if body_company_int is not None else header_company_int
 
         from .models import UserProfile
+        # This endpoint is authenticated with the Portal shared secret rather
+        # than a browser JWT.  Establish the verified company context before
+        # resolving or creating the tenant-scoped user profile, so the same
+        # shared identity receives a profile in each authorized company.
+        from .tenancy import set_current_company_id
+        set_current_company_id(resolved_company_id)
 
         email = str(request.data.get('email') or '').strip()
         provision = bool(request.data.get('provision'))
@@ -294,18 +301,17 @@ class CompanyPortalAccountView(APIView):
             if last_name and user.last_name != last_name:
                 user.last_name = last_name
                 update_fields.append('last_name')
-            # is_staff mirrors role on every call so promote/demote always
-            # takes effect, but a superuser's staff flag is never touched here.
-            if not user.is_superuser:
-                desired_staff = raw_role == 'admin'
-                if user.is_staff != desired_staff:
-                    user.is_staff = desired_staff
-                    update_fields.append('is_staff')
+            # A shared-user provisioning call may never downgrade an existing
+            # administrator.  It can promote an authorized user to admin, but
+            # a lower role from another company must not remove admin access.
+            if not user.is_superuser and raw_role == 'admin' and not user.is_staff:
+                user.is_staff = True
+                update_fields.append('is_staff')
             user.save(update_fields=update_fields)
 
             profile, _ = UserProfile.objects.get_or_create(user=user, defaults={'role': raw_role})
             profile_fields = []
-            if profile.role != raw_role:
+            if raw_role == 'admin' and profile.role != 'admin':
                 profile.role = raw_role
                 profile_fields.append('role')
             if phone and profile.phone_number != phone:
@@ -534,6 +540,12 @@ class ContactSyncView(APIView):
                 {"error": "Invalid or missing contact sync token."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+
+        # Integration calls are authenticated by the shared sync token, not a
+        # portal JWT. Establish their configured tenant before saving a
+        # tenant-scoped Contact; otherwise TenantModel.save() rejects the
+        # request because the middleware deliberately starts with no context.
+        set_current_company_id(settings.CONTACT_SYNC_TENANT_COMPANY_ID)
 
         origin_project = (
             request.data.get("origin_project")
@@ -2365,6 +2377,13 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                     )
 
     def _rebuild_contact_assignments(self, planner):
+        # Contact queries use the `contacts_db` alias through ContactRouter.
+        # Row locks must be enclosed by a transaction on that same alias;
+        # the planner/member-plan transaction alone is on `default`.
+        with transaction.atomic(using='contacts_db'):
+            return self._rebuild_contact_assignments_in_contacts_transaction(planner)
+
+    def _rebuild_contact_assignments_in_contacts_transaction(self, planner):
         existing_assignments = list(
             PlannerCallAssignment.objects.filter(member_plan__planner=planner)
             .select_related('contact', 'assigned_user')
@@ -2426,7 +2445,6 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
 
         unowned_contacts = list(
             self._planner_contacts(planner).select_for_update().filter(telemarketing_owner__isnull=True)
-            .distinct()
             .order_by('created_at', 'id')
         )
 

@@ -6,8 +6,8 @@ services:
     container_name: bdcrm_backend
     environment:
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
-      DJANGO_CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-http://192.168.1.56:8003,http://127.0.0.1:8003,http://localhost:8003}
-      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://192.168.1.56:8003,http://127.0.0.1:8003,http://localhost:8003}
+      DJANGO_CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS:-http://192.168.1.94:8003,http://127.0.0.1:8003,http://localhost:8003}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://192.168.1.94:8003,http://127.0.0.1:8003,http://localhost:8003}
       # PostgreSQL is hosted on the Windows machine, not in the db service below.
       POSTGRES_DB: ${POSTGRES_DB:-BDCRM}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -27,9 +27,15 @@ services:
       CONTACT_SYNC_SOURCE: bdcrm
       CONTACT_SYNC_TARGET_URL: ${CONTACT_SYNC_TARGET_URL:-http://host.docker.internal:8003/api/integrations/sync/contact/}
       CONTACT_SYNC_TARGET_URLS: ${CONTACT_SYNC_TARGET_URLS:-http://host.docker.internal:8003/api/integrations/sync/contact/,http://host.docker.internal:8001/api/integrations/sync/contact/}
-      CONTACT_ASSIGNMENT_SYNC_TARGET_URLS: ${CONTACT_ASSIGNMENT_SYNC_TARGET_URLS:-http://host.docker.internal:8003/api/integrations/sync/tele-assignment/}
+      # Planner assignments belong in Marketing CRM's telemarketing queue,
+      # not this BDCRM API.  Port 8003 is BDCRM itself and has no receiver
+      # for this endpoint.
+      CONTACT_ASSIGNMENT_SYNC_TARGET_URLS: ${CONTACT_ASSIGNMENT_SYNC_TARGET_URLS:-http://host.docker.internal:8000/api/integrations/sync/tele-assignment/}
       # Use the same value in Marketing CRM and SalesPie.
       CONTACT_SYNC_API_TOKEN: ${CONTACT_SYNC_API_TOKEN:-bdcrm-contact-sync-local}
+      # Shared-token contact sync needs an explicit BDCRM tenant because it
+      # does not carry a portal JWT.
+      CONTACT_SYNC_TENANT_COMPANY_ID: ${CONTACT_SYNC_TENANT_COMPANY_ID:-1}
       CONTACT_SYNC_TIMEOUT_SECONDS: ${CONTACT_SYNC_TIMEOUT_SECONDS:-5}
       PORTAL_SSO_SHARED_SECRET: ${PORTAL_SSO_SHARED_SECRET:?Set PORTAL_SSO_SHARED_SECRET in .env}
       PORTAL_SSO_EXCHANGE_URL: http://company-portal-api:8004/api/portal/sso/exchange/

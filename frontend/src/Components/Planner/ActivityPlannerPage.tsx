@@ -380,6 +380,37 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
     );
   };
 
+  const selectPlannerPeriod = (nextMonth: number, nextYear: number) => {
+    const matchingPlanner = planners.find(
+      (planner) => planner.month === nextMonth && planner.year === nextYear
+    );
+
+    // Switch the selected planner at the same time as the period. Without this,
+    // the previously selected planner restores its old month through the form
+    // hydration effect above.
+    setSelectedPlannerId(matchingPlanner?.id ?? null);
+    setMonth(nextMonth);
+    setYear(nextYear);
+
+    if (!matchingPlanner) {
+      setPlanName('Monthly Call Planner');
+      setSourceProject('all');
+      setWorkingWeekendDates([]);
+      setTargets((prev) => {
+        const next = { ...prev };
+        users.forEach((user) => {
+          next[user.id] = Number.NaN;
+        });
+        return next;
+      });
+    }
+  };
+
+  const showPreviousMonth = () => {
+    const previous = new Date(year, month - 2, 1);
+    selectPlannerPeriod(previous.getMonth() + 1, previous.getFullYear());
+  };
+
 
   const handleSaveAdminPlanner = async () => {
     setSaving(true);
@@ -643,7 +674,11 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                 </div>
                 <div>
                   <label className="block text-[12px] font-black text-slate-500 uppercase tracking-[0.16em] mb-2">Month</label>
-                  <select className={inputCls} value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+                  <select
+                    className={inputCls}
+                    value={month}
+                    onChange={(e) => selectPlannerPeriod(Number(e.target.value), year)}
+                  >
                     {MONTHS.map((item) => (
                       <option key={item.value} value={item.value}>
                         {item.label}
@@ -653,7 +688,19 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                 </div>
                 <div>
                   <label className="block text-[12px] font-black text-slate-500 uppercase tracking-[0.16em] mb-2">Year</label>
-                  <input className={inputCls} type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} />
+                  <input
+                    className={inputCls}
+                    type="number"
+                    value={year}
+                    onChange={(e) => selectPlannerPeriod(month, Number(e.target.value))}
+                  />
+                  <button
+                    type="button"
+                    onClick={showPreviousMonth}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-black text-sky-700 bg-sky-50 border border-sky-200"
+                  >
+                    <CalendarDays size={12} /> View Previous Month
+                  </button>
                 </div>
                 <div>
                   <label className="block text-[12px] font-black text-slate-500 uppercase tracking-[0.16em] mb-2">Contact Source</label>

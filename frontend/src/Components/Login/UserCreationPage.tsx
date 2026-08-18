@@ -1191,6 +1191,9 @@ const Avatar = ({ name, index }: { name: string; index: number }) => {
   );
 };
 
+const getUserDisplayName = (user: any) =>
+  [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.username;
+
 /* ── Role badge ── */
 const RoleBadge = ({ role }: { role: string }) =>
   role === 'admin' ? (
@@ -1662,12 +1665,11 @@ export const UserCreationPage: React.FC = () => {
                       <td className="px-6 py-4 text-[14px] font-black text-slate-300">{i + 1}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <Avatar name={`${u.first_name || ''} ${u.last_name || u.username}`} index={i} />
+                          <Avatar name={getUserDisplayName(u)} index={i} />
                           <div>
                             <p className="text-[14px] font-black text-slate-800">
-                              {u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : u.username}
+                              {getUserDisplayName(u)}
                             </p>
-                            <p className="text-[12px] text-slate-400 font-medium">@{u.username}</p>
                           </div>
                         </div>
                       </td>

@@ -403,6 +403,9 @@ def send_assignment_to_peer(contact, assigned_user, assignment=None, planner_nam
         "location": contact.location or "",
         "is_verified": bool(contact.is_verified),
         "bdcrm_assignment_id": getattr(assignment, "id", None),
+        # A verified contact is not necessarily a completed planner call.
+        # Send the planner row's independent state to Marketing CRM.
+        "assignment_status": getattr(assignment, "status", "pending"),
         "bdcrm_planner_name": planner_name,
         "scheduled_date": (
             getattr(assignment, "scheduled_date", None).isoformat()

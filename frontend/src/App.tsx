@@ -36,7 +36,7 @@ import { AccountTargetingOwnersPage } from './Components/AccountTargeting/Accoun
 import { WishlistPage } from './Components/Wishlist/WishlistPage';
 
 function PortalRedirect() {
-  window.location.replace(`${import.meta.env.VITE_COMPANY_PORTAL_URL || 'http://192.168.1.56:8002'}?workspace=1`);
+  window.location.replace(`${import.meta.env.VITE_COMPANY_PORTAL_URL || 'http://192.168.1.94:8002'}?workspace=1`);
   return null;
 }
 

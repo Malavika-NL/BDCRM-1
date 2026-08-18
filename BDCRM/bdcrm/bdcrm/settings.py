@@ -83,6 +83,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'crm.tenancy.CompanyContextMiddleware',
     'corsheaders.middleware.CorsMiddleware',
 
     'django.middleware.security.SecurityMiddleware',
@@ -187,10 +188,10 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'crm.tenancy.CompanyJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ),
 }
 
@@ -229,10 +230,13 @@ CONTACT_SYNC_TARGET_URLS = os.getenv(
 # assignment must never be posted to a frontend/non-Marketing endpoint.
 CONTACT_ASSIGNMENT_SYNC_TARGET_URLS = os.getenv(
     "CONTACT_ASSIGNMENT_SYNC_TARGET_URLS",
-    "http://127.0.0.1:8003/api/integrations/sync/tele-assignment/",
+    "http://127.0.0.1:8000/api/integrations/sync/tele-assignment/",
 )
 CONTACT_SYNC_API_TOKEN = os.getenv(
     "CONTACT_SYNC_API_TOKEN",
     "bdcrm-contact-sync-local",
 )
+# Contact-sync requests use a shared integration token rather than a portal
+# JWT, so they need an explicitly configured tenant context.
+CONTACT_SYNC_TENANT_COMPANY_ID = int(os.getenv("CONTACT_SYNC_TENANT_COMPANY_ID", "1"))
 CONTACT_SYNC_TIMEOUT_SECONDS = float(os.getenv("CONTACT_SYNC_TIMEOUT_SECONDS", "5"))
