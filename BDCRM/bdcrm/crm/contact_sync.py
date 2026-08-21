@@ -11,6 +11,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from .models import Contact, PlannerCallAssignment
+from .tenancy import current_company_id
 
 logger = logging.getLogger(__name__)
 _sync_state = threading.local()
@@ -386,6 +387,7 @@ def send_assignment_to_peer(contact, assigned_user, assignment=None, planner_nam
     token = getattr(settings, "CONTACT_SYNC_API_TOKEN", "")
     if not urls or not token or not assigned_user or not assigned_user.email:
         return
+    tenant_company_id = current_company_id()
     payload = {
         # These identifiers make the operation idempotent in Marketing CRM and
         # let it reconcile a retry with the same BDCRM planner row.
@@ -403,6 +405,11 @@ def send_assignment_to_peer(contact, assigned_user, assignment=None, planner_nam
         "location": contact.location or "",
         "is_verified": bool(contact.is_verified),
         "bdcrm_assignment_id": getattr(assignment, "id", None),
+        "bdcrm_planner_id": getattr(
+            getattr(getattr(assignment, "member_plan", None), "planner", None),
+            "id",
+            None,
+        ),
         # A verified contact is not necessarily a completed planner call.
         # Send the planner row's independent state to Marketing CRM.
         "assignment_status": getattr(assignment, "status", "pending"),
@@ -425,7 +432,11 @@ def send_assignment_to_peer(contact, assigned_user, assignment=None, planner_nam
             try:
                 response = requests.post(
                     target_url, json=payload,
-                    headers={"X-Contact-Sync-Token": token, "X-Contact-Sync-Source": "bdcrm"},
+                    headers={
+                        "X-Contact-Sync-Token": token,
+                        "X-Contact-Sync-Source": "bdcrm",
+                        "X-Company-ID": str(tenant_company_id),
+                    },
                     timeout=getattr(settings, "CONTACT_SYNC_TIMEOUT_SECONDS", 5),
                 )
                 response.raise_for_status()
@@ -443,19 +454,56 @@ def send_assignment_to_peer(contact, assigned_user, assignment=None, planner_nam
         logger.warning("Could not queue assignment sync for contact %s: %s", contact.pk, exc)
 
 
-def delete_assignment_from_peer(assignment_id, contact=None, planner_name="", purge_legacy=False):
+def delete_assignment_from_peer(
+    assignment_id,
+    contact=None,
+    planner_id=None,
+    planner_name="",
+    purge_legacy=False,
+    delete_workspace=False,
+    require_delivery=False,
+):
     urls = get_sync_assignment_target_urls()
     token = getattr(settings, "CONTACT_SYNC_API_TOKEN", "")
     if not urls or not token:
-        return
+        if require_delivery:
+            raise RuntimeError("Marketing CRM assignment sync is not configured.")
+        return False
+    tenant_company_id = current_company_id()
+
     def _delete():
+        failed_urls = []
         for target_url in urls:
-            try:
-                requests.post(target_url, json={"deleted": True, "bdcrm_assignment_id": assignment_id,
-                                                "email": getattr(contact, "email", ""), "phone": getattr(contact, "phone", ""),
-                                                "bdcrm_planner_name": planner_name, "purge_legacy": purge_legacy},
-                              headers={"X-Contact-Sync-Token": token},
-                              timeout=getattr(settings, "CONTACT_SYNC_TIMEOUT_SECONDS", 5)).raise_for_status()
-            except requests.RequestException as exc:
-                logger.warning("Assignment delete sync to %s failed for %s: %s", target_url, assignment_id, exc)
+            last_error = None
+            for attempt in range(1, 4):
+                try:
+                    requests.post(target_url, json={"deleted": True, "bdcrm_assignment_id": assignment_id,
+                                                    "email": getattr(contact, "email", ""), "phone": getattr(contact, "phone", ""),
+                                                    "bdcrm_planner_id": planner_id,
+                                                    "bdcrm_planner_name": planner_name, "purge_legacy": purge_legacy,
+                                                    "delete_workspace": delete_workspace},
+                                  headers={
+                                      "X-Contact-Sync-Token": token,
+                                      "X-Company-ID": str(tenant_company_id),
+                                  },
+                                  timeout=getattr(settings, "CONTACT_SYNC_TIMEOUT_SECONDS", 5)).raise_for_status()
+                    last_error = None
+                    break
+                except requests.RequestException as exc:
+                    last_error = exc
+                    logger.warning(
+                        "Assignment delete sync attempt %s to %s failed for %s: %s",
+                        attempt, target_url, assignment_id, exc,
+                    )
+            if last_error is not None:
+                failed_urls.append(target_url)
+        if failed_urls and require_delivery:
+            raise RuntimeError(
+                "Marketing CRM did not acknowledge planner workspace deletion."
+            )
+        return not failed_urls
+
+    if require_delivery:
+        return _delete()
     transaction.on_commit(_delete)
+    return True

@@ -2,7 +2,7 @@ from rest_framework import viewsets, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import permissions, status
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import APIException, PermissionDenied
 from rest_framework.views import APIView
 from django.db.models import Sum, Count, Q
 from django.db import OperationalError, transaction
@@ -98,6 +98,15 @@ def _is_telemarketing_user(user):
     if any(keyword in searchable for keyword in keywords):
         return True
     return getattr(profile, "role", "") == "employee" and not searchable.strip()
+
+
+class MarketingWorkspaceSyncUnavailable(APIException):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_detail = (
+        "The activity planner was not deleted because Marketing CRM could not "
+        "confirm workspace deletion. Please try again."
+    )
+    default_code = "marketing_workspace_sync_unavailable"
 
 
 class LoginView(APIView):
@@ -2028,32 +2037,35 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
         if not _is_admin(self.request.user):
             raise PermissionDenied("Only admin can delete activity planners.")
 
-        # Deleting a planner must also release its contacts.  Otherwise they
-        # retain a telemarketing owner and cannot be allocated by the next plan.
+        # A planner owns the contacts that were allocated into its employee
+        # workspaces.  Remove those contacts along with the planner rather
+        # than merely releasing them back to the unassigned contact pool.
         assignment_contact_ids = list(
             PlannerCallAssignment.objects.filter(member_plan__planner=instance)
             .values_list('contact_id', flat=True)
             .distinct()
         )
-        planner_assignments = PlannerCallAssignment.objects.filter(member_plan__planner=instance).select_related('contact')
-        for assignment in planner_assignments:
+        # Planner deletion is a required cross-CRM operation. Do not remove
+        # the BDCRM source record unless Marketing CRM acknowledges that its
+        # mirrored employee workspace has been removed. This prevents silent
+        # orphan queues when the peer service is unavailable.
+        try:
             delete_assignment_from_peer(
-                assignment.id,
-                assignment.contact,
+                0,
+                planner_id=instance.id,
                 planner_name=instance.name,
                 purge_legacy=True,
+                delete_workspace=True,
+                require_delivery=True,
             )
-        # Also purge when the planner has no current local assignments but
-        # Marketing CRM still contains legacy mirrored rows.
-        if not planner_assignments.exists():
-            delete_assignment_from_peer(0, planner_name=instance.name, purge_legacy=True)
-        if assignment_contact_ids:
-            Contact.objects.filter(id__in=assignment_contact_ids).update(
-                telemarketing_owner=None,
-                telemarketing_assigned_at=None,
-                is_verified=False,
-            )
+        except RuntimeError as exc:
+            raise MarketingWorkspaceSyncUnavailable() from exc
         instance.delete()
+        if assignment_contact_ids:
+            # The planner deletion cascades through its assignments first, so
+            # deleting these contacts cannot affect assignments from this
+            # planner.  Contact.objects is routed to contacts_db.
+            Contact.objects.filter(id__in=assignment_contact_ids).delete()
 
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
