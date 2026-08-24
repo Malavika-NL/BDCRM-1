@@ -8,3 +8,160 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Activity Planner: a higher-contrast, blue-to-teal planning surface. */
+.activity-planner-theme {
+  color: #0f172a;
+}
+
+.activity-planner-theme .bg-white {
+  background-image: linear-gradient(145deg, #ffffff 0%, #f8fbff 58%, #f0fdfa 100%);
+}
+
+.activity-planner-theme .bg-slate-50 {
+  background-image: linear-gradient(135deg, #f8fafc 0%, #eff6ff 52%, #f0fdfa 100%);
+}
+
+.activity-planner-theme .border-slate-200 {
+  border-color: #cbd5e1;
+}
+
+.activity-planner-theme .border-sky-100,
+.activity-planner-theme .border-sky-200 {
+  border-color: #bae6fd;
+}
+
+.activity-planner-theme .text-slate-400 {
+  color: #475569;
+}
+
+.activity-planner-theme .text-slate-500 {
+  color: #475569;
+}
+
+.activity-planner-theme .text-slate-600 {
+  color: #334155;
+}
+
+.activity-planner-theme .hover\:bg-sky-50\/40:hover,
+.activity-planner-theme .hover\:bg-sky-50:hover {
+  background-image: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 50%, #ccfbf1 100%);
+}
+
+.activity-planner-theme button:not(:disabled) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.activity-planner-theme button:focus-visible,
+.activity-planner-theme a:focus-visible,
+.activity-planner-theme input:focus-visible,
+.activity-planner-theme select:focus-visible,
+.activity-planner-theme textarea:focus-visible {
+  outline: 3px solid rgba(6, 182, 212, 0.42);
+  outline-offset: 3px;
+}
+
+.activity-planner-theme .shadow-sm {
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.activity-planner-theme .planner-section-heading {
+  position: relative;
+}
+
+.activity-planner-theme .planner-section-heading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, #4f46e5 0%, #0ea5e9 45%, #14b8a6 100%);
+}
+
+.activity-planner-theme .planner-name-card {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 42%, #0284c7 100%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 12px 24px rgba(79, 70, 229, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.activity-planner-theme .planner-name-input {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.activity-planner-theme .planner-name-input:focus {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.38), inset 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.activity-planner-theme .planner-stat-card {
+  border-color: transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 5px 14px rgba(15, 23, 42, 0.06);
+}
+
+.activity-planner-theme .planner-stat-teal {
+  background: linear-gradient(135deg, #ecfdf5 0%, #ccfbf1 100%);
+  border-color: #99f6e4;
+}
+
+.activity-planner-theme .planner-stat-violet {
+  background: linear-gradient(135deg, #f5f3ff 0%, #e0e7ff 100%);
+  border-color: #c7d2fe;
+}
+
+.activity-planner-theme .planner-stat-sky {
+  background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);
+  border-color: #bae6fd;
+}
+
+.activity-planner-theme .planner-stat-indigo {
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  border-color: #c7d2fe;
+}
+
+.activity-planner-theme .planner-stat-amber {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: #fde68a;
+}
+
+.activity-planner-theme .planner-section-heading h2,
+.activity-planner-theme .planner-section-heading h3 {
+  color: #172554;
+}
+
+.activity-planner-theme .previous-month-button {
+  background: linear-gradient(135deg, #312e81 0%, #2563eb 52%, #0891b2 100%);
+  box-shadow: 0 10px 22px rgba(49, 46, 129, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.activity-planner-theme .previous-month-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 28px rgba(49, 46, 129, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.activity-planner-theme .planner-calendar-day.bg-white {
+  background-image: linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%);
+  border-color: #bae6fd;
+}
+
+.activity-planner-theme .planner-calendar-day.bg-slate-50 {
+  background-image: linear-gradient(145deg, #f8fafc 0%, #f5f3ff 100%);
+  border-color: #ddd6fe;
+}
+
+.activity-planner-theme .planner-calendar-day.bg-teal-50 {
+  background-image: linear-gradient(145deg, #ccfbf1 0%, #cffafe 100%);
+  border-color: #2dd4bf;
+  box-shadow: 0 6px 14px rgba(13, 148, 136, 0.16);
+}
+
+.activity-planner-theme .planner-table-heading {
+  background: linear-gradient(100deg, #eef2ff 0%, #e0f2fe 50%, #ecfdf5 100%);
+}
+
+.activity-planner-theme .planner-save-bar {
+  background: linear-gradient(100deg, rgba(238, 242, 255, 0.96) 0%, rgba(240, 249, 255, 0.96) 48%, rgba(236, 253, 245, 0.96) 100%);
+  box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.05);
+}

@@ -18,22 +18,33 @@ services:
       DATABASE_USER: ${POSTGRES_USER:-postgres}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
       DATABASE_HOST: ${POSTGRES_HOST:-host.docker.internal}
-      DATABASE_PORT: ${POSTGRES_PORT:-5433}
+      DATABASE_PORT: ${POSTGRES_PORT:-5432}
       CONTACTS_DATABASE_NAME: ${POSTGRES_DB:-BDCRM}
       CONTACTS_DATABASE_USER: ${POSTGRES_USER:-postgres}
       CONTACTS_DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
       CONTACTS_DATABASE_HOST: ${POSTGRES_HOST:-host.docker.internal}
-      CONTACTS_DATABASE_PORT: ${POSTGRES_PORT:-5433}
+      CONTACTS_DATABASE_PORT: ${POSTGRES_PORT:-5432}
       CONTACT_SYNC_SOURCE: bdcrm
-      CONTACT_SYNC_TARGET_URL: ${CONTACT_SYNC_TARGET_URL:-http://192.168.1.94:8000/api/integrations/sync/contact/}
-      CONTACT_SYNC_TARGET_URLS: ${CONTACT_SYNC_TARGET_URLS:-http://192.168.1.94:8000/api/integrations/sync/contact/,http://192.168.1.94:8001/api/integrations/sync/contact/}
+      CONTACT_SYNC_TARGET_URL: ${CONTACT_SYNC_TARGET_URL:-http://host.docker.internal:8003/api/integrations/sync/contact/}
+      CONTACT_SYNC_TARGET_URLS: ${CONTACT_SYNC_TARGET_URLS:-http://host.docker.internal:8003/api/integrations/sync/contact/,http://host.docker.internal:8001/api/integrations/sync/contact/}
+      # Planner assignments belong in Marketing CRM's telemarketing queue,
+      # not this BDCRM API.  Port 8003 is BDCRM itself and has no receiver
+      # for this endpoint.
+      CONTACT_ASSIGNMENT_SYNC_TARGET_URLS: ${CONTACT_ASSIGNMENT_SYNC_TARGET_URLS:-http://host.docker.internal:8000/api/integrations/sync/tele-assignment/}
       # Use the same value in Marketing CRM and SalesPie.
       CONTACT_SYNC_API_TOKEN: ${CONTACT_SYNC_API_TOKEN:-bdcrm-contact-sync-local}
+      # Shared-token contact sync needs an explicit BDCRM tenant because it
+      # does not carry a portal JWT.
+      CONTACT_SYNC_TENANT_COMPANY_ID: ${CONTACT_SYNC_TENANT_COMPANY_ID:-1}
       CONTACT_SYNC_TIMEOUT_SECONDS: ${CONTACT_SYNC_TIMEOUT_SECONDS:-5}
       WISHLIST_SYNC_API_TOKEN: ${WISHLIST_SYNC_API_TOKEN}
+      PORTAL_SSO_SHARED_SECRET: ${PORTAL_SSO_SHARED_SECRET:?Set PORTAL_SSO_SHARED_SECRET in .env}
+      PORTAL_SSO_EXCHANGE_URL: http://company-portal-api:8004/api/portal/sso/exchange/
     restart: unless-stopped
     networks:
-      - bdcrm_net
+      bdcrm_net:
+        aliases:
+          - bdcrm-api
 
   frontend:
     build:
@@ -51,4 +62,5 @@ services:
 networks:
   bdcrm_net:
     driver: bridge
+
 

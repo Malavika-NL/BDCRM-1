@@ -83,6 +83,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'crm.tenancy.CompanyContextMiddleware',
     'corsheaders.middleware.CorsMiddleware',
 
     'django.middleware.security.SecurityMiddleware',
@@ -115,6 +116,7 @@ WSGI_APPLICATION = 'bdcrm.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+
 DATABASES = {
     "default": {
         "ENGINE": os.getenv("DATABASE_ENGINE", "django.db.backends.postgresql"),
@@ -126,13 +128,27 @@ DATABASES = {
     },
     "contacts_db": {
         "ENGINE": os.getenv("CONTACTS_DATABASE_ENGINE", os.getenv("DATABASE_ENGINE", "django.db.backends.postgresql")),
-        "NAME": os.getenv("CONTACTS_DATABASE_NAME", os.getenv("DATABASE_NAME", "BDCRM_DB")),
+        # Contacts share the primary BDCRM database unless a separate contacts
+        # database is explicitly configured. The previous fallback referenced
+        # a non-existent `BDCRM_DB` database during planner assignment.
+        "NAME": os.getenv("DATABASE_NAME", "BDCRM"),
         "USER": os.getenv("CONTACTS_DATABASE_USER", os.getenv("DATABASE_USER", "postgres")),
         "PASSWORD": os.getenv("CONTACTS_DATABASE_PASSWORD", os.getenv("DATABASE_PASSWORD", "admin")),
         "HOST": os.getenv("CONTACTS_DATABASE_HOST", os.getenv("DATABASE_HOST", "127.0.0.1")),
         "PORT": os.getenv("CONTACTS_DATABASE_PORT", os.getenv("DATABASE_PORT", "5432")),
     },
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     },
+#     'contacts_db': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     },
+# }
 
 DATABASE_ROUTERS = ['db_router.ContactRouter']
 # Password validation
@@ -172,12 +188,22 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'crm.tenancy.CompanyJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ),
 }
+
+# Company Portal is the trusted SSO authority. These settings must match the
+# portal backend's shared secret in each deployed environment.
+# Keep the standalone development default aligned with Company Portal. A real
+# deployment must provide PORTAL_SSO_SHARED_SECRET to every backend.
+PORTAL_SSO_SHARED_SECRET = os.getenv('PORTAL_SSO_SHARED_SECRET', 'change-this-local-shared-secret')
+PORTAL_SSO_EXCHANGE_URL = os.getenv(
+    'PORTAL_SSO_EXCHANGE_URL', 'http://127.0.0.1:8004/api/portal/sso/exchange/'
+)
+PORTAL_SSO_TIMEOUT_SECONDS = int(os.getenv('PORTAL_SSO_TIMEOUT_SECONDS', '10'))
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
@@ -192,24 +218,27 @@ GOOGLE_CSE_ID = os.getenv("GOOGLE_CSE_ID", "")
 CONTACT_SYNC_SOURCE = os.getenv("CONTACT_SYNC_SOURCE", "bdcrm")
 CONTACT_SYNC_TARGET_URL = os.getenv(
     "CONTACT_SYNC_TARGET_URL",
-    "http://192.168.1.94:8000/api/integrations/sync/contact/",
+    "http://127.0.0.1:8003/api/integrations/sync/contact/",
 )
 CONTACT_SYNC_TARGET_URLS = os.getenv(
     "CONTACT_SYNC_TARGET_URLS",
-    "http://192.168.1.94:8000/api/integrations/sync/contact/,"
-    "http://192.168.1.94:8001/api/integrations/sync/contact/",
+    "http://127.0.0.1:8003/api/integrations/sync/contact/,"
+    "http://127.0.0.1:8001/api/integrations/sync/contact/",
 )
 # Planner assignments are consumed only by Marketing CRM.  Keep this separate
 # from contact sync: the latter can have multiple peer CRMs, while an
 # assignment must never be posted to a frontend/non-Marketing endpoint.
 CONTACT_ASSIGNMENT_SYNC_TARGET_URLS = os.getenv(
     "CONTACT_ASSIGNMENT_SYNC_TARGET_URLS",
-    "http://192.168.1.94:8000/api/integrations/sync/tele-assignment/",
+    "http://127.0.0.1:8000/api/integrations/sync/tele-assignment/",
 )
 CONTACT_SYNC_API_TOKEN = os.getenv(
     "CONTACT_SYNC_API_TOKEN",
     "bdcrm-contact-sync-local",
 )
+# Contact-sync requests use a shared integration token rather than a portal
+# JWT, so they need an explicitly configured tenant context.
+CONTACT_SYNC_TENANT_COMPANY_ID = int(os.getenv("CONTACT_SYNC_TENANT_COMPANY_ID", "1"))
 CONTACT_SYNC_TIMEOUT_SECONDS = float(os.getenv("CONTACT_SYNC_TIMEOUT_SECONDS", "5"))
 
 WISHLIST_SYNC_API_TOKEN = os.getenv("WISHLIST_SYNC_API_TOKEN", "")

@@ -47,7 +47,10 @@ class Command(BaseCommand):
 
     def _import_salespie_contacts(self, verified_only=False):
         conn = self._connect(
-            os.getenv("SALESPIE_DATABASE_NAME", "Salespie_Original"),
+            # The live SalesPie service uses the `salespie` database.  The
+            # older `Salespie_Original` fallback no longer exists, which
+            # prevented the all-contacts import from running.
+            os.getenv("SALESPIE_DATABASE_NAME", "salespie"),
             "SALESPIE",
         )
         imported = 0
@@ -105,7 +108,7 @@ class Command(BaseCommand):
 
     def _import_salespie_native_contacts(self, verified_only=False):
         conn = self._connect(
-            os.getenv("SALESPIE_DATABASE_NAME", "Salespie_Original"),
+            os.getenv("SALESPIE_DATABASE_NAME", "salespie"),
             "SALESPIE",
         )
         imported = 0

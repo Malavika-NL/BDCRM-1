@@ -20,6 +20,10 @@ const USER_KEY = 'auth_user';
 
 const REFRESH_URL = '/api/auth/refresh/';
 const TOKEN_REFRESH_BUFFER_SECONDS = 60;
+// Keep a reference to the browser implementation before installing the API
+// interceptor below.  This prevents refresh requests from being intercepted
+// recursively.
+const browserFetch = globalThis.fetch.bind(globalThis);
 
 const isTokenRefreshResponse = (data: unknown): data is { access?: string; refresh?: string } => {
   return typeof data === 'object' && data !== null;
@@ -79,7 +83,7 @@ export const authStore = {
     const refreshToken = localStorage.getItem(REFRESH_KEY);
     if (!refreshToken) return null;
 
-    const res = await fetch(REFRESH_URL, {
+    const res = await browserFetch(REFRESH_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh: refreshToken }),
@@ -106,7 +110,7 @@ export const authStore = {
     const makeRequest = async (token: string) => {
       const headers = new Headers(init.headers || {});
       headers.set('Authorization', `Bearer ${token}`);
-      return fetch(input, { ...init, headers });
+      return browserFetch(input, { ...init, headers });
     };
 
     let accessToken = authStore.getToken();
@@ -133,4 +137,28 @@ export const authStore = {
     res = await makeRequest(newAccessToken);
     return res;
   },
+};
+
+/**
+ * Makes existing direct `fetch('/api/...')` calls authenticated as well.
+ * Most of the application predates `fetchWithAuth`, so routing API calls
+ * through this one place avoids an inconsistent mix of authenticated and
+ * anonymous requests.
+ */
+export const installAuthenticatedFetch = () => {
+  globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const requestUrl = input instanceof Request ? input.url : input.toString();
+    const url = new URL(requestUrl, window.location.origin);
+    const headers = new Headers(input instanceof Request ? input.headers : init?.headers);
+    const isApiRequest = url.origin === window.location.origin && url.pathname.startsWith('/api/');
+    const isAuthRequest = url.pathname.startsWith('/api/auth/');
+
+    // Login, token refresh, and explicitly-authenticated requests must pass
+    // through unchanged.
+    if (!isApiRequest || isAuthRequest || headers.has('Authorization')) {
+      return browserFetch(input, init);
+    }
+
+    return authStore.fetchWithAuth(input, init);
+  };
 };

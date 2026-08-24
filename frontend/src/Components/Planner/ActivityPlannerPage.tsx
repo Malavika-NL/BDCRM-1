@@ -43,9 +43,9 @@ const MONTHS = Array.from({ length: 12 }, (_, index) => ({
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const inputCls =
-  'w-full px-3.5 py-3 text-[14px] text-slate-800 bg-slate-50 border border-slate-200 rounded-xl ' +
-  'placeholder:text-slate-300 focus:outline-none focus:bg-white focus:border-sky-400 ' +
-  'focus:ring-4 focus:ring-sky-500/10 transition-all duration-200';
+  'w-full px-3.5 py-3 text-[14px] font-semibold text-slate-900 bg-white/90 border border-sky-200 rounded-xl shadow-sm ' +
+  'placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-cyan-500 ' +
+  'focus:ring-4 focus:ring-cyan-500/15 transition-all duration-200';
 
 const getDisplayName = (user: PlannerUser) =>
   `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || user.email;
@@ -134,7 +134,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
   const [userView, setUserView] = useState<'queue' | 'contacted'>('queue');
   const [nextContactPopup, setNextContactPopup] = useState<PlannerCallAssignment | null>(null);
 
-  const [planName, setPlanName] = useState('Monthly Call Planner');
+  const [planName, setPlanName] = useState('');
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
   const [sourceProject, setSourceProject] = useState<'all' | 'marketing_crm' | 'salespie' | 'both'>('all');
@@ -182,7 +182,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
         const usersData = await usersRes.json().catch(() => null);
         if (!usersRes.ok) throw new Error(extractErrorMessage(usersData, 'Failed to load users.'));
         const employeeUsers = (Array.isArray(usersData) ? usersData : []).filter(
-          (user) => user.role !== 'admin' && user.is_active !== false && isTelemarketingUser(user)
+          (user) => user.is_active !== false && (user.role === 'admin' || isTelemarketingUser(user))
         );
         setUsers(employeeUsers);
 
@@ -380,8 +380,43 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
     );
   };
 
+  const selectPlannerPeriod = (nextMonth: number, nextYear: number) => {
+    const matchingPlanner = planners.find(
+      (planner) => planner.month === nextMonth && planner.year === nextYear
+    );
+
+    // Switch the selected planner at the same time as the period. Without this,
+    // the previously selected planner restores its old month through the form
+    // hydration effect above.
+    setSelectedPlannerId(matchingPlanner?.id ?? null);
+    setMonth(nextMonth);
+    setYear(nextYear);
+
+    if (!matchingPlanner) {
+      setPlanName('');
+      setSourceProject('all');
+      setWorkingWeekendDates([]);
+      setTargets((prev) => {
+        const next = { ...prev };
+        users.forEach((user) => {
+          next[user.id] = Number.NaN;
+        });
+        return next;
+      });
+    }
+  };
+
+  const showPreviousMonth = () => {
+    const previous = new Date(year, month - 2, 1);
+    selectPlannerPeriod(previous.getMonth() + 1, previous.getFullYear());
+  };
+
 
   const handleSaveAdminPlanner = async () => {
+    if (!planName.trim()) {
+      setError('Enter a planner name before saving.');
+      return;
+    }
     setSaving(true);
     setError('');
     setSuccess('');
@@ -394,7 +429,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: planName.trim() || 'Monthly Call Planner',
+            name: planName.trim(),
             month,
             year,
             status: 'active',
@@ -411,7 +446,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: planName.trim() || 'Monthly Call Planner',
+            name: planName.trim(),
             month,
             year,
             status: 'active',
@@ -465,7 +500,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
 
   const handleDeletePlanner = async () => {
     if (!selectedPlannerId || !selectedPlanner) return;
-    if (!window.confirm(`Delete "${selectedPlanner.name}"? Its assigned contacts will be released for future planners.`)) return;
+    if (!window.confirm(`Delete "${selectedPlanner.name}"? This also permanently deletes all contacts assigned in its employee workspaces and removes those workspaces from Marketing CRM.`)) return;
 
     setSaving(true);
     setError('');
@@ -478,7 +513,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
       }
       setSelectedPlannerId(null);
       setTargets({});
-      setSuccess(`Planner "${selectedPlanner.name}" was deleted and its contacts were released.`);
+      setSuccess(`Planner "${selectedPlanner.name}", its assigned workspace contacts, and the Marketing CRM workspaces were deleted.`);
       await load();
     } catch (err: any) {
       setError(err.message || 'Failed to delete activity planner.');
@@ -521,22 +556,22 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
 
   return (
     <div
-      className="flex flex-col h-full overflow-y-auto px-6 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-      style={{ background: 'linear-gradient(145deg,#f8fbff 0%,#eef7ff 48%,#f7fcfb 100%)' }}
+      className="activity-planner-theme flex flex-col h-full overflow-y-auto px-6 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      style={{ background: 'radial-gradient(circle at 8% 0%,#dbeafe 0%,transparent 27%), radial-gradient(circle at 94% 14%,#ccfbf1 0%,transparent 25%), linear-gradient(145deg,#f8fbff 0%,#eaf4ff 50%,#f1fdf9 100%)' }}
     >
       <div
         className="rounded-[30px] overflow-hidden"
         style={{
           background: isAdmin
-            ? 'linear-gradient(125deg,#082f49 0%,#0f766e 42%,#2563eb 100%)'
-            : 'linear-gradient(125deg,#172554 0%,#1d4ed8 52%,#0891b2 100%)',
-          boxShadow: '0 16px 48px -6px rgba(14,116,144,0.35), 0 2px 10px rgba(0,0,0,0.12)',
+            ? 'linear-gradient(115deg,#0f172a 0%,#172554 26%,#0f766e 63%,#06b6d4 100%)'
+            : 'linear-gradient(115deg,#172554 0%,#312e81 32%,#1d4ed8 64%,#06b6d4 100%)',
+          boxShadow: '0 20px 52px -6px rgba(8,47,73,0.46), 0 2px 10px rgba(15,23,42,0.18)',
         }}
       >
         <div className="px-8 py-8 flex items-center gap-5 flex-wrap">
           <div
             className="w-16 h-16 rounded-3xl flex items-center justify-center shrink-0"
-            style={{ backgroundColor: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.24)' }}
+            style={{ background: 'linear-gradient(145deg,rgba(255,255,255,0.28),rgba(255,255,255,0.08))', border: '1.5px solid rgba(255,255,255,0.32)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18)' }}
           >
             {isAdmin ? <Target className="text-white" size={28} /> : <Phone className="text-white" size={28} />}
           </div>
@@ -544,7 +579,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
           <div className="flex-1 min-w-0">
             <div
               className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-[0.16em]"
-              style={{ background: 'rgba(255,255,255,0.12)', color: '#dbeafe', border: '1px solid rgba(255,255,255,0.16)' }}
+              style={{ background: 'rgba(15,23,42,0.22)', color: '#e0f2fe', border: '1px solid rgba(255,255,255,0.28)' }}
             >
               <ShieldCheck size={12} />
               {isAdmin ? 'Admin Planning Console' : 'My Daily Call Queue'}
@@ -612,38 +647,31 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
             className="bg-white rounded-[28px] overflow-hidden"
             style={{ border: '1.5px solid #dbeafe', boxShadow: '0 18px 50px rgba(15,23,42,0.08)' }}
           >
-            <div className="px-6 py-5 border-b border-slate-100 bg-[linear-gradient(135deg,#ffffff,#f8fbff,#f0fdfa)]">
-              <p className="text-[12px] font-black uppercase tracking-[0.16em] text-sky-600">Monthly Target Setup</p>
-              <h2 className="text-[22px] font-black text-slate-800 mt-1">Assign monthly call targets user-wise</h2>
-              <p className="text-[13px] text-slate-500 font-medium mt-1">
+            <div className="planner-section-heading px-6 py-5 border-b border-sky-200 bg-[linear-gradient(105deg,#eff6ff,#ffffff_42%,#ecfeff)]">
+              <h2 className="text-[24px] font-black text-slate-900">Monthly Planner</h2>
+              <p className="text-[13px] text-slate-600 font-medium mt-2">
                 Once saved, the system automatically creates weekly and daily plans and assigns unique contacts.
               </p>
             </div>
 
             <div className="p-7 md:p-8 space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-5 gap-5">
-                <div>
-                  <label className="block text-[12px] font-black text-slate-500 uppercase tracking-[0.16em] mb-2">Planner Name</label>
-                  <input className={inputCls} value={planName} onChange={(e) => setPlanName(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-[12px] font-black text-slate-500 uppercase tracking-[0.16em] mb-2">Existing Planner</label>
-                  <select
-                    className={inputCls}
-                    value={selectedPlannerId ?? ''}
-                    onChange={(e) => setSelectedPlannerId(e.target.value ? Number(e.target.value) : null)}
-                  >
-                    <option value="">Create new planner for selected month</option>
-                    {planners.map((planner) => (
-                      <option key={planner.id} value={planner.id}>
-                        {planner.name} - {MONTHS[planner.month - 1]?.label} {planner.year}
-                      </option>
-                    ))}
-                  </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-5 items-end">
+                <div className="planner-name-card rounded-2xl px-4 py-3 min-h-[78px]">
+                  <p className="text-[11px] font-black uppercase tracking-[0.16em] text-white/80">Planner Name</p>
+                  <input
+                    className="planner-name-input mt-2 w-full rounded-xl px-3 py-2 text-[14px] font-bold text-slate-900 outline-none"
+                    value={planName}
+                    onChange={(e) => setPlanName(e.target.value)}
+                    aria-label="Planner Name"
+                  />
                 </div>
                 <div>
                   <label className="block text-[12px] font-black text-slate-500 uppercase tracking-[0.16em] mb-2">Month</label>
-                  <select className={inputCls} value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+                  <select
+                    className={inputCls}
+                    value={month}
+                    onChange={(e) => selectPlannerPeriod(Number(e.target.value), year)}
+                  >
                     {MONTHS.map((item) => (
                       <option key={item.value} value={item.value}>
                         {item.label}
@@ -653,7 +681,12 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                 </div>
                 <div>
                   <label className="block text-[12px] font-black text-slate-500 uppercase tracking-[0.16em] mb-2">Year</label>
-                  <input className={inputCls} type="number" value={year} onChange={(e) => setYear(Number(e.target.value))} />
+                  <input
+                    className={inputCls}
+                    type="number"
+                    value={year}
+                    onChange={(e) => selectPlannerPeriod(month, Number(e.target.value))}
+                  />
                 </div>
                 <div>
                   <label className="block text-[12px] font-black text-slate-500 uppercase tracking-[0.16em] mb-2">Contact Source</label>
@@ -687,10 +720,17 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                     </div>
                   ) : null}
                 </div>
+                <button
+                  type="button"
+                  onClick={showPreviousMonth}
+                  className="previous-month-button inline-flex min-h-[48px] items-center justify-center gap-2.5 rounded-xl px-5 py-3 text-[13px] font-black text-white"
+                >
+                  <CalendarDays size={18} /> Show Previous Month
+                </button>
               </div>
 
               <div className="rounded-[28px] overflow-hidden bg-white" style={{ border: '1px solid #dbeafe' }}>
-                <div className="px-5 py-5 md:px-6 border-b border-sky-100 bg-[linear-gradient(135deg,#ffffff,#f8fbff)]">
+                <div className="planner-section-heading px-5 py-5 md:px-6 border-b border-sky-200 bg-[linear-gradient(105deg,#ecfdf5,#ffffff_46%,#eff6ff)]">
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg,#0f766e,#14b8a6)' }}>
@@ -705,11 +745,11 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 w-full sm:w-auto">
-                      <div className="rounded-2xl px-4 py-3 bg-slate-50 border border-slate-200 min-w-[130px]">
+                      <div className="planner-stat-card planner-stat-teal rounded-2xl px-4 py-3 border min-w-[130px]">
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Working Days</p>
                         <p className="text-[22px] font-black text-slate-800 mt-1">{workingDayCount}</p>
                       </div>
-                      <div className="rounded-2xl px-4 py-3 bg-slate-50 border border-slate-200 min-w-[130px]">
+                      <div className="planner-stat-card planner-stat-violet rounded-2xl px-4 py-3 border min-w-[130px]">
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Weekends On</p>
                         <p className="text-[22px] font-black text-slate-800 mt-1">{workingWeekendDates.length}</p>
                       </div>
@@ -737,7 +777,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                           type="button"
                           onClick={() => day.isWeekend && toggleWeekendDate(day.ymd)}
                           disabled={!day.isWeekend}
-                          className={`min-h-[54px] rounded-2xl border px-2 py-2 text-left transition-all duration-150 ${
+                          className={`planner-calendar-day min-h-[54px] rounded-2xl border px-2 py-2 text-left transition-all duration-150 ${
                             day.isWeekend
                               ? weekendSelected
                                 ? 'bg-teal-50 border-teal-300 shadow-sm'
@@ -767,7 +807,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
               </div>
 
               <div className="rounded-[28px] overflow-hidden" style={{ background: '#f8fbff', border: '1px solid #dbeafe' }}>
-                <div className="px-5 py-5 md:px-6 border-b border-sky-100 bg-white">
+                <div className="planner-section-heading px-5 py-5 md:px-6 border-b border-sky-200 bg-[linear-gradient(105deg,#eff6ff,#ffffff_46%,#f5f3ff)]">
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg,#2563eb,#0ea5e9)' }}>
@@ -782,15 +822,15 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                     </div>
 
                     <div className="grid grid-cols-3 gap-3 w-full md:w-auto">
-                      <div className="rounded-2xl px-4 py-3 bg-slate-50 border border-slate-200 min-w-[120px]">
+                      <div className="planner-stat-card planner-stat-sky rounded-2xl px-4 py-3 border min-w-[120px]">
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Users</p>
                         <p className="text-[22px] font-black text-slate-800 mt-1">{assignedUserCount}/{users.length}</p>
                       </div>
-                      <div className="rounded-2xl px-4 py-3 bg-slate-50 border border-slate-200 min-w-[120px]">
+                      <div className="planner-stat-card planner-stat-indigo rounded-2xl px-4 py-3 border min-w-[120px]">
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Monthly target</p>
                         <p className="text-[22px] font-black text-slate-800 mt-1">{totalMonthlyCalls}</p>
                       </div>
-                      <div className="rounded-2xl px-4 py-3 bg-slate-50 border border-slate-200 min-w-[120px]">
+                      <div className="planner-stat-card planner-stat-amber rounded-2xl px-4 py-3 border min-w-[120px]">
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Daily Avg</p>
                         <p className="text-[22px] font-black text-slate-800 mt-1">{averageDailyCalls}</p>
                       </div>
@@ -838,7 +878,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[860px] border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200">
+                      <tr className="planner-table-heading border-b border-slate-200">
                         <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400 w-[70px]">No.</th>
                         <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Telemarketing User</th>
                         <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Email</th>
@@ -869,7 +909,6 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                               </td>
                               <td className="px-5 py-4 align-middle">
                                 <p className="text-[15px] font-black text-slate-800">{getDisplayName(user)}</p>
-                                <p className="text-[12px] text-slate-400 font-semibold mt-1">{user.username}</p>
                               </td>
                               <td className="px-5 py-4 align-middle">
                                 <p className="text-[13px] font-semibold text-slate-600">{user.email}</p>
@@ -898,7 +937,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                   </table>
                 </div>
 
-                <div className="sticky bottom-0 px-5 py-4 bg-white/95 backdrop-blur border-t border-slate-200">
+                <div className="planner-save-bar sticky bottom-0 px-5 py-4 backdrop-blur border-t border-sky-200">
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div>
                       <p className="text-[13px] font-black text-slate-800">
@@ -958,8 +997,8 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                             }}
                             className={`rounded-[22px] px-5 py-5 text-left border transition-all duration-200 ${
                               selectedAdminMemberId === member.id
-                                ? 'bg-sky-50 border-sky-300 shadow-[0_10px_24px_rgba(14,116,144,0.10)]'
-                                : 'bg-slate-50 border-slate-200 hover:border-sky-200 hover:bg-white'
+                                ? 'bg-[linear-gradient(135deg,#e0f2fe,#dbeafe,#ccfbf1)] border-sky-400 shadow-[0_12px_28px_rgba(14,116,144,0.18)]'
+                                : 'bg-slate-50 border-slate-200 hover:border-sky-300 hover:bg-white'
                             }`}
                           >
                             <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -993,7 +1032,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
 
                     {selectedAdminMemberPlan ? (
                       <div className="space-y-5">
-                        <div className="rounded-[24px] p-5 bg-white border border-slate-200">
+                        <div className="rounded-[24px] p-5 bg-[linear-gradient(135deg,#ffffff,#eff6ff,#f0fdfa)] border border-sky-200 shadow-sm">
                           <div className="flex items-start justify-between gap-4 flex-wrap">
                             <div>
                               <p className="text-[12px] font-black uppercase tracking-[0.16em] text-sky-600">Plan View</p>
@@ -1378,7 +1417,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                 </div>
               ) : (
                 <div className="space-y-5">
-                  <div className="rounded-[26px] p-5" style={{ background: 'linear-gradient(145deg,#f8fbff,#f0fdfa)', border: '1px solid #dbeafe' }}>
+                  <div className="rounded-[26px] p-5" style={{ background: 'linear-gradient(135deg,#eff6ff 0%,#e0f2fe 48%,#ccfbf1 100%)', border: '1px solid #7dd3fc', boxShadow: '0 12px 28px rgba(14,116,144,0.10)' }}>
                     <div className="flex items-start justify-between gap-4 flex-wrap">
                       <div>
                         <p className="text-[12px] font-black uppercase tracking-[0.16em] text-slate-400">Assigned For</p>

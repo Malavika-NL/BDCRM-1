@@ -14,7 +14,6 @@ import {
   TrendingUp,
   Wand2,
   CalendarDays,
-  PhoneCall,
   UserPlus,
   PanelLeftClose,
   ChevronDown,
@@ -68,13 +67,6 @@ const accountTargetingItems: NavItem[] = [
   { path: '/account-targetting/owners', label: 'Owner Summary', icon: Users, bg: 'bg-gradient-to-br from-sky-500 to-blue-700' },
 ];
 
-const assignedContactsItem: NavItem = {
-  path: '/telemarketing/assigned-contacts',
-  label: 'Assigned Contacts',
-  icon: PhoneCall,
-  bg: 'bg-gradient-to-br from-teal-500 to-emerald-600',
-};
-
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const [alertCount, setAlertCount] = useState(0);
@@ -82,11 +74,6 @@ export const Sidebar: React.FC = () => {
 
   const currentUser = authStore.getUser();
   const isAdmin = currentUser?.role === 'admin';
-  const userWorkDetails = `${currentUser?.designation || ''} ${currentUser?.department || ''}`.toLowerCase();
-  const isTelemarketingUser = !isAdmin && (
-    ['telemarketing', 'tele-calling', 'telecalling', 'tele caller', 'telecaller'].some((keyword) => userWorkDetails.includes(keyword))
-    || currentUser?.role === 'employee'
-  );
   const utilityNavItems = isAdmin ? [...bottomNavItems, adminItem] : bottomNavItems;
 
   const isAiRoute = aiNavItems.some((item) => location.pathname.startsWith(item.path));
@@ -222,13 +209,6 @@ export const Sidebar: React.FC = () => {
 
       <nav className="flex-1 overflow-y-auto overflow-x-visible px-2.5 py-3 space-y-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {topNavItems.map((item, i) => renderNavItem(item, i))}
-
-        {isTelemarketingUser ? (
-          <div className={`${collapsed ? 'space-y-1 mt-1' : 'space-y-1 mt-1 pl-2 border-l-2 border-emerald-100 ml-2'}`}>
-            {!collapsed && <p className="px-3 pt-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-600">Telemarketing</p>}
-            {renderNavItem(assignedContactsItem, topNavItems.length, true)}
-          </div>
-        ) : null}
 
         <div className="space-y-1">
           <button

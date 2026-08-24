@@ -13,6 +13,7 @@ import type {
   WishlistEntry,
   WishlistEntryInput,
 } from './types';
+import { authStore } from './auth';
 
 // Change this if you deploy to AWS/Heroku
 const API_BASE_URL = '/api';
@@ -22,13 +23,13 @@ export const api = {
     const url = new URL(`${API_BASE_URL}/contacts/`, window.location.origin);
     if (search) url.searchParams.append('search', search);
     if (project !== 'all') url.searchParams.append('project', project);
-    const res = await fetch(url.toString());
+    const res = await authStore.fetchWithAuth(url.toString());
     if (!res.ok) throw new Error('Failed to fetch contacts');
     return res.json();
   },
 
   createContact: async (data: ContactInput): Promise<Contact> => {
-    const res = await fetch(`${API_BASE_URL}/contacts/`, {
+    const res = await authStore.fetchWithAuth(`${API_BASE_URL}/contacts/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -41,7 +42,7 @@ export const api = {
   },
 
   updateContact: async (id: number | string, data: ContactInput): Promise<Contact> => {
-    const res = await fetch(`${API_BASE_URL}/contacts/${id}/`, {
+    const res = await authStore.fetchWithAuth(`${API_BASE_URL}/contacts/${id}/`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -54,7 +55,7 @@ export const api = {
   },
 
   deleteContact: async (id: number | string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/contacts/${id}/`, { method: 'DELETE' });
+    const res = await authStore.fetchWithAuth(`${API_BASE_URL}/contacts/${id}/`, { method: 'DELETE' });
     if (!res.ok) throw new Error('Failed to delete contact');
   },
 

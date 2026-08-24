@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.conf import settings
+from .tenancy import TenantModel
 
 
 class UserProfile(models.Model):
@@ -20,19 +21,19 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"{self.user.username} ({self.role})"
 
-class Vertical(models.Model):
+class Vertical(TenantModel):
     name = models.CharField(max_length=100) # e.g., Auto, Pharma
     def __str__(self): return self.name
 
-class Region(models.Model):
+class Region(TenantModel):
     name = models.CharField(max_length=100) # e.g., APAC, EMEA
     def __str__(self): return self.name
 
-class Industry(models.Model):
+class Industry(TenantModel):
     name = models.CharField(max_length=100)
     def __str__(self): return self.name
 
-class Company(models.Model):
+class Company(TenantModel):
     name = models.CharField(max_length=200)
     industry = models.CharField(max_length=100, blank=True)
     website = models.URLField(blank=True)
@@ -43,14 +44,14 @@ class Company(models.Model):
     def __str__(self):
         return self.name
 
-class Tag(models.Model):
+class Tag(TenantModel):
     name = models.CharField(max_length=50, unique=True)
     color = models.CharField(max_length=7, default='#3B82F6')
 
     def __str__(self):
         return self.name
 
-class Campaign(models.Model):
+class Campaign(TenantModel):
     TYPE_CHOICES = [
         ('whatsapp', 'WhatsApp Campaign'),
         ('email', 'Email Sequence'),
@@ -66,7 +67,7 @@ class Campaign(models.Model):
     def __str__(self): 
         return self.name
 
-class Lead(models.Model):
+class Lead(TenantModel):
     STATUS_CHOICES = [
         ('new', 'New'),
         ('contacted', 'Contacted'),
@@ -107,7 +108,7 @@ class Lead(models.Model):
     def __str__(self):
         return f"{self.company} - {self.name}"
 
-class AIInteractionLog(models.Model):
+class AIInteractionLog(TenantModel):
     lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='ai_logs')
     campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE, null=True, blank=True)
     interaction_type = models.CharField(max_length=50) # e.g., 'voice_call', 'whatsapp_bot'
@@ -117,7 +118,7 @@ class AIInteractionLog(models.Model):
     audio_url = models.URLField(blank=True) # Twilio/Asterisk recording link
     created_at = models.DateTimeField(auto_now_add=True)
 
-class Activity(models.Model):
+class Activity(TenantModel):
     TYPE_CHOICES = [
         ('call', 'Phone Call'),
         ('email', 'Email'),
@@ -133,7 +134,7 @@ class Activity(models.Model):
     class Meta:
         ordering = ['-created_at']
 
-class Task(models.Model):
+class Task(TenantModel):
     PRIORITY_CHOICES = [
         ('low', 'Low'),
         ('medium', 'Medium'),
@@ -151,7 +152,7 @@ class Task(models.Model):
         ordering = ['due_date']
 
 
-class Course(models.Model):
+class Course(TenantModel):
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     target_vertical = models.CharField(max_length=100, blank=True)
@@ -161,7 +162,7 @@ class Course(models.Model):
     def __str__(self):
         return self.title
 
-class Module(models.Model):
+class Module(TenantModel):
     course = models.ForeignKey(Course, related_name='modules', on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     order = models.PositiveIntegerField(default=0)
@@ -169,7 +170,7 @@ class Module(models.Model):
     class Meta:
         ordering = ['order']
 
-class Lesson(models.Model):
+class Lesson(TenantModel):
     TYPE_CHOICES = [
         ('script', 'Sales Script / Prompt'),
         ('video', 'Training Video'),
@@ -185,11 +186,11 @@ class Lesson(models.Model):
     class Meta:
         ordering = ['order']
 
-class ProductCategory(models.Model):
+class ProductCategory(TenantModel):
     name = models.CharField(max_length=100) # e.g., "Label", "Ribbon"
     def __str__(self): return self.name
 
-class ConsumptionPattern(models.Model):
+class ConsumptionPattern(TenantModel):
     """
     Tracks when a Company needs to re-order.
     """
@@ -208,7 +209,7 @@ class ConsumptionPattern(models.Model):
         return timezone.now().date() >= self.next_action_date()
 
 
-class Enrollment(models.Model):
+class Enrollment(TenantModel):
     """
     Links your existing 'Lead' to your existing 'Course'.
     Tracks progress automatically.
@@ -222,7 +223,7 @@ class Enrollment(models.Model):
         return f"{self.lead.name} -> {self.course.title}"
 
 
-class WhatsAppCampaign(models.Model):
+class WhatsAppCampaign(TenantModel):
     STATUS_CHOICES = [
         ('draft', 'Draft'),
         ('pending', 'Pending'),
@@ -244,7 +245,7 @@ class WhatsAppCampaign(models.Model):
     def __str__(self):
         return self.name
 
-class WhatsAppMessage(models.Model):
+class WhatsAppMessage(TenantModel):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('sent', 'Sent'),
@@ -266,7 +267,7 @@ class WhatsAppMessage(models.Model):
         return f"{self.campaign.name} - {self.lead.name}"
   
 
-class AILeadProfile(models.Model):
+class AILeadProfile(TenantModel):
     lead = models.OneToOneField(Lead, on_delete=models.CASCADE, related_name='ai_profile')
 
     score = models.FloatField(default=0.0)
@@ -296,7 +297,7 @@ class AILeadProfile(models.Model):
         return f"AI: {self.lead.name} ({self.score})"
 
 
-class AIScoreSnapshot(models.Model):
+class AIScoreSnapshot(TenantModel):
     lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='ai_score_history')
     score = models.FloatField()
     conversion_probability = models.FloatField(default=0.0)
@@ -308,7 +309,7 @@ class AIScoreSnapshot(models.Model):
         ordering = ['-created_at']
 
 
-class AIActivityAnalysis(models.Model):
+class AIActivityAnalysis(TenantModel):
     activity = models.OneToOneField(Activity, on_delete=models.CASCADE, related_name='ai_analysis')
     lead = models.ForeignKey(Lead, on_delete=models.CASCADE, related_name='ai_activity_analyses')
 
@@ -335,7 +336,7 @@ class AIActivityAnalysis(models.Model):
         return f"Analysis: {self.lead.name}"
 
 
-class AIAlert(models.Model):
+class AIAlert(TenantModel):
     ALERT_TYPES = [
         ('churn_risk', 'Churn Risk'),
         ('engagement_spike', 'Engagement Spike'),
@@ -364,7 +365,7 @@ class AIAlert(models.Model):
         return f"[{self.priority}] {self.title}"
 
 
-class AIChatSession(models.Model):
+class AIChatSession(TenantModel):
     session_id = models.CharField(max_length=100, unique=True)
     messages = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -380,7 +381,7 @@ class AIChatSession(models.Model):
         return f"Chat: {self.session_id}"
 
 
-class AIDocument(models.Model):
+class AIDocument(TenantModel):
     DOC_TYPES = [
         ('proposal', 'Business Proposal'),
         ('email_sequence', 'Email Sequence'),
@@ -405,7 +406,7 @@ class AIDocument(models.Model):
 # Add at the bottom of models.py
 # =========================
 
-class ProductLine(models.Model):
+class ProductLine(TenantModel):
     name = models.CharField(max_length=100, unique=True)  # e.g. RFID, WMS, Label
     description = models.TextField(blank=True)
 
@@ -413,7 +414,7 @@ class ProductLine(models.Model):
         return self.name
 
 
-class CustomerCategory(models.Model):
+class CustomerCategory(TenantModel):
     name = models.CharField(max_length=100, unique=True)  # Key Accounts, Existing Accounts...
     description = models.TextField(blank=True)
 
@@ -421,7 +422,7 @@ class CustomerCategory(models.Model):
         return self.name
 
 
-class SalesChannel(models.Model):
+class SalesChannel(TenantModel):
     name = models.CharField(max_length=100, unique=True)  # Direct Customer, Dealer
     description = models.TextField(blank=True)
 
@@ -429,7 +430,7 @@ class SalesChannel(models.Model):
         return self.name
 
 
-class EngagementTool(models.Model):
+class EngagementTool(TenantModel):
     name = models.CharField(max_length=100, unique=True)  # WhatsApp, Email, LinkedIn...
     description = models.TextField(blank=True)
 
@@ -437,7 +438,7 @@ class EngagementTool(models.Model):
         return self.name
 
 
-class LeadBusinessMeta(models.Model):
+class LeadBusinessMeta(TenantModel):
     """
     Extra business dimensions for an existing Lead without changing your Lead model.
     """
@@ -466,7 +467,7 @@ class LeadBusinessMeta(models.Model):
         return f"Business Meta - {self.lead.name}"
 
 
-class BDMTarget(models.Model):
+class BDMTarget(TenantModel):
     """
     Management target setting module
     """
@@ -512,7 +513,7 @@ class BDMTarget(models.Model):
         return self.name
 
 
-class BDMReview(models.Model):
+class BDMReview(TenantModel):
     """
     Review / PDCA logs against target
     """
@@ -529,7 +530,7 @@ class BDMReview(models.Model):
         return f"Review - {self.target.name} - {self.review_date}"
 
 
-class CampaignWorkspace(models.Model):
+class CampaignWorkspace(TenantModel):
     """
     Unified campaign builder workspace
     """
@@ -551,7 +552,7 @@ class CampaignWorkspace(models.Model):
         return self.name
 
 
-class CampaignResponse(models.Model):
+class CampaignResponse(TenantModel):
     """
     Response categorization for campaign interactions
     """
@@ -577,7 +578,7 @@ class CampaignResponse(models.Model):
         return f"{self.lead.name} - {self.response_type}"
 
 
-class Contact(models.Model):
+class Contact(TenantModel):
     region = models.CharField(max_length=100, blank=True, null=True)
     location = models.CharField(max_length=100, blank=True, default="")
     vertical = models.CharField(max_length=100, blank=True, null=True)
@@ -596,6 +597,16 @@ class Contact(models.Model):
         related_name='telemarketing_assigned_contacts',
     )
     telemarketing_assigned_at = models.DateTimeField(null=True, blank=True)
+    # The actual BDCRM account that manually created this contact.  Keep the
+    # existing name snapshot for legacy/imported rows, but use this relation
+    # for accurate creator attribution going forward.
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='created_contacts',
+    )
     created_by_name = models.CharField(max_length=150, blank=True, default="")
     source_project = models.CharField(max_length=30, blank=True, default="")
     source_contact_id = models.CharField(max_length=100, blank=True, default="")
@@ -607,7 +618,7 @@ class Contact(models.Model):
     class Meta:
         db_table = "contacts"
 
-class MarketingAsset(models.Model):
+class MarketingAsset(TenantModel):
     ASSET_TYPES = [
         ('brochure', 'Company Profile/Brochure'),
         ('demo', 'Product Demo Video'),
@@ -624,7 +635,7 @@ class MarketingAsset(models.Model):
     def __str__(self): return self.name
 
 
-class ActivityPlanner(models.Model):
+class ActivityPlanner(TenantModel):
     STATUS_CHOICES = [
         ('draft', 'Draft'),
         ('active', 'Active'),
@@ -662,7 +673,7 @@ class ActivityPlanner(models.Model):
         return f"{self.name} ({self.month}/{self.year})"
 
 
-class PlannerMemberPlan(models.Model):
+class PlannerMemberPlan(TenantModel):
     planner = models.ForeignKey(ActivityPlanner, on_delete=models.CASCADE, related_name='member_plans')
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -701,7 +712,7 @@ class PlannerMemberPlan(models.Model):
         return f"{self.member_name} - {self.workspace_name}"
 
 
-class PlannerTask(models.Model):
+class PlannerTask(TenantModel):
     PERIOD_CHOICES = [
         ('weekly', 'Weekly'),
         ('daily', 'Daily'),
@@ -722,6 +733,7 @@ class PlannerTask(models.Model):
     period_type = models.CharField(max_length=20, choices=PERIOD_CHOICES)
     week_number = models.PositiveSmallIntegerField(default=1)
     task_date = models.DateField(null=True, blank=True)
+    scheduled_time = models.TimeField(default='09:00')
     channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES)
     target_count = models.PositiveIntegerField(default=0)
     title = models.CharField(max_length=200)
@@ -737,7 +749,7 @@ class PlannerTask(models.Model):
         return f"{self.member_plan.member_name} - {self.channel} ({self.period_type})"
 
 
-class PlannerCallAssignment(models.Model):
+class PlannerCallAssignment(TenantModel):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('contacted', 'Contacted'),
@@ -761,6 +773,7 @@ class PlannerCallAssignment(models.Model):
     )
     sequence_number = models.PositiveIntegerField(default=1)
     scheduled_date = models.DateField()
+    scheduled_time = models.TimeField(default='09:00')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     remarks = models.TextField(blank=True, default='')
     contacted_at = models.DateTimeField(null=True, blank=True)
@@ -778,7 +791,7 @@ class PlannerCallAssignment(models.Model):
         return f"{self.member_plan.member_name} -> {self.contact} ({self.scheduled_date})"
 
 
-class AccountTargetCompany(models.Model):
+class AccountTargetCompany(TenantModel):
     name = models.CharField(max_length=255, unique=True)
     normalized_name = models.CharField(max_length=255, unique=True, editable=False)
     location = models.CharField(max_length=255, blank=True, default="")
@@ -807,7 +820,7 @@ class AccountTargetCompany(models.Model):
         return self.name
 
 
-class AccountTargetPIC(models.Model):
+class AccountTargetPIC(TenantModel):
     company = models.ForeignKey(AccountTargetCompany, on_delete=models.CASCADE, related_name="pics")
     pic_name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=50)
@@ -839,7 +852,7 @@ class AccountTargetPIC(models.Model):
         return f"{self.company.name} - {self.pic_name}"
 
 
-class WishlistEntry(models.Model):
+class WishlistEntry(TenantModel):
     company_name = models.CharField(max_length=255)
     location = models.CharField(max_length=255)
     created_by = models.ForeignKey(

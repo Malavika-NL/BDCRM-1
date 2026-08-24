@@ -51,6 +51,8 @@ urlpatterns = [
     path('api/integrations/wishlist/', WishlistSyncView.as_view(), name='wishlist-sync'),
     path('admin/', admin.site.urls),
     path('api/auth/login/', views.LoginView.as_view(), name='auth_login'),
+    path('api/auth/company-portal-login/', views.CompanyPortalLoginView.as_view(), name='company_portal_login'),
+    path('api/portal/company-account/', views.CompanyPortalAccountView.as_view(), name='company_portal_account'),
     path('api/auth/refresh/', views.RefreshAuthTokenView.as_view(), name='auth_refresh_token'),
     path('api/auth/change-password/', views.ChangePasswordView.as_view(), name='auth_change_password'),
     path('api/auth/create-user/', views.CreateUserView.as_view(), name='auth_create_user'),
