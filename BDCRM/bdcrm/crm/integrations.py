@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from crm.models import WishlistEntry
+from crm.tenancy import set_current_company_id
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +35,8 @@ class WishlistSyncView(APIView):
     def get(self, request):
         if not _token_ok(request):
             return Response({"detail": "invalid token"}, status=status.HTTP_403_FORBIDDEN)
+
+        set_current_company_id(settings.CONTACT_SYNC_TENANT_COMPANY_ID)
 
         entries = (
             WishlistEntry.objects
