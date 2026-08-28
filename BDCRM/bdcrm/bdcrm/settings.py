@@ -240,3 +240,4 @@ CONTACT_SYNC_API_TOKEN = os.getenv(
 # JWT, so they need an explicitly configured tenant context.
 CONTACT_SYNC_TENANT_COMPANY_ID = int(os.getenv("CONTACT_SYNC_TENANT_COMPANY_ID", "1"))
 CONTACT_SYNC_TIMEOUT_SECONDS = float(os.getenv("CONTACT_SYNC_TIMEOUT_SECONDS", "5"))
+WISHLIST_SYNC_API_TOKEN = os.getenv("WISHLIST_SYNC_API_TOKEN", "")

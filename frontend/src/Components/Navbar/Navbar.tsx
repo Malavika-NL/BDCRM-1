@@ -263,7 +263,11 @@ export const Navbar: React.FC = () => {
               {/* Bottom */}
               <div className="flex flex-col items-center gap-3">
                 <button
-                  onClick={() => { authStore.clearSession(); window.location.replace(`${import.meta.env.VITE_COMPANY_PORTAL_URL || 'http://192.168.1.94:8002'}?workspace=1`); }}
+                  onClick={() => {
+                    authStore.clearSession();
+                    const portalUrl = `${window.location.protocol}//${window.location.hostname}:8002`;
+                    window.location.replace(`${portalUrl}?workspace=1`);
+                  }}
                   className="flex items-center gap-2 px-7 py-2 rounded-lg text-[13px] font-semibold text-white transition-all duration-200 hover:opacity-90 hover:scale-[1.03]"
                   style={{
                     background: 'linear-gradient(135deg, #67E8F9, #60A5FA, #A78BFA)',

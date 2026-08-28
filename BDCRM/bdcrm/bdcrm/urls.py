@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
-from crm import views 
+from crm import views
+from crm.integrations import WishlistSyncView
 
 router = routers.DefaultRouter()
 router.register(r'contacts', views.ContactViewSet, basename='contact')
@@ -47,6 +48,7 @@ urlpatterns = [
     path('api/agent-status/', views.agent_status, name='agent_status'),
     path('api/run-free-campaign/', views.run_free_campaign, name='run_free_campaign'),
     path('api/integrations/sync/contact/', views.ContactSyncView.as_view(), name='contact_sync'),
+    path('api/integrations/wishlist/', WishlistSyncView.as_view(), name='wishlist_sync'),
     path('admin/', admin.site.urls),
     path('api/auth/login/', views.LoginView.as_view(), name='auth_login'),
     path('api/auth/company-portal-login/', views.CompanyPortalLoginView.as_view(), name='company_portal_login'),

@@ -7,7 +7,7 @@ import { authStore, installAuthenticatedFetch } from './Components/Utils/auth'
 installAuthenticatedFetch()
 
 const root = createRoot(document.getElementById('root')!)
-const portalUrl = import.meta.env.VITE_COMPANY_PORTAL_URL || 'http://192.168.1.94:8002'
+const portalUrl = `${window.location.protocol}//${window.location.hostname}:8002`
 
 const renderApp = () => root.render(
   <StrictMode>
@@ -34,7 +34,7 @@ const startBdcrm = async () => {
     authStore.setSession(payload.access, payload.refresh, payload.user)
     window.location.replace('/dashboard')
   } catch {
-    window.location.replace(portalUrl)
+    window.location.replace(`${portalUrl}?workspace=1`)
   }
 }
 
