@@ -2037,9 +2037,9 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
         if not _is_admin(self.request.user):
             raise PermissionDenied("Only admin can delete activity planners.")
 
-        # A planner owns the contacts that were allocated into its employee
-        # workspaces.  Remove those contacts along with the planner rather
-        # than merely releasing them back to the unassigned contact pool.
+        # Keep the source contacts when a planner is removed.  The planner's
+        # assignments are deleted by the cascade below, and releasing their
+        # ownership makes the contacts available to every subsequent planner.
         assignment_contact_ids = list(
             PlannerCallAssignment.objects.filter(member_plan__planner=instance)
             .values_list('contact_id', flat=True)
@@ -2060,12 +2060,16 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
             )
         except RuntimeError as exc:
             raise MarketingWorkspaceSyncUnavailable() from exc
+        with transaction.atomic(using='contacts_db'):
+            if assignment_contact_ids:
+                # Clear both assignment fields so the availability query treats
+                # these records exactly like contacts that have never been planned.
+                Contact.objects.filter(id__in=assignment_contact_ids).update(
+                    telemarketing_owner=None,
+                    telemarketing_assigned_at=None,
+                    updated_at=timezone.now(),
+                )
         instance.delete()
-        if assignment_contact_ids:
-            # The planner deletion cascades through its assignments first, so
-            # deleting these contacts cannot affect assignments from this
-            # planner.  Contact.objects is routed to contacts_db.
-            Contact.objects.filter(id__in=assignment_contact_ids).delete()
 
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
@@ -2298,8 +2302,12 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
             "month": planner.month,
             "year": planner.year,
             "members": overview,
+            # The available pool contains only contacts that have not been
+            # allocated to this (or another) planner.  When this planner is
+            # deleted, perform_destroy clears those owners, so this count
+            # returns to the complete contact pool for the next fresh plan.
             "available_contacts": self._planner_contacts(planner).filter(
-                Q(telemarketing_owner__isnull=True) | Q(telemarketing_owner_id__in=planner_user_ids)
+                telemarketing_owner__isnull=True
             ).count(),
         }, status=status.HTTP_200_OK)
 
