@@ -500,7 +500,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
 
   const handleDeletePlanner = async () => {
     if (!selectedPlannerId || !selectedPlanner) return;
-    if (!window.confirm(`Delete "${selectedPlanner.name}"? This also permanently deletes all contacts assigned in its employee workspaces and removes those workspaces from Marketing CRM.`)) return;
+    if (!window.confirm(`Delete "${selectedPlanner.name}"? Its employee workspaces will be removed from Marketing CRM and their contacts will become available again.`)) return;
 
     setSaving(true);
     setError('');
@@ -512,9 +512,15 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
         throw new Error(extractErrorMessage(data, 'Failed to delete activity planner.'));
       }
       setSelectedPlannerId(null);
+      setPlanners((current) => current.filter((planner) => planner.id !== selectedPlannerId));
+      setPlanName('');
+      setSourceProject('all');
+      setWorkingWeekendDates([]);
       setTargets({});
-      setSuccess(`Planner "${selectedPlanner.name}", its assigned workspace contacts, and the Marketing CRM workspaces were deleted.`);
-      await load();
+      setQuickFillCount('');
+      setAssignmentSearch('');
+      setSuccess(`Planner "${selectedPlanner.name}" and its Marketing CRM workspaces were deleted. Its contacts are available again.`);
+      navigate('/activity-planner', { replace: true });
     } catch (err: any) {
       setError(err.message || 'Failed to delete activity planner.');
     } finally {
