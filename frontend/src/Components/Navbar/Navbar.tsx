@@ -123,6 +123,8 @@ import { useNavigate } from 'react-router-dom';
 import { X, LogOut, Bell } from 'lucide-react';
 import { authStore } from '../Utils/auth';
 import { api } from '../Utils/api';
+import NlTechnologiesLogo from '../../assets/nl_technologies.png';
+import VbsLogo from '../../assets/vbs-logo-transparent.png';
 
 const getAbbreviation = (name: string) =>
   name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -135,6 +137,9 @@ export const Navbar: React.FC = () => {
   const seenAlertIdsRef = useRef<Set<number>>(new Set());
   const popupRef = useRef<HTMLDivElement>(null);
   const currentUser = authStore.getUser();
+  const companyCode = currentUser?.company?.code?.toLowerCase();
+  const companyLogo = companyCode === 'vbs' ? VbsLogo : NlTechnologiesLogo;
+  const companyName = companyCode === 'vbs' ? 'VBS' : 'NL Technologies';
 
   const userName =
     `${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() ||
@@ -186,16 +191,12 @@ export const Navbar: React.FC = () => {
     <header className="h-[68px] bg-[#001740] flex items-center justify-between pr-4 pl-0 shrink-0 z-20 shadow-[0_3px_8px_rgba(0,0,0,0.24)]">
 
       {/* ── Brand ── */}
-      <div className="flex flex-col gap-0.5 items-start justify-center">
-        <span
-          className="text-[26px] leading-none font-extrabold tracking-[2px] bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400 bg-clip-text text-transparent"
-          style={{ backgroundSize: '220% 100%', animation: 'brandFlow 4.2s ease-in-out infinite alternate' }}
-        >
-          VAIJNANIK
-        </span>
-        <span className="text-[10px] font-bold text-blue-100 tracking-[2.5px] uppercase opacity-85">
-          BUSINESS SOLUTIONS
-        </span>
+      <div className="flex items-center gap-3 pl-4">
+        <img
+          src={companyLogo}
+          alt={companyName}
+          className={`h-10 w-auto object-contain ${companyCode === 'vbs' ? '' : 'brightness-0 invert'}`}
+        />
       </div>
 
       <style>{`

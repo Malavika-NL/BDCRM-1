@@ -73,6 +73,9 @@ export const Sidebar: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
 
   const currentUser = authStore.getUser();
+  const companyCode = currentUser?.company?.code?.toLowerCase();
+  const companyLogo = companyCode === 'vbs' ? '/vbs-logo-transparent.png' : '/nl_technologies.png';
+  const companyName = companyCode === 'vbs' ? 'VBS' : 'NL Technologies';
   const isAdmin = currentUser?.role === 'admin';
   const utilityNavItems = isAdmin ? [...bottomNavItems, adminItem] : bottomNavItems;
 
@@ -189,21 +192,13 @@ export const Sidebar: React.FC = () => {
         ${collapsed ? 'justify-center px-0' : 'px-5'}
       `}>
         {!collapsed && (
-          <div className="flex flex-col gap-0.5 overflow-hidden w-full items-center">
-            <div className="text-[36px] leading-none font-black tracking-[2px] text-slate-900 whitespace-nowrap text-center">
-              <span className="text-blue-800">BD</span>
-              <span className="text-pink-600">CRM</span>
-            </div>
-            <div className="text-[9px] font-bold text-slate-400 tracking-[1.8px] uppercase text-center">
-              AI-Powered CRM
-            </div>
+          <div className="flex items-center overflow-hidden w-full">
+            <span className="text-2xl font-black tracking-[4px] uppercase whitespace-nowrap"><span className="text-red-600">BD</span><span className="text-slate-900">CRM</span></span>
           </div>
         )}
 
         {collapsed && (
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-            <span className="text-white text-[11px] font-black">BD</span>
-          </div>
+          <div className="text-xl font-black text-red-600 tracking-wider">BD</div>
         )}
       </div>
 

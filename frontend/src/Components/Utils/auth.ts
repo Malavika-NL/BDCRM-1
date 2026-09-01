@@ -12,6 +12,11 @@ export type AuthUser = {
   designation?: string;
   department?: string;
   address?: string;
+  company?: {
+    id?: number;
+    code?: string;
+    name?: string;
+  };
 };
 
 const TOKEN_KEY = 'access_token';

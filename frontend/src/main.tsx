@@ -31,7 +31,10 @@ const startBdcrm = async () => {
     })
     const payload = await response.json().catch(() => ({}))
     if (!response.ok || !payload.access || !payload.refresh || !payload.user) throw new Error('Portal sign-in was rejected.')
-    authStore.setSession(payload.access, payload.refresh, payload.user)
+    authStore.setSession(payload.access, payload.refresh, {
+      ...payload.user,
+      company: payload.company,
+    })
     window.location.replace('/dashboard')
   } catch {
     window.location.replace(`${portalUrl}?workspace=1`)
