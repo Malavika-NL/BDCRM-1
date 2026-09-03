@@ -120,7 +120,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 // Import Bell icon
-import { X, LogOut, Bell } from 'lucide-react';
+import { ArrowLeftRight, X, Bell, LogOut } from 'lucide-react';
 import { authStore } from '../Utils/auth';
 import { api } from '../Utils/api';
 import NlTechnologiesLogo from '../../assets/nl_technologies.png';
@@ -140,6 +140,19 @@ export const Navbar: React.FC = () => {
   const companyCode = currentUser?.company?.code?.toLowerCase();
   const companyLogo = companyCode === 'vbs' ? VbsLogo : NlTechnologiesLogo;
   const companyName = companyCode === 'vbs' ? 'VBS' : 'NL Technologies';
+
+  const switchToCrm = (application: 'marketing_crm' | 'salespie') => {
+    const portalUrl = `${window.location.protocol}//${window.location.hostname}:8002`;
+    const launchUrl = `${portalUrl}/switch.html?open=${application}`;
+    window.location.assign(launchUrl);
+  };
+
+  const signOut = () => {
+    authStore.clearSession();
+    const portalUrl = `${window.location.protocol}//${window.location.hostname}:8002`;
+    // No workspace flag means the Portal clears the shared sign-in too.
+    window.location.replace(portalUrl);
+  };
 
   const userName =
     `${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() ||
@@ -235,7 +248,7 @@ export const Navbar: React.FC = () => {
           {/* Popup */}
           {isOpen && (
             <div className="absolute right-0 top-full mt-3 w-[320px] bg-[#f1f3f4] rounded-[22px] shadow-[0px_0px_10px_0px_rgba(0,0,0,0.5)] z-50 flex flex-col justify-between p-5 overflow-hidden"
-              style={{ height: '300px' }}
+              style={{ minHeight: '360px' }}
             >
               {/* Close */}
               <button
@@ -263,19 +276,23 @@ export const Navbar: React.FC = () => {
 
               {/* Bottom */}
               <div className="flex flex-col items-center gap-3">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => switchToCrm('marketing_crm')}
+                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 px-4 py-2.5 text-[12px] font-bold text-white shadow-lg shadow-indigo-500/30 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-indigo-500/50"
+                  >
+                    <ArrowLeftRight size={14} /> Marketing CRM
+                  </button>
+                  <button
+                    onClick={() => switchToCrm('salespie')}
+                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 px-4 py-2.5 text-[12px] font-bold text-white shadow-lg shadow-emerald-500/30 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-emerald-500/50"
+                  >
+                    <ArrowLeftRight size={14} /> SalesPie
+                  </button>
+                </div>
                 <button
-                  onClick={() => {
-                    authStore.clearSession();
-                    const portalUrl = `${window.location.protocol}//${window.location.hostname}:8002`;
-                    window.location.replace(`${portalUrl}?workspace=1`);
-                  }}
-                  className="flex items-center gap-2 px-7 py-2 rounded-lg text-[13px] font-semibold text-white transition-all duration-200 hover:opacity-90 hover:scale-[1.03]"
-                  style={{
-                    background: 'linear-gradient(135deg, #67E8F9, #60A5FA, #A78BFA)',
-                    backgroundSize: '200% 100%',
-                    animation: 'brandFlow 3s ease-in-out infinite alternate',
-                    boxShadow: '0 0 12px rgba(103,232,249,0.35)',
-                  }}
+                  onClick={signOut}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 px-6 py-2.5 text-[12px] font-bold text-white shadow-lg shadow-rose-500/30 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-rose-500/50"
                 >
                   <LogOut size={14} />
                   Sign Out
