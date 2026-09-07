@@ -191,15 +191,25 @@ export const Sidebar: React.FC = () => {
         flex items-center border-b border-slate-100 shrink-0 h-[68px]
         ${collapsed ? 'justify-center px-0' : 'px-5'}
       `}>
-        {!collapsed && (
-          <div className="flex items-center overflow-hidden w-full">
-            <span className="text-2xl font-black tracking-[4px] uppercase whitespace-nowrap"><span className="text-red-600">BD</span><span className="text-slate-900">CRM</span></span>
-          </div>
-        )}
-
-        {collapsed && (
-          <div className="text-xl font-black text-red-600 tracking-wider">BD</div>
-        )}
+        <div
+          className="relative inline-flex min-w-0 items-baseline whitespace-nowrap pb-2 leading-none"
+          role="img"
+          aria-label="BDCRM"
+          title={collapsed ? 'BDCRM' : undefined}
+        >
+          <span
+            aria-hidden="true"
+            className={`font-black tracking-[-1.2px] text-red-700 ${collapsed ? 'text-[24px]' : 'text-[32px]'}`}
+          >
+            BD
+          </span>
+          {!collapsed && (
+            <span aria-hidden="true" className="ml-1 text-[32px] font-extrabold tracking-[-1.2px] text-[#102341]">
+              CRM
+            </span>
+          )}
+          <span aria-hidden="true" className="absolute bottom-0 left-0 h-[3px] w-6 rounded-full bg-gradient-to-r from-red-700 to-red-400" />
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto overflow-x-visible px-2.5 py-3 space-y-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
