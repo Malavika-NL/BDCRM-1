@@ -200,6 +200,7 @@ REST_FRAMEWORK = {
 # Keep the standalone development default aligned with Company Portal. A real
 # deployment must provide PORTAL_SSO_SHARED_SECRET to every backend.
 PORTAL_SSO_SHARED_SECRET = os.getenv('PORTAL_SSO_SHARED_SECRET', 'change-this-local-shared-secret')
+BDCRM_DASHBOARD_SECRET = os.getenv('BDCRM_DASHBOARD_SECRET', '')
 PORTAL_SSO_EXCHANGE_URL = os.getenv(
     'PORTAL_SSO_EXCHANGE_URL', 'http://127.0.0.1:8004/api/portal/sso/exchange/'
 )

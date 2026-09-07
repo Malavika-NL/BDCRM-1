@@ -39,6 +39,7 @@ services:
       CONTACT_SYNC_TIMEOUT_SECONDS: ${CONTACT_SYNC_TIMEOUT_SECONDS:-5}
       WISHLIST_SYNC_API_TOKEN: ${WISHLIST_SYNC_API_TOKEN:-talentai-wishlist-sync-local}
       PORTAL_SSO_SHARED_SECRET: ${PORTAL_SSO_SHARED_SECRET:?Set PORTAL_SSO_SHARED_SECRET in .env}
+      BDCRM_DASHBOARD_SECRET: ${BDCRM_DASHBOARD_SECRET}
       PORTAL_SSO_EXCHANGE_URL: http://company-portal-api:8004/api/portal/sso/exchange/
     restart: unless-stopped
     networks:

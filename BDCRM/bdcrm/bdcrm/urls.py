@@ -1,4 +1,5 @@
 from django.contrib import admin
+from crm.salespie_dashboard import SalesPieDashboardView
 from django.urls import path, include
 from rest_framework import routers
 from crm import views
@@ -43,6 +44,7 @@ router.register(r'wishlist', views.WishlistEntryViewSet, basename='wishlist')
 
 
 urlpatterns = [
+    path('api/integrations/salespie/dashboard/', SalesPieDashboardView.as_view(), name='salespie-dashboard'),
     path('api/run-free-campaign/', views.run_free_campaign, name='run_free_campaign'),
     path('api/run-agent/', views.trigger_agent, name='run_agent'),
     path('api/agent-status/', views.agent_status, name='agent_status'),

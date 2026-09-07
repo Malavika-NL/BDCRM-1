@@ -19,11 +19,23 @@
 
 // src/Components/Layout/MainLayout.tsx
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../Sidebar/Sidebar';
 import { Navbar } from '../Navbar/Navbar';
 
 const MainLayout: React.FC = () => {
+  const location = useLocation();
+  const isEmbeddedDashboard = location.pathname === '/dashboard'
+    && new URLSearchParams(location.search).get('embed') === '1';
+
+  if (isEmbeddedDashboard) {
+    return (
+      <main className="h-screen overflow-y-auto overflow-x-hidden bg-slate-50 font-sans text-slate-900">
+        <Outlet />
+      </main>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen font-sans text-slate-900">
       {/* Navbar — full width across the top */}
