@@ -50,7 +50,7 @@ urlpatterns = [
     path('api/agent-status/', views.agent_status, name='agent_status'),
     path('api/run-free-campaign/', views.run_free_campaign, name='run_free_campaign'),
     path('api/integrations/sync/contact/', views.ContactSyncView.as_view(), name='contact_sync'),
-    path('api/integrations/wishlist/', WishlistSyncView.as_view(), name='wishlist_sync'),
+    path('api/integrations/wishlist/', WishlistSyncView.as_view(), name='wishlist-sync'),
     path('admin/', admin.site.urls),
     path('api/auth/login/', views.LoginView.as_view(), name='auth_login'),
     path('api/auth/company-portal-login/', views.CompanyPortalLoginView.as_view(), name='company_portal_login'),
@@ -64,3 +64,4 @@ urlpatterns = [
     path('api/auth/bootstrap-admin/', views.bootstrap_admin_profile, name='auth_bootstrap_admin'),
     path('api/', include(router.urls)),
 ]
+
