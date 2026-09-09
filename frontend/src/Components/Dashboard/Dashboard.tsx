@@ -2369,8 +2369,8 @@ export const Dashboard = () => {
             <SectionHeader icon={BarChart2} title="Pipeline by Stage" subtitle="Lead distribution across pipeline"
               iconBg="linear-gradient(135deg,#4f46e5,#7c3aed)" iconGlow="rgba(79,70,229,0.35)"
               action={<span className="text-[11px] font-black px-2.5 py-1 rounded-full" style={{ background:'#eef2ff', color:'#4338ca', border:'1px solid #c7d2fe' }}>This Month</span>} />
-            <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={208}>
+            <div className="h-52 min-w-0">
+              <ResponsiveContainer width="100%" height={208} minWidth={0}>
                 <BarChart data={pipelineData} barCategoryGap="35%" margin={{ top:4, right:4, left:-20, bottom:0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill:'#64748b', fontSize:11, fontWeight:600 }} />
@@ -2398,8 +2398,8 @@ export const Dashboard = () => {
             style={{ border:'1.5px solid #cffafe', boxShadow:'0 4px 20px rgba(6,182,212,0.07),0 1px 4px rgba(0,0,0,0.04)' }}>
             <SectionHeader icon={Activity} title="Conversion Snapshot" subtitle="Leads by current status"
               iconBg="linear-gradient(135deg,#06b6d4,#0284c7)" iconGlow="rgba(6,182,212,0.35)" />
-            <div className="h-44 relative">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={176}>
+            <div className="h-44 min-w-0 relative">
+              <ResponsiveContainer width="100%" height={176} minWidth={0}>
                 <PieChart>
                   <Pie data={pieData} dataKey="value" innerRadius={50} outerRadius={68}
                     stroke="none" startAngle={90} endAngle={-270} cornerRadius={4}>
@@ -2446,8 +2446,8 @@ export const Dashboard = () => {
                   </span>
                 </div>
               } />
-            <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={208}>
+            <div className="h-52 min-w-0">
+              <ResponsiveContainer width="100%" height={208} minWidth={0}>
                 <AreaChart data={weeklyData} margin={{ top:4, right:8, left:-24, bottom:0 }}>
                   <defs>
                     <linearGradient id="leadFill" x1="0" y1="0" x2="0" y2="1">
@@ -2524,8 +2524,8 @@ export const Dashboard = () => {
               </div>
             ) : (
               <>
-                <div className="h-36">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={144}>
+                <div className="h-36 min-w-0">
+                  <ResponsiveContainer width="100%" height={144} minWidth={0}>
                     <PieChart>
                       <Pie data={campData} dataKey="value" innerRadius={38} outerRadius={54}
                         stroke="none" startAngle={90} endAngle={-270} cornerRadius={4}>

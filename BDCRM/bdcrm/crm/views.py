@@ -390,6 +390,78 @@ class CompanyPortalAccountView(APIView):
         return Response({'detail': 'No BDCRM account found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
+class CompanyPortalCredentialsLoginView(APIView):
+    """Verify BDCRM credentials for the Company Portal login screen."""
+
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        if not hmac.compare_digest(
+            request.headers.get('X-Portal-SSO-Secret', ''), settings.PORTAL_SSO_SHARED_SECRET
+        ):
+            return Response({'detail': 'Invalid portal credentials.'}, status=status.HTTP_403_FORBIDDEN)
+
+        body_company_id = request.data.get('company_id')
+        header_company_id = request.headers.get('X-Company-ID')
+        if not (body_company_id or header_company_id):
+            return Response({'detail': 'Missing company context.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            company_id = int(body_company_id or header_company_id)
+        except (TypeError, ValueError):
+            return Response({'detail': 'Invalid company context.'}, status=status.HTTP_400_BAD_REQUEST)
+        set_current_company_id(company_id)
+
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data.get("username", "").strip()
+        email = serializer.validated_data.get("email", "").strip().lower()
+        password = serializer.validated_data["password"]
+        user = None
+        inactive_user = None
+
+        if username:
+            user = authenticate(username=username, password=password)
+        elif email:
+            for candidate in User.objects.filter(email__iexact=email).order_by("id"):
+                if not candidate.is_active:
+                    inactive_user = candidate
+                    continue
+                if candidate.check_password(password):
+                    user = candidate
+                    break
+
+        if not user and username:
+            for candidate in User.objects.filter(username__iexact=username).order_by("id"):
+                if not candidate.is_active:
+                    inactive_user = candidate
+                    continue
+                if candidate.check_password(password):
+                    user = candidate
+                    break
+
+        if not user and inactive_user:
+            return Response({"detail": "Account is inactive. Contact admin."}, status=status.HTTP_403_FORBIDDEN)
+        if not user:
+            return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        profile = getattr(user, "profile", None)
+        role = getattr(profile, "role", "") or ("admin" if user.is_staff else "employee")
+        return Response({
+            'user': {
+                'id': str(user.pk),
+                'email': user.email,
+                'username': user.username,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'role': role,
+                'company_id': company_id,
+            },
+            'app_access': ['bdcrm'],
+        })
+
+
 class CreateUserView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 

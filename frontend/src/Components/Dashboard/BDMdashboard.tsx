@@ -903,8 +903,8 @@ export const BDMDashboard = () => {
                   <p className="text-[13px] font-black text-slate-400">No revenue data yet</p>
                 </div>
               ) : (
-                <div className="h-52">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={208}>
+                <div className="h-52 min-w-0">
+                  <ResponsiveContainer width="100%" height={208} minWidth={0}>
                     <BarChart data={verticalStats.slice(0,6)} barCategoryGap="30%"
                       margin={{ top:4, right:4, left:-20, bottom:0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -992,8 +992,8 @@ export const BDMDashboard = () => {
                 </div>
               ) : (
                 <>
-                  <div className="h-40">
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={160}>
+                  <div className="h-40 min-w-0">
+                    <ResponsiveContainer width="100%" height={160} minWidth={0}>
                       <PieChart>
                         <Pie data={sourceStats} dataKey="value" innerRadius={42} outerRadius={60}
                           stroke="none" startAngle={90} endAngle={-270} cornerRadius={4}>
