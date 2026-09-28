@@ -170,11 +170,19 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
     setLoading(true);
     setError('');
     try {
-      const plannersRes = await authStore.fetchWithAuth(PLANNERS_URL);
+      const plannersRes = await authStore.fetchWithAuth(`${PLANNERS_URL}?summary=true`);
       const plannersData = await plannersRes.json().catch(() => null);
       if (!plannersRes.ok) throw new Error(extractErrorMessage(plannersData, 'Failed to load activity planners.'));
 
-      const plannerList = Array.isArray(plannersData) ? plannersData : [];
+      // List endpoints intentionally return only planner metadata. Loading
+      // every historical task and assignment here made this page slow.
+      const plannerList = (Array.isArray(plannersData) ? plannersData : []).map((planner) => ({
+        ...planner,
+        source_project: planner.source_project || 'all',
+        status: planner.status || 'active',
+        notes: planner.notes || '',
+        member_plans: [],
+      })) as ActivityPlanner[];
       setPlanners(plannerList);
 
       if (isAdmin) {
@@ -189,6 +197,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
         const preferredPlanner =
           plannerList.find((planner) => planner.month === month && planner.year === year) || plannerList[0] || null;
         setSelectedPlannerId(preferredPlanner?.id ?? null);
+        if (preferredPlanner) await loadPlannerDetails(preferredPlanner.id);
       } else {
         await loadQueue();
       }
@@ -200,6 +209,13 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadPlannerDetails = async (plannerId: number) => {
+    const response = await authStore.fetchWithAuth(`${PLANNERS_URL}${plannerId}/`);
+    const detail = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(extractErrorMessage(detail, 'Failed to load planner details.'));
+    setPlanners((current) => current.map((planner) => planner.id === plannerId ? detail : planner));
   };
 
   useEffect(() => {
@@ -482,7 +498,6 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
       const assignData = await assignRes.json().catch(() => null);
       if (!assignRes.ok) throw new Error(extractErrorMessage(assignData, 'Failed to assign monthly targets.'));
 
-      await load();
       setSelectedPlannerId(plannerId);
       setSuccess(`Monthly targets saved. ${assignData?.assigned_contacts ?? 0} contacts were assigned automatically.`);
       if (isAdmin && plannerId) {

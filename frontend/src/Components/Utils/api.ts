@@ -19,13 +19,18 @@ import { authStore } from './auth';
 const API_BASE_URL = '/api';
 
 export const api = {
-  getContacts: async (search: string = '', project: string = 'all'): Promise<Contact[]> => {
+  getContacts: async (search = '', project = 'all', page = 1, owner = 'all', verified = 'all'): Promise<{ count: number; results: Contact[] }> => {
     const url = new URL(`${API_BASE_URL}/contacts/`, window.location.origin);
     if (search) url.searchParams.append('search', search);
     if (project !== 'all') url.searchParams.append('project', project);
+    url.searchParams.append('page', String(page));
+    if (owner !== 'all') url.searchParams.append('owner', owner);
+    if (verified !== 'all') url.searchParams.append('verified', verified === 'verified' ? 'true' : 'false');
     const res = await authStore.fetchWithAuth(url.toString());
     if (!res.ok) throw new Error('Failed to fetch contacts');
-    return res.json();
+    const data = await res.json();
+    // Retain compatibility with an unpaginated API during rolling deployments.
+    return Array.isArray(data) ? { count: data.length, results: data } : data;
   },
 
   createContact: async (data: ContactInput): Promise<Contact> => {

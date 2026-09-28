@@ -1,6 +1,7 @@
 import hmac
 import logging
 import threading
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from django.contrib.auth import get_user_model
@@ -15,6 +16,10 @@ from .tenancy import current_company_id
 
 logger = logging.getLogger(__name__)
 _sync_state = threading.local()
+# Planner allocation can contain hundreds of contacts. A small shared worker
+# pool prevents one save from opening hundreds of simultaneous connections to
+# Marketing CRM, while keeping the admin request independent of that work.
+_assignment_sync_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix='planner-sync')
 
 
 COMMON_CONTACT_FIELDS = (
@@ -147,6 +152,21 @@ def validate_sync_token(request):
 
 
 def find_matching_contact(payload):
+    # A peer CRM's contact ID is its durable identity.  It must be checked
+    # before email/phone fallbacks: different source contacts can legitimately
+    # share an inbox, a company switchboard, or a reused phone number.  Using
+    # only those fallback fields caused a later sync to overwrite another
+    # source record, making contacts disappear from the BDCRM directory.
+    source_contact_id = str(payload.get("source_contact_id") or "").strip()
+    source_project = str(payload.get("source_project") or "").strip().lower()
+    if source_contact_id and source_project:
+        contact = Contact.objects.filter(
+            source_contact_id=source_contact_id,
+            source_project=source_project,
+        ).order_by("id").first()
+        if contact:
+            return contact
+
     query = Q()
     if payload["email"]:
         query |= Q(email__iexact=payload["email"])
@@ -446,10 +466,11 @@ def send_assignment_to_peer(contact, assigned_user, assignment=None, planner_nam
                 )
             except requests.RequestException as exc:
                 logger.warning("Assignment sync to %s failed for contact %s: %s", target_url, contact.pk, exc)
-    # Assignment sync is auxiliary; a CRM/network failure must never make the
-    # BDCRM planner save fail with HTTP 500.
+    # Assignment sync is auxiliary. Start it after commit in a daemon thread
+    # so a large monthly allocation never keeps the admin waiting for hundreds
+    # of remote Marketing CRM requests.
     try:
-        transaction.on_commit(_post_assignment)
+        transaction.on_commit(lambda: _assignment_sync_executor.submit(_post_assignment))
     except Exception as exc:
         logger.warning("Could not queue assignment sync for contact %s: %s", contact.pk, exc)
 
@@ -505,5 +526,9 @@ def delete_assignment_from_peer(
 
     if require_delivery:
         return _delete()
-    transaction.on_commit(_delete)
+    # Rebuilding an active planner may replace hundreds of assignments. The
+    # peer deletion is eventually consistent and must not make the admin wait
+    # for its network retries. Planner *deletion* still uses require_delivery
+    # above and remains synchronous for safety.
+    transaction.on_commit(lambda: _assignment_sync_executor.submit(_delete))
     return True

@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import permissions, status
 from rest_framework.exceptions import APIException, PermissionDenied
 from rest_framework.views import APIView
+from rest_framework.pagination import PageNumberPagination
 from django.db.models import Sum, Count, Q
 from django.db import OperationalError, transaction
 from django.contrib.auth import authenticate
@@ -558,6 +559,12 @@ class UserDetailView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class ContactPagination(PageNumberPagination):
+    page_size = 25
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class ContactViewSet(viewsets.ModelViewSet):
     queryset = Contact.objects.all().order_by("-created_at")
     serializer_class = ContactSerializer
@@ -565,6 +572,7 @@ class ContactViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["person_name", "company_name", "email", "phone", "address", "region", "vertical"]
     ordering_fields = ["created_at", "updated_at", "person_name", "company_name"]
+    pagination_class = ContactPagination
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -576,6 +584,14 @@ class ContactViewSet(viewsets.ModelViewSet):
         }
         if project in project_sources:
             queryset = queryset.filter(source_project__in=project_sources[project])
+        owner = (self.request.query_params.get("owner") or "").strip()
+        if owner:
+            queryset = queryset.filter(
+                Q(created_by_name__iexact=owner) | Q(source_owner_name__icontains=owner)
+            )
+        verified = (self.request.query_params.get("verified") or "").strip().lower()
+        if verified in {"true", "false"}:
+            queryset = queryset.filter(is_verified=verified == "true")
         return queryset
 
     def perform_create(self, serializer):
@@ -2102,8 +2118,18 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         if _is_admin(self.request.user):
-            return queryset
-        return queryset.filter(member_plans__user=self.request.user).distinct()
+            scoped = queryset
+        else:
+            scoped = queryset.filter(member_plans__user=self.request.user).distinct()
+        # Details are rendered only for one planner at a time. Fetch its
+        # nested data in bulk instead of issuing queries for every member,
+        # task and assignment during serialization.
+        if self.action == 'retrieve':
+            return scoped.prefetch_related(
+                'member_plans__tasks',
+                'member_plans__call_assignments',
+            )
+        return scoped
 
     def perform_create(self, serializer):
         if not _is_admin(self.request.user):
@@ -2545,9 +2571,15 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
             owned_for_member = owned_contacts_by_user.get(member.user_id, [])
             reserved_contacts_by_user[member.user_id] = owned_for_member[:required_contacts]
 
+        # Only lock/read as many free contacts as this planner can possibly
+        # consume. Loading the whole shared contact pool on every save made a
+        # small target edit increasingly slow as the directory grew.
+        maximum_fresh_contacts = sum(
+            item['required_contacts'] for item in member_required_counts.values()
+        )
         unowned_contacts = list(
             self._planner_contacts(planner).select_for_update().filter(telemarketing_owner__isnull=True)
-            .order_by('created_at', 'id')
+            .order_by('created_at', 'id')[:maximum_fresh_contacts]
         )
 
         for member in member_plans:
