@@ -276,6 +276,16 @@ class CompanyPortalAccountView(APIView):
 
         user = User.objects.filter(email__iexact=email).order_by('id').first()
 
+        # Removing access in Marketing CRM means delete this passwordless
+        # portal-provisioned BDCRM account, not merely deactivate it.
+        if request.data.get('delete'):
+            if user is None:
+                return Response({'deleted': True})
+            if user.is_superuser:
+                return Response({'detail': 'A superuser cannot be removed through portal provisioning.'}, status=status.HTTP_403_FORBIDDEN)
+            user.delete()
+            return Response({'deleted': True})
+
         # A revoke must win over a grant arriving in the same call, so this is
         # checked before provision and never falls through to the update branch.
         # A superuser's is_active is never flipped this way - only the account
