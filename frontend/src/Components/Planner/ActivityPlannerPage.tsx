@@ -6,7 +6,6 @@ import {
   ClipboardList,
   Loader2,
   Phone,
-  Pencil,
   RotateCcw,
   Search,
   Shield,
@@ -170,23 +169,30 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
     setLoading(true);
     setError('');
     try {
-      const plannersRes = await authStore.fetchWithAuth(`${PLANNERS_URL}?summary=true`);
+      const plannersRequest = authStore.fetchWithAuth(`${PLANNERS_URL}?summary=true`);
+      const usersRequest = isAdmin ? authStore.fetchWithAuth(USERS_URL) : null;
+      const plannersRes = await plannersRequest;
       const plannersData = await plannersRes.json().catch(() => null);
       if (!plannersRes.ok) throw new Error(extractErrorMessage(plannersData, 'Failed to load activity planners.'));
 
-      // List endpoints intentionally return only planner metadata. Loading
-      // every historical task and assignment here made this page slow.
+      // The setup payload contains only planner settings and monthly targets.
+      // Historical tasks and individual contact assignments stay off the
+      // initial request so the planner can open without a long wait.
       const plannerList = (Array.isArray(plannersData) ? plannersData : []).map((planner) => ({
         ...planner,
         source_project: planner.source_project || 'all',
         status: planner.status || 'active',
         notes: planner.notes || '',
-        member_plans: [],
+        member_plans: (planner.member_plans || []).map((memberPlan) => ({
+          ...memberPlan,
+          tasks: [],
+          call_assignments: [],
+        })),
       })) as ActivityPlanner[];
       setPlanners(plannerList);
 
       if (isAdmin) {
-        const usersRes = await authStore.fetchWithAuth(USERS_URL);
+        const usersRes = await usersRequest!;
         const usersData = await usersRes.json().catch(() => null);
         if (!usersRes.ok) throw new Error(extractErrorMessage(usersData, 'Failed to load users.'));
         const employeeUsers = (Array.isArray(usersData) ? usersData : []).filter(
@@ -197,7 +203,6 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
         const preferredPlanner =
           plannerList.find((planner) => planner.month === month && planner.year === year) || plannerList[0] || null;
         setSelectedPlannerId(preferredPlanner?.id ?? null);
-        if (preferredPlanner) await loadPlannerDetails(preferredPlanner.id);
       } else {
         await loadQueue();
       }
@@ -209,13 +214,6 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadPlannerDetails = async (plannerId: number) => {
-    const response = await authStore.fetchWithAuth(`${PLANNERS_URL}${plannerId}/`);
-    const detail = await response.json().catch(() => null);
-    if (!response.ok) throw new Error(extractErrorMessage(detail, 'Failed to load planner details.'));
-    setPlanners((current) => current.map((planner) => planner.id === plannerId ? detail : planner));
   };
 
   useEffect(() => {
@@ -577,7 +575,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
 
   return (
     <div
-      className="activity-planner-theme flex flex-col h-full overflow-y-auto px-6 py-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="activity-planner-theme planner-page-shell flex h-full w-full max-w-[1680px] self-center flex-col overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 xl:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       style={{ background: 'radial-gradient(circle at 8% 0%,#dbeafe 0%,transparent 27%), radial-gradient(circle at 94% 14%,#ccfbf1 0%,transparent 25%), linear-gradient(145deg,#f8fbff 0%,#eaf4ff 50%,#f1fdf9 100%)' }}
     >
       <div
@@ -589,7 +587,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
           boxShadow: '0 20px 52px -6px rgba(8,47,73,0.46), 0 2px 10px rgba(15,23,42,0.18)',
         }}
       >
-        <div className="px-8 py-8 flex items-center gap-5 flex-wrap">
+        <div className="flex items-center gap-5 px-5 py-6 sm:px-8 sm:py-8 flex-wrap">
           <div
             className="w-16 h-16 rounded-3xl flex items-center justify-center shrink-0"
             style={{ background: 'linear-gradient(145deg,rgba(255,255,255,0.28),rgba(255,255,255,0.08))', border: '1.5px solid rgba(255,255,255,0.32)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.18)' }}
@@ -605,7 +603,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
               <ShieldCheck size={12} />
               {isAdmin ? 'Admin Planning Console' : 'My Daily Call Queue'}
             </div>
-            <h1 className="text-[30px] font-black text-white leading-tight tracking-tight mt-3">
+            <h1 className="mt-3 text-[26px] font-black leading-tight tracking-tight text-white sm:text-[30px]">
               {!isAdmin && assignedContactsOnly ? 'Assigned Contacts' : 'Activity Planner'}
             </h1>
             <p className="text-[14px] text-blue-50/90 mt-2 max-w-3xl font-medium">
@@ -675,8 +673,8 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
               </p>
             </div>
 
-            <div className="p-7 md:p-8 space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-5 items-end">
+            <div className="space-y-6 p-5 sm:p-7 md:p-8">
+              <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2 lg:gap-5 xl:grid-cols-[minmax(220px,1.25fr)_minmax(150px,.7fr)_minmax(130px,.55fr)_minmax(190px,1fr)_auto]">
                 <div className="planner-name-card rounded-2xl px-4 py-3 min-h-[78px]">
                   <p className="text-[11px] font-black uppercase tracking-[0.16em] text-white/80">Planner Name</p>
                   <input
@@ -721,33 +719,26 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                     <option value="salespie">SalesPie</option>
                     <option value="both">Shared by both CRMs</option>
                   </select>
+                </div>
+                <div className="flex flex-wrap items-end gap-3 sm:col-span-2 xl:col-span-1 xl:justify-end">
+                  <button
+                    type="button"
+                    onClick={showPreviousMonth}
+                    className="previous-month-button inline-flex min-h-[48px] items-center justify-center gap-2.5 rounded-xl px-5 py-3 text-[13px] font-black text-white"
+                  >
+                    <CalendarDays size={18} /> Show Previous Month
+                  </button>
                   {selectedPlanner ? (
-                    <div className="mt-2 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPlannerId(selectedPlanner.id)}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-black text-sky-700 bg-sky-50 border border-sky-200"
-                      >
-                        <Pencil size={12} /> Edit
-                      </button>
-                      <button
+                    <button
                         type="button"
                         onClick={handleDeletePlanner}
                         disabled={saving}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-black text-rose-700 bg-rose-50 border border-rose-200 disabled:opacity-60"
+                        className="inline-flex min-h-[48px] items-center gap-1.5 rounded-xl px-5 py-3 text-[13px] font-black text-rose-700 bg-rose-50 border border-rose-200 disabled:opacity-60"
                       >
-                        <Trash2 size={12} /> Delete
+                        <Trash2 size={14} /> Delete
                       </button>
-                    </div>
                   ) : null}
                 </div>
-                <button
-                  type="button"
-                  onClick={showPreviousMonth}
-                  className="previous-month-button inline-flex min-h-[48px] items-center justify-center gap-2.5 rounded-xl px-5 py-3 text-[13px] font-black text-white"
-                >
-                  <CalendarDays size={18} /> Show Previous Month
-                </button>
               </div>
 
               <div className="rounded-[28px] overflow-hidden bg-white" style={{ border: '1px solid #dbeafe' }}>
@@ -842,7 +833,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3 w-full md:w-auto">
+                    <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3 md:w-auto">
                       <div className="planner-stat-card planner-stat-sky rounded-2xl px-4 py-3 border min-w-[120px]">
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Users</p>
                         <p className="text-[22px] font-black text-slate-800 mt-1">{assignedUserCount}/{users.length}</p>
@@ -858,7 +849,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 xl:grid-cols-[minmax(260px,1fr)_220px_auto_auto] gap-3 mt-5">
+                  <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(260px,1fr)_220px_auto_auto]">
                     <div className="relative">
                       <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
@@ -897,7 +888,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[860px] border-collapse">
+                  <table className="planner-assignment-table w-full min-w-[760px] border-collapse">
                     <thead>
                       <tr className="planner-table-heading border-b border-slate-200">
                         <th className="px-5 py-3 text-left text-[11px] font-black uppercase tracking-[0.16em] text-slate-400 w-[70px]">No.</th>
@@ -958,7 +949,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                   </table>
                 </div>
 
-                <div className="planner-save-bar sticky bottom-0 px-5 py-4 backdrop-blur border-t border-sky-200">
+                <div className="planner-save-bar sticky bottom-0 border-t border-sky-200 px-5 py-4 backdrop-blur">
                   <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div>
                       <p className="text-[13px] font-black text-slate-800">
@@ -993,7 +984,7 @@ export function ActivityPlannerPage({ assignedContactsOnly = false }: { assigned
                 </div>
               </div>
 
-              {selectedPlanner?.member_plans?.length ? (
+              {selectedPlanner?.member_plans?.some((member) => member.tasks.length || member.call_assignments?.length) ? (
                 <div className="rounded-[28px] overflow-hidden bg-white" style={{ border: '1px solid #dbeafe' }}>
                   <div className="px-5 py-5 md:px-6 border-b border-sky-100 bg-[linear-gradient(135deg,#ffffff,#eff6ff,#f0fdfa)]">
                     <p className="text-[12px] font-black uppercase tracking-[0.16em] text-sky-600">Admin Contact Visibility</p>
