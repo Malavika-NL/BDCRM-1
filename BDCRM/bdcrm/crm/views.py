@@ -2121,6 +2121,10 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
             scoped = queryset
         else:
             scoped = queryset.filter(member_plans__user=self.request.user).distinct()
+        if self.action == 'list' and self.request.query_params.get('summary') == 'true':
+            # The setup screen needs saved targets, but never the potentially
+            # thousands of task/contact records. One prefetch keeps this fast.
+            return scoped.prefetch_related('member_plans')
         # Details are rendered only for one planner at a time. Fetch its
         # nested data in bulk instead of issuing queries for every member,
         # task and assignment during serialization.
@@ -2476,11 +2480,12 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
             ("linkedin", member_plan.monthly_linkedin_target, member_plan.linkedin_weightage),
         ]
 
+        tasks_to_create = []
         for channel, monthly_target, weight in channels:
             weekly_counts = self._channel_distribution(monthly_target, weight, len(week_map.keys()))
             for idx, week_number in enumerate(sorted(week_map.keys())):
                 weekly_target = weekly_counts[idx]
-                PlannerTask.objects.create(
+                tasks_to_create.append(PlannerTask(
                     member_plan=member_plan,
                     period_type='weekly',
                     week_number=week_number,
@@ -2488,12 +2493,12 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                     target_count=weekly_target,
                     title=f"Week {week_number}: {channel.title()} target {weekly_target}",
                     created_by_admin=True,
-                )
+                ))
                 week_days = week_map[week_number]
                 daily_counts = self._channel_distribution(weekly_target, 100, len(week_days))
                 for d_idx, task_day in enumerate(week_days):
                     daily_target = daily_counts[d_idx]
-                    PlannerTask.objects.create(
+                    tasks_to_create.append(PlannerTask(
                         member_plan=member_plan,
                         period_type='daily',
                         week_number=week_number,
@@ -2502,7 +2507,10 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                         target_count=daily_target,
                         title=f"{task_day.strftime('%d %b')}: {channel.title()} {daily_target}",
                         created_by_admin=True,
-                    )
+                    ))
+        # A monthly plan can create hundreds of task rows. Insert them in one
+        # query instead of making the save wait for one database round-trip per day.
+        PlannerTask.objects.bulk_create(tasks_to_create, batch_size=500)
 
     def _rebuild_contact_assignments(self, planner):
         # Contact queries use the `contacts_db` alias through ContactRouter.
@@ -2537,6 +2545,7 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
         assigned_total = 0
         member_summaries = []
         assigned_in_planner = set()
+        assignments_to_create = []
 
         member_plans = list(planner.member_plans.select_related('user').all().order_by('member_name', 'id'))
         planner_user_ids = [member.user_id for member in member_plans if member.user_id]
@@ -2635,7 +2644,7 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                     contact_index += 1
                     if contact.id in assigned_in_planner:
                         continue
-                    planner_assignment = PlannerCallAssignment.objects.create(
+                    assignments_to_create.append(PlannerCallAssignment(
                         member_plan=member,
                         planner_task=task,
                         contact=contact,
@@ -2643,8 +2652,7 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                         sequence_number=seq,
                         scheduled_date=task.task_date,
                         scheduled_time=task.scheduled_time,
-                    )
-                    send_assignment_to_peer(contact, member.user, planner_assignment, planner.name)
+                    ))
                     assigned_in_planner.add(contact.id)
                     assigned_total += 1
                     member_assigned += 1
@@ -2658,10 +2666,20 @@ class ActivityPlannerViewSet(viewsets.ModelViewSet):
                 "assigned_contacts": member_assigned,
             })
 
+        # Persist the complete monthly allocation at once. This avoids a
+        # separate insert query for every contact being assigned.
+        PlannerCallAssignment.objects.bulk_create(assignments_to_create, batch_size=500)
+        for assignment in assignments_to_create:
+            send_assignment_to_peer(
+                assignment.contact,
+                assignment.assigned_user,
+                assignment,
+                planner.name,
+            )
+
         return {
             "planner_id": planner.id,
             "assigned_contacts": assigned_total,
-            "remaining_unassigned_contacts": self._planner_contacts(planner).filter(telemarketing_owner__isnull=True).count(),
             "members": member_summaries,
         }
 

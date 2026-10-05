@@ -457,11 +457,20 @@ class ActivityPlannerSerializer(serializers.ModelSerializer):
         model = ActivityPlanner
         fields = '__all__'
 
+class PlannerMemberPlanSummarySerializer(serializers.ModelSerializer):
+    """Planner setup data only; intentionally excludes tasks and contacts."""
+    class Meta:
+        model = PlannerMemberPlan
+        fields = ('id', 'user', 'member_name', 'workspace_name', 'monthly_calls_target')
+
+
 class ActivityPlannerOptionSerializer(serializers.ModelSerializer):
-    """Small planner payload used by dropdowns and overview pages."""
+    """Small planner payload used by the planner setup screen."""
+    member_plans = PlannerMemberPlanSummarySerializer(many=True, read_only=True)
+
     class Meta:
         model = ActivityPlanner
-        fields = ('id', 'name', 'month', 'year')
+        fields = ('id', 'name', 'month', 'year', 'source_project', 'status', 'notes', 'member_plans')
 
 
 class LoginSerializer(serializers.Serializer):

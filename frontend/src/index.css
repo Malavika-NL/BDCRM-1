@@ -14,6 +14,20 @@ body {
   color: #0f172a;
 }
 
+.planner-page-shell {
+  scrollbar-gutter: stable;
+}
+
+.activity-planner-theme section {
+  min-width: 0;
+}
+
+.activity-planner-theme input,
+.activity-planner-theme select,
+.activity-planner-theme textarea {
+  min-width: 0;
+}
+
 .activity-planner-theme .bg-white {
   background-image: linear-gradient(145deg, #ffffff 0%, #f8fbff 58%, #f0fdfa 100%);
 }
@@ -164,4 +178,27 @@ body {
 .activity-planner-theme .planner-save-bar {
   background: linear-gradient(100deg, rgba(238, 242, 255, 0.96) 0%, rgba(240, 249, 255, 0.96) 48%, rgba(236, 253, 245, 0.96) 100%);
   box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.05);
+}
+
+@media (max-width: 639px) {
+  .activity-planner-theme .planner-section-heading {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  .activity-planner-theme .planner-calendar-day {
+    min-height: 46px;
+    padding: 0.4rem;
+    border-radius: 0.8rem;
+  }
+
+  .activity-planner-theme .planner-calendar-day span:last-child {
+    padding-left: 0.35rem;
+    padding-right: 0.35rem;
+    font-size: 7px;
+  }
+
+  .activity-planner-theme .planner-save-bar {
+    position: static;
+  }
 }
