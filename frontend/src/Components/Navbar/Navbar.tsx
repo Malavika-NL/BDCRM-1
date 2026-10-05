@@ -1,3 +1,4 @@
+import { getCompanyPortalUrl } from '../../config/portal';
 // import React, { useState, useRef, useEffect } from 'react';
 // import { useNavigate } from 'react-router-dom';
 // import { X, LogOut } from 'lucide-react';
@@ -142,14 +143,14 @@ export const Navbar: React.FC = () => {
   const companyName = companyCode === 'vbs' ? 'VBS' : 'NL Technologies';
 
   const switchToCrm = (application: 'marketing_crm' | 'salespie') => {
-    const portalUrl = `${window.location.protocol}//${window.location.hostname}:8002`;
+    const portalUrl = getCompanyPortalUrl();
     const launchUrl = `${portalUrl}/switch.html?open=${application}`;
     window.location.assign(launchUrl);
   };
 
   const signOut = () => {
     authStore.clearSession();
-    const portalUrl = `${window.location.protocol}//${window.location.hostname}:8002`;
+    const portalUrl = getCompanyPortalUrl();
     // No workspace flag means the Portal clears the shared sign-in too.
     window.location.replace(portalUrl);
   };

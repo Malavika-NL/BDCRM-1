@@ -1,3 +1,4 @@
+import { getCompanyPortalUrl } from './config/portal';
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
@@ -7,7 +8,7 @@ import { authStore, installAuthenticatedFetch } from './Components/Utils/auth'
 installAuthenticatedFetch()
 
 const root = createRoot(document.getElementById('root')!)
-const portalUrl = `${window.location.protocol}//${window.location.hostname}:8002`
+const portalUrl = getCompanyPortalUrl()
 
 const renderApp = () => root.render(
   <StrictMode>

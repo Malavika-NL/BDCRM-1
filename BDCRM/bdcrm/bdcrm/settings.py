@@ -243,3 +243,8 @@ CONTACT_SYNC_TENANT_COMPANY_ID = int(os.getenv("CONTACT_SYNC_TENANT_COMPANY_ID",
 CONTACT_SYNC_TIMEOUT_SECONDS = float(os.getenv("CONTACT_SYNC_TIMEOUT_SECONDS", "5"))
 WISHLIST_SYNC_API_TOKEN = os.getenv("WISHLIST_SYNC_API_TOKEN", "")
 
+
+# Additional Tailscale HTTPS entry point; retain existing LAN access.
+ALLOWED_HOSTS += ['vbsagent.tail9c1eb6.ts.net', '100.106.13.10']
+CSRF_TRUSTED_ORIGINS += ['https://vbsagent.tail9c1eb6.ts.net:6004']
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
