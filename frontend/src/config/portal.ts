@@ -6,3 +6,9 @@ export const getCompanyPortalUrl = () => {
   }
   return `${protocol}//${hostname}:8002`;
 };
+
+/** The central NexusOne workspace used after a CRM-only logout. */
+export const getNexusOneLoginUrl = () => {
+  const { protocol, hostname } = window.location;
+  return `${protocol}//${hostname}:7000/login`;
+};

@@ -1,4 +1,4 @@
-import { getCompanyPortalUrl } from '../../config/portal';
+import { getCompanyPortalUrl, getNexusOneLoginUrl } from '../../config/portal';
 // import React, { useState, useRef, useEffect } from 'react';
 // import { useNavigate } from 'react-router-dom';
 // import { X, LogOut } from 'lucide-react';
@@ -150,9 +150,7 @@ export const Navbar: React.FC = () => {
 
   const signOut = () => {
     authStore.clearSession();
-    const portalUrl = getCompanyPortalUrl();
-    // No workspace flag means the Portal clears the shared sign-in too.
-    window.location.replace(portalUrl);
+    window.location.replace(getNexusOneLoginUrl());
   };
 
   const userName =

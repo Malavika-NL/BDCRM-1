@@ -1,4 +1,4 @@
-import { getCompanyPortalUrl } from './config/portal';
+import { getNexusOneLoginUrl } from './config/portal';
 // src/App.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import type React from 'react';
@@ -37,8 +37,7 @@ import { AccountTargetingOwnersPage } from './Components/AccountTargeting/Accoun
 import { WishlistPage } from './Components/Wishlist/WishlistPage';
 
 function PortalRedirect() {
-  const portalUrl = getCompanyPortalUrl();
-  window.location.replace(`${portalUrl}?workspace=1`);
+  window.location.replace(getNexusOneLoginUrl());
   return null;
 }
 

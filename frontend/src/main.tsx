@@ -1,4 +1,4 @@
-import { getCompanyPortalUrl } from './config/portal';
+import { getNexusOneLoginUrl } from './config/portal';
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
@@ -8,7 +8,6 @@ import { authStore, installAuthenticatedFetch } from './Components/Utils/auth'
 installAuthenticatedFetch()
 
 const root = createRoot(document.getElementById('root')!)
-const portalUrl = getCompanyPortalUrl()
 
 const renderApp = () => root.render(
   <StrictMode>
@@ -38,7 +37,7 @@ const startBdcrm = async () => {
     })
     window.location.replace('/dashboard')
   } catch {
-    window.location.replace(`${portalUrl}?workspace=1`)
+    window.location.replace(getNexusOneLoginUrl())
   }
 }
 
