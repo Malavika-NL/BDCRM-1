@@ -121,7 +121,7 @@ import { getCompanyPortalUrl, getNexusOneLoginUrl } from '../../config/portal';
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 // Import Bell icon
-import { ArrowLeftRight, X, Bell, LogOut } from 'lucide-react';
+import { ArrowLeftRight, X, Bell, Home } from 'lucide-react';
 import { authStore } from '../Utils/auth';
 import { api } from '../Utils/api';
 import NlTechnologiesLogo from '../../assets/nl_technologies.png';
@@ -148,9 +148,8 @@ export const Navbar: React.FC = () => {
     window.location.assign(launchUrl);
   };
 
-  const signOut = () => {
-    authStore.clearSession();
-    window.location.replace(getNexusOneLoginUrl());
+  const returnToPortal = () => {
+    window.location.assign(getNexusOneLoginUrl().replace(/\/login$/, ''));
   };
 
   const userName =
@@ -290,11 +289,11 @@ export const Navbar: React.FC = () => {
                   </button>
                 </div>
                 <button
-                  onClick={signOut}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 px-6 py-2.5 text-[12px] font-bold text-white shadow-lg shadow-rose-500/30 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-rose-500/50"
+                  onClick={returnToPortal}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 px-6 py-2.5 text-[12px] font-bold text-white shadow-lg shadow-indigo-500/30 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-indigo-500/50"
                 >
-                  <LogOut size={14} />
-                  Sign Out
+                  <Home size={14} />
+                  Back to home
                 </button>
 
                 <div className="flex gap-5">
