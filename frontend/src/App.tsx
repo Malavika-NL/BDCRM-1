@@ -37,7 +37,7 @@ import { AccountTargetingOwnersPage } from './Components/AccountTargeting/Accoun
 import { WishlistPage } from './Components/Wishlist/WishlistPage';
 
 function PortalRedirect() {
-  window.location.replace(getNexusOneLoginUrl());
+  window.location.replace(`${getNexusOneLoginUrl()}?open=bdcrm`);
   return null;
 }
 

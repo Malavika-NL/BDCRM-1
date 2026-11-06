@@ -17,6 +17,7 @@ export type AuthUser = {
     code?: string;
     name?: string;
   };
+  app_access?: string[];
 };
 
 const TOKEN_KEY = 'access_token';

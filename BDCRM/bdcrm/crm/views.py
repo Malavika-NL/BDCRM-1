@@ -178,12 +178,11 @@ class CompanyPortalLoginView(APIView):
             return Response({'detail': 'Missing portal sign-in code.'}, status=status.HTTP_400_BAD_REQUEST)
 
         portal_request = Request(
-            settings.PORTAL_SSO_EXCHANGE_URL,
-            data=json.dumps({'application': 'bdcrm', 'code': code}).encode(),
+            settings.NEXUS_SSO_TOKEN_URL,
+            data=json.dumps({'client_id': settings.NEXUS_SSO_CLIENT_ID, 'client_secret': settings.NEXUS_SSO_CLIENT_SECRET, 'code': code, 'redirect_uri': settings.NEXUS_SSO_REDIRECT_URI}).encode(),
             headers={
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'X-Portal-SSO-Secret': settings.PORTAL_SSO_SHARED_SECRET,
             },
             method='POST',
         )
@@ -193,9 +192,12 @@ class CompanyPortalLoginView(APIView):
         except (HTTPError, URLError, TimeoutError, json.JSONDecodeError, ValueError):
             return Response({'detail': 'Portal sign-in link is invalid or expired.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        external_user_id = payload.get('external_user_id') if isinstance(payload, dict) else None
-        company = payload.get('company') if isinstance(payload, dict) else None
-        user = User.objects.filter(pk=external_user_id, is_active=True).first()
+        identity = payload.get('user') if isinstance(payload, dict) else None
+        email = str(identity.get('email') or '').strip().lower() if isinstance(identity, dict) else ''
+        company = identity.get('company') if isinstance(identity, dict) else None
+        app_access = identity.get('application_identifiers', []) if isinstance(identity, dict) else []
+        if not isinstance(app_access, list) or not all(isinstance(item, str) for item in app_access): app_access = []
+        user = User.objects.filter(email__iexact=email, is_active=True).first()
         if not user or not isinstance(company, dict) or not company.get('id'):
             return Response({'detail': 'The linked BDCRM account was not found.'}, status=status.HTTP_403_FORBIDDEN)
 
@@ -206,6 +208,7 @@ class CompanyPortalLoginView(APIView):
         token_payload['access'] = str(refresh.access_token)
         token_payload['refresh'] = str(refresh)
         token_payload['company'] = company
+        token_payload['app_access'] = app_access
         return Response(token_payload)
 
 

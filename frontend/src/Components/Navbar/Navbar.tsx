@@ -1,4 +1,4 @@
-import { getCompanyPortalUrl, getNexusOneLoginUrl } from '../../config/portal';
+import { getNexusOneLoginUrl } from '../../config/portal';
 // import React, { useState, useRef, useEffect } from 'react';
 // import { useNavigate } from 'react-router-dom';
 // import { X, LogOut } from 'lucide-react';
@@ -139,13 +139,14 @@ export const Navbar: React.FC = () => {
   const popupRef = useRef<HTMLDivElement>(null);
   const currentUser = authStore.getUser();
   const companyCode = currentUser?.company?.code?.toLowerCase();
+  const appAccess = Array.isArray(currentUser?.app_access) ? currentUser.app_access : [];
   const companyLogo = companyCode === 'vbs' ? VbsLogo : NlTechnologiesLogo;
   const companyName = companyCode === 'vbs' ? 'VBS' : 'NL Technologies';
 
   const switchToCrm = (application: 'marketing_crm' | 'salespie') => {
-    const portalUrl = getCompanyPortalUrl();
-    const launchUrl = `${portalUrl}/switch.html?open=${application}`;
-    window.location.assign(launchUrl);
+    const portalUrl = getNexusOneLoginUrl().replace(/\/login$/, '');
+    const params = new URLSearchParams({ application, company: companyCode || '' });
+    window.location.assign(`${portalUrl}/api/sso/switch/?${params.toString()}`);
   };
 
   const returnToPortal = () => {
@@ -275,18 +276,18 @@ export const Navbar: React.FC = () => {
               {/* Bottom */}
               <div className="flex flex-col items-center gap-3">
                 <div className="flex gap-2">
-                  <button
+                  {appAccess.includes('marketing_crm') && <button
                     onClick={() => switchToCrm('marketing_crm')}
                     className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-blue-600 px-4 py-2.5 text-[12px] font-bold text-white shadow-lg shadow-indigo-500/30 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-indigo-500/50"
                   >
                     <ArrowLeftRight size={14} /> Marketing CRM
-                  </button>
-                  <button
+                  </button>}
+                  {appAccess.includes('salespie') && <button
                     onClick={() => switchToCrm('salespie')}
                     className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 px-4 py-2.5 text-[12px] font-bold text-white shadow-lg shadow-emerald-500/30 transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.03] hover:shadow-emerald-500/50"
                   >
                     <ArrowLeftRight size={14} /> SalesPie
-                  </button>
+                  </button>}
                 </div>
                 <button
                   onClick={returnToPortal}

@@ -205,6 +205,10 @@ PORTAL_SSO_EXCHANGE_URL = os.getenv(
     'PORTAL_SSO_EXCHANGE_URL', 'http://127.0.0.1:8004/api/portal/sso/exchange/'
 )
 PORTAL_SSO_TIMEOUT_SECONDS = int(os.getenv('PORTAL_SSO_TIMEOUT_SECONDS', '10'))
+NEXUS_SSO_TOKEN_URL = os.getenv('NEXUS_SSO_TOKEN_URL', 'http://192.168.1.56:8005/api/sso/token/')
+NEXUS_SSO_CLIENT_ID = os.getenv('NEXUS_SSO_CLIENT_ID', 'bdcrm-S8LuBbpNVZoYM7hpavdE62az')
+NEXUS_SSO_CLIENT_SECRET = os.getenv('NEXUS_SSO_CLIENT_SECRET', 'nexus-bdcrm-direct-2026-8Vr3kN6mQp5Ls2Tx')
+NEXUS_SSO_REDIRECT_URI = os.getenv('NEXUS_SSO_REDIRECT_URI', 'http://192.168.1.56:8003/?sso=1')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
