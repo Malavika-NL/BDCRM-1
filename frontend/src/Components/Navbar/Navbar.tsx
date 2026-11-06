@@ -139,7 +139,10 @@ export const Navbar: React.FC = () => {
   const popupRef = useRef<HTMLDivElement>(null);
   const currentUser = authStore.getUser();
   const companyCode = currentUser?.company?.code?.toLowerCase();
-  const appAccess = Array.isArray(currentUser?.app_access) ? currentUser.app_access : [];
+  const isAdmin = currentUser?.is_portal_admin === true || currentUser?.role === 'admin';
+  const appAccess = isAdmin
+    ? ['marketing_crm', 'salespie', 'bdcrm']
+    : (Array.isArray(currentUser?.app_access) ? currentUser.app_access : []);
   const companyLogo = companyCode === 'vbs' ? VbsLogo : NlTechnologiesLogo;
   const companyName = companyCode === 'vbs' ? 'VBS' : 'NL Technologies';
 

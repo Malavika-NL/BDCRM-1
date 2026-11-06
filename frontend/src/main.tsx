@@ -34,6 +34,10 @@ const startBdcrm = async () => {
     authStore.setSession(payload.access, payload.refresh, {
       ...payload.user,
       company: payload.company,
+      app_access: Array.isArray(payload.app_access)
+        ? payload.app_access.filter((item: unknown): item is string => typeof item === 'string')
+        : [],
+      is_portal_admin: payload.is_portal_admin === true,
     })
     window.location.replace('/dashboard')
   } catch (reason) {

@@ -209,6 +209,7 @@ class CompanyPortalLoginView(APIView):
         token_payload['refresh'] = str(refresh)
         token_payload['company'] = company
         token_payload['app_access'] = app_access
+        token_payload['is_portal_admin'] = identity.get('is_portal_admin') is True
         return Response(token_payload)
 
 

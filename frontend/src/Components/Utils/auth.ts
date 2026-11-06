@@ -18,6 +18,7 @@ export type AuthUser = {
     name?: string;
   };
   app_access?: string[];
+  is_portal_admin?: boolean;
 };
 
 const TOKEN_KEY = 'access_token';
