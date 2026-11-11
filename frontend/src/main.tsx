@@ -1,4 +1,3 @@
-import { getNexusOneLoginUrl } from './config/portal';
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
@@ -41,11 +40,7 @@ const startBdcrm = async () => {
     })
     window.location.replace('/dashboard')
   } catch (reason) {
-    // Keep the actual error visible instead of silently returning to login.
-    // A retry obtains a fresh one-time code from the central portal.
-    const company = new URLSearchParams(window.location.search).get('state')?.split(':')[2]
     const params = new URLSearchParams({ open: 'bdcrm' })
-    if (company === 'nl-technologies' || company === 'vbs') params.set('company', company)
     window.history.replaceState(null, '', window.location.pathname)
     root.render(<main style={{ maxWidth: 480, margin: '80px auto', padding: 28 }}>
       <h1>Unable to open BDCRM</h1>
@@ -56,3 +51,4 @@ const startBdcrm = async () => {
 }
 
 void startBdcrm()
+import { getNexusOneLoginUrl } from './config/portal';
