@@ -10,5 +10,8 @@ export const getCompanyPortalUrl = () => {
 /** The central NexusOne workspace used after a CRM-only logout. */
 export const getNexusOneLoginUrl = () => {
   const { protocol, hostname } = window.location;
-  return `${protocol}//${hostname}:7000/login`;
+  // NexusOne is served separately from BDCRM.  The CRM may be reached through
+  // a tunnel on another port, so do not inherit the BDCRM port here.
+  const portalOrigin = import.meta.env.VITE_NEXUSONE_URL || `${protocol}//${hostname}:7005`;
+  return `${portalOrigin.replace(/\/$/, '')}/login`;
 };
