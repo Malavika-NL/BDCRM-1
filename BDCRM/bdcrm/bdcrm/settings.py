@@ -205,10 +205,24 @@ PORTAL_SSO_EXCHANGE_URL = os.getenv(
     'PORTAL_SSO_EXCHANGE_URL', 'http://127.0.0.1:8004/api/portal/sso/exchange/'
 )
 PORTAL_SSO_TIMEOUT_SECONDS = int(os.getenv('PORTAL_SSO_TIMEOUT_SECONDS', '10'))
-NEXUS_SSO_TOKEN_URL = os.getenv('NEXUS_SSO_TOKEN_URL', 'http://192.168.1.56:8005/api/sso/token/')
-NEXUS_SSO_CLIENT_ID = os.getenv('NEXUS_SSO_CLIENT_ID', 'bdcrm-S8LuBbpNVZoYM7hpavdE62az')
+# These must be configured together for the address where this CRM is served.
+# OAuth authorization codes are bound to the redirect URI used at login, so a
+# stale LAN address here makes every otherwise-valid code fail at exchange.
+# In Docker, use the NexusOne backend exposed by this Windows host.  The
+# browser login on .94 is served by this instance; exchanging against a .56
+# server rejects codes because authorization codes are stored per instance.
+NEXUS_SSO_TOKEN_URL = os.getenv('NEXUS_SSO_TOKEN_URL', 'http://host.docker.internal:8005/api/sso/token/')
+NEXUS_SSO_CLIENT_ID = os.getenv('NEXUS_SSO_CLIENT_ID', 'LklOUrLObOjzgvaK4CLM2uvcBP46qSr4')
 NEXUS_SSO_CLIENT_SECRET = os.getenv('NEXUS_SSO_CLIENT_SECRET', 'nexus-bdcrm-direct-2026-8Vr3kN6mQp5Ls2Tx')
-NEXUS_SSO_REDIRECT_URI = os.getenv('NEXUS_SSO_REDIRECT_URI', 'http://192.168.1.56:8003/?sso=1')
+NEXUS_SSO_REDIRECT_URI = os.getenv('NEXUS_SSO_REDIRECT_URI', 'http://192.168.1.94:8003')
+NEXUS_SSO_REDIRECT_URIS = _csv_env(
+    'NEXUS_SSO_REDIRECT_URIS',
+    [
+        NEXUS_SSO_REDIRECT_URI,
+        'http://192.168.1.56:8003',
+        'https://vbsagent.tail9c1eb6.ts.net:6004/',
+    ],
+)
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/

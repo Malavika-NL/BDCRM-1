@@ -41,6 +41,13 @@ services:
       PORTAL_SSO_SHARED_SECRET: ${PORTAL_SSO_SHARED_SECRET:?Set PORTAL_SSO_SHARED_SECRET in .env}
       BDCRM_DASHBOARD_SECRET: ${BDCRM_DASHBOARD_SECRET}
       PORTAL_SSO_EXCHANGE_URL: http://company-portal-api:8004/api/portal/sso/exchange/
+      # OAuth exchanges must use the same callback URL that Nexus used to
+      # issue the code. Keep these in .env instead of baking in a previous LAN IP.
+      NEXUS_SSO_TOKEN_URL: ${NEXUS_SSO_TOKEN_URL:-http://host.docker.internal:8005/api/sso/token/}
+      NEXUS_SSO_CLIENT_ID: ${NEXUS_SSO_CLIENT_ID:-LklOUrLObOjzgvaK4CLM2uvcBP46qSr4}
+      NEXUS_SSO_CLIENT_SECRET: ${NEXUS_SSO_CLIENT_SECRET:-nexus-bdcrm-direct-2026-8Vr3kN6mQp5Ls2Tx}
+      NEXUS_SSO_REDIRECT_URI: ${NEXUS_SSO_REDIRECT_URI:-http://192.168.1.94:8003}
+      NEXUS_SSO_REDIRECT_URIS: ${NEXUS_SSO_REDIRECT_URIS:-http://192.168.1.94:8003,http://192.168.1.56:8003,https://vbsagent.tail9c1eb6.ts.net:6004/}
     restart: unless-stopped
     networks:
       bdcrm_net:

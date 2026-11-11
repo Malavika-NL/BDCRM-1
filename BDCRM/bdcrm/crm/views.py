@@ -16,6 +16,7 @@ import hmac
 import requests
 import re
 import json
+from urllib.parse import urlsplit
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from django.conf import settings
@@ -177,9 +178,26 @@ class CompanyPortalLoginView(APIView):
         if not code:
             return Response({'detail': 'Missing portal sign-in code.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # The authorization code is bound to the exact callback URL.  Select
+        # the configured callback that matches the LAN address the user used,
+        # rather than always exchanging it as a different machine/IP.
+        request_host = request.get_host().lower()
+        redirect_uri = next(
+            (
+                candidate for candidate in settings.NEXUS_SSO_REDIRECT_URIS
+                if urlsplit(candidate).netloc.lower() == request_host
+            ),
+            None,
+        )
+        if not redirect_uri:
+            return Response(
+                {'detail': 'This BDCRM address is not configured for portal sign-in.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         portal_request = Request(
             settings.NEXUS_SSO_TOKEN_URL,
-            data=json.dumps({'client_id': settings.NEXUS_SSO_CLIENT_ID, 'client_secret': settings.NEXUS_SSO_CLIENT_SECRET, 'code': code, 'redirect_uri': settings.NEXUS_SSO_REDIRECT_URI}).encode(),
+            data=json.dumps({'client_id': settings.NEXUS_SSO_CLIENT_ID, 'client_secret': settings.NEXUS_SSO_CLIENT_SECRET, 'code': code, 'redirect_uri': redirect_uri}).encode(),
             headers={
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',

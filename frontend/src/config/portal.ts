@@ -10,5 +10,12 @@ export const getCompanyPortalUrl = () => {
 /** The central NexusOne workspace used after a CRM-only logout. */
 export const getNexusOneLoginUrl = () => {
   const { protocol, hostname } = window.location;
+  // This machine exposes the NexusOne container on 7005 for the .94 LAN
+  // address.  Port 7000 is used by the .56 deployment.  Sending .94 users
+  // to 7000 reaches no portal and can leave them with a code from a different
+  // SSO instance.
+  if (hostname === '192.168.1.94') {
+    return `${protocol}//${hostname}:7005/login`;
+  }
   return `${protocol}//${hostname}:7000/login`;
 };

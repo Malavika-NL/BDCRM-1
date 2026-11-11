@@ -3,10 +3,40 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
+from unittest.mock import patch
+import json
 
 from .models import UserProfile
 
 SSO_SECRET = 'test-portal-secret'
+
+
+class _PortalTokenResponse:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def read(self):
+        return json.dumps({'user': {'email': 'missing@example.com', 'company': {'id': 1}}}).encode()
+
+
+class CompanyPortalLoginViewTests(TestCase):
+    @override_settings(NEXUS_SSO_REDIRECT_URIS=[
+        'http://192.168.1.94:8003/',
+        'http://192.168.1.56:8003/',
+    ], ALLOWED_HOSTS=['testserver', '192.168.1.56'])
+    @patch('crm.views.urlopen', return_value=_PortalTokenResponse())
+    def test_uses_callback_uri_for_the_address_receiving_the_code(self, mocked_urlopen):
+        response = APIClient().post(
+            reverse('company_portal_login'), {'code': 'test-code'}, format='json',
+            HTTP_HOST='192.168.1.56:8003',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        sent_body = json.loads(mocked_urlopen.call_args.args[0].data.decode())
+        self.assertEqual(sent_body['redirect_uri'], 'http://192.168.1.56:8003/')
 
 
 @override_settings(PORTAL_SSO_SHARED_SECRET=SSO_SECRET)
