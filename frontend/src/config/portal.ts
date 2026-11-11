@@ -17,5 +17,8 @@ export const getNexusOneLoginUrl = () => {
   if (hostname === '192.168.1.94') {
     return `${protocol}//${hostname}:7005/login`;
   }
-  return `${protocol}//${hostname}:7000/login`;
+  // NexusOne is served separately from BDCRM.  The CRM may be reached through
+  // a tunnel on another port, so do not inherit the BDCRM port here.
+  const portalOrigin = import.meta.env.VITE_NEXUSONE_URL || `${protocol}//${hostname}:7005`;
+  return `${portalOrigin.replace(/\/$/, '')}/login`;
 };
